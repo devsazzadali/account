@@ -1,29 +1,19 @@
-import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award } from "lucide-react";
+import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award, Plus, Minus, AlertCircle, ShieldCheck } from "lucide-react";
 import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { FEATURED_ITEMS, CATEGORIES, REVIEWS } from "../data/mockData";
+import { CATEGORIES, REVIEWS } from "../data/mockData";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "../lib/supabase";
 
 interface FeaturedItem {
-  id: number;
+  id: string;
   title: string;
   sold: number;
   price: number;
   image: string;
   badge: string;
   category?: string;
-}
-
-interface Category {
-  name: string;
-  offers: number;
-}
-
-interface Review {
-  type: string;
-  text: string;
-  buyer: string;
-  date: string;
+  stock?: number;
 }
 
 const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
@@ -68,7 +58,7 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
             </div>
             <div className="flex flex-col min-w-0">
                 <span className="text-[10px] text-dark-50/70 truncate leading-tight mb-0.5">Verified Seller</span>
-                <span className="text-xs text-white font-medium truncate">AccountStoreOne</span>
+                <span className="text-xs text-white font-medium truncate">TitanGames_Global</span>
             </div>
           </div>
         </div>
@@ -77,12 +67,12 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
         <div className="flex flex-col items-end justify-between shrink-0 w-[90px]">
           <div className="w-[90px] h-[90px] rounded-xl overflow-hidden relative border border-white/10 bg-dark-900 group-hover:border-primary-500/30 transition-colors">
              <img 
-                src={item.image} 
+                src={item.image || "https://picsum.photos/seed/default/400/225"} 
                 alt={item.title}
                 className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-115" 
              />
              {item.badge && (
-                <div className="absolute top-0 right-0 bg-primary-500 text-white text-[9px] px-2 py-0.5 font-bold shadow-lg z-10 rounded-bl-lg">
+                <div className="absolute top-0 right-0 bg-primary-500 text-white text-[9px] px-2 py-0.5 font-bold shadow-lg z-10 rounded-bl-lg uppercase">
                     {item.badge}
                 </div>
              )}
@@ -98,43 +88,31 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
       </div>
 
       {/* Quantity and Buy Button */}
-      <div className="mt-5 pt-5 border-t border-white/5 flex items-center justify-between gap-3">
-          <div className="flex items-center bg-dark-900/50 border border-white/10 rounded-xl h-9 overflow-hidden">
+      <div className="mt-5 flex items-center gap-2 relative z-20">
+          <div className="flex items-center bg-white/5 border border-white/5 rounded-xl p-1 shrink-0">
               <button 
-                onClick={(e) => handleQuantityChange(e, -1)}
-                className="px-3 text-dark-50/60 hover:bg-white/5 hover:text-white h-full flex items-center transition-colors"
+                  onClick={(e) => handleQuantityChange(e, -1)}
+                  className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors text-dark-50/40 hover:text-white"
               >
-                -
+                  <Minus size={14} />
               </button>
-              <span className="text-xs font-semibold w-8 text-center text-white">{quantity}</span>
+              <span className="w-8 text-center text-xs font-bold text-white">{quantity}</span>
               <button 
-                onClick={(e) => handleQuantityChange(e, 1)}
-                className="px-3 text-dark-50/60 hover:bg-white/5 hover:text-white h-full flex items-center transition-colors"
+                  onClick={(e) => handleQuantityChange(e, 1)}
+                  className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors text-dark-50/40 hover:text-white"
               >
-                +
+                  <Plus size={14} />
               </button>
           </div>
           <Link 
             to={`/checkout/${item.id}?quantity=${quantity}`}
-            onClick={(e) => e.stopPropagation()}
-            className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white text-xs font-bold h-9 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20 hover:shadow-primary-500/40 transform hover:-translate-y-0.5"
+            className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white text-[11px] font-bold uppercase tracking-widest py-3 rounded-xl shadow-lg shadow-primary-500/20 transition-all flex items-center justify-center gap-2 group/btn"
           >
-            <Zap className="w-3.5 h-3.5 fill-current" />
             Buy Now
+            <Zap className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform fill-current" />
           </Link>
       </div>
     </Link>
-)};
-
-const DUMMY_PRODUCTS: FeaturedItem[] = [
-  {
-    id: 1001,
-    title: "Netflix Premium 4K UHD | 1 Month | Private Account",
-    sold: 1250,
-    price: 3.50,
-    image: "https://picsum.photos/seed/dummy1/200/200",
-    badge: "HOT"
-  },
   {
     id: 1002,
     title: "Spotify Premium Individual Upgrade | Lifetime Warranty",
