@@ -322,7 +322,7 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
                                             </div>
                                             <span className="text-sm text-dark-50/60 group-hover:text-white transition-colors">{type}</span>
                                         </div>
-                                        <span className="text-[10px] font-bold text-dark-50/20">{Math.floor(Math.random() * 100)}</span>
+                                        <span className="text-[10px] font-bold text-dark-50/20">0</span>
                                     </label>
                                 ))}
                             </div>
@@ -376,7 +376,7 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
                 <h2 className="text-2xl font-display font-bold text-white tracking-tight">Customer <span className="text-primary-400">Reviews</span></h2>
             </div>
             <div className="text-xs font-bold text-dark-50/30 uppercase tracking-widest">
-                <span className="text-primary-400">17,439</span> Total Reviews
+                <span className="text-primary-400">{reviews.length}</span> Total Reviews
             </div>
         </div>
         
