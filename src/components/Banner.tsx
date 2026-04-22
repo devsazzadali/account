@@ -1,58 +1,44 @@
+import { Sparkles, Crown } from "lucide-react";
+
 export function Banner() {
   return (
-    <div className="bg-[#1a1b2e] relative overflow-hidden h-[180px] md:h-[220px] w-full border-b-4 border-yellow-400">
-        {/* Background Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#ff00cc] via-[#333399] to-[#333399]"></div>
-        
-        <div className="container mx-auto px-4 h-full max-w-7xl relative z-10">
-             <div className="h-full flex items-center justify-center relative">
-                
-                {/* Center Content: StoreOne Logo/Text */}
-                <div className="text-center relative z-20 mt-[-20px]">
-                    <div className="relative inline-block">
-                         {/* Crown Icon above text */}
-                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-yellow-400">
-                             <svg width="40" height="30" viewBox="0 0 24 24" fill="currentColor">
-                                 <path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5ZM19 19C19 19.5523 18.5523 20 18 20H6C5.44772 20 5 19.5523 5 19V18H19V19Z" />
-                             </svg>
-                         </div>
-                         
-                         {/* Main Text */}
-                         <h1 className="text-5xl md:text-7xl text-yellow-300 font-serif italic tracking-wide drop-shadow-lg" style={{ fontFamily: 'Georgia, serif', textShadow: '2px 2px 0px #000' }}>
-                            StoreOne
-                         </h1>
-                         
-                         {/* Decorative Ribbons/Shields */}
-                         <div className="absolute top-1/2 -left-24 -translate-y-1/2 hidden md:block">
-                            <div className="w-16 h-20 bg-red-600 border-2 border-yellow-400 clip-banner shadow-lg flex items-center justify-center">
-                                <div className="text-yellow-400 text-2xl">⚜️</div>
-                            </div>
-                         </div>
-                         <div className="absolute top-1/2 -right-24 -translate-y-1/2 hidden md:block">
-                            <div className="w-16 h-20 bg-red-600 border-2 border-yellow-400 clip-banner shadow-lg flex items-center justify-center">
-                                <div className="text-yellow-400 text-2xl">⚜️</div>
-                            </div>
-                         </div>
-                    </div>
-                </div>
-                
-                {/* Castle Graphic (Right Side) */}
-                <div className="absolute right-0 bottom-0 h-full flex items-end">
-                    <div className="w-32 md:w-48 h-32 md:h-40 bg-yellow-400 border-4 border-black relative clip-castle flex items-center justify-center">
-                        <div className="w-4 h-12 bg-black absolute top-10 left-4 rounded-t-full"></div>
-                        <div className="w-4 h-12 bg-black absolute top-10 right-4 rounded-t-full"></div>
-                        <div className="w-8 h-12 bg-black absolute bottom-0 left-1/2 -translate-x-1/2 rounded-t-full"></div>
-                    </div>
-                </div>
+    <div className="relative overflow-hidden h-[240px] md:h-[320px] w-full bg-dark-900 border-b border-white/10">
+      {/* Background Gradient Orbs */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[150%] bg-primary-600/20 blur-[120px] rounded-full mix-blend-screen pointer-events-none"></div>
+      <div className="absolute top-[20%] right-[-10%] w-[50%] h-[150%] bg-blue-600/20 blur-[120px] rounded-full mix-blend-screen pointer-events-none"></div>
+      
+      {/* Subtle Grid Pattern Overlay */}
+      <div className="absolute inset-0 bg-[url('https://transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none mix-blend-overlay"></div>
 
-                {/* Left Side Decoration (Optional to balance) */}
-                <div className="absolute left-0 top-0 h-full w-full opacity-20 pointer-events-none">
-                    <div className="absolute top-4 left-10 text-white text-4xl">✨</div>
-                    <div className="absolute bottom-10 left-1/4 text-white text-2xl">✨</div>
-                    <div className="absolute top-10 right-1/4 text-white text-3xl">✨</div>
-                </div>
-             </div>
+      <div className="container mx-auto px-4 h-full max-w-7xl relative z-10 flex items-center justify-center">
+        
+        {/* Main Content Area */}
+        <div className="flex flex-col items-center justify-center text-center space-y-6">
+          
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card border border-primary-500/30 text-primary-100 text-sm font-medium tracking-wide animate-float">
+            <Sparkles className="w-4 h-4 text-primary-400" />
+            <span>Discover Premium Excellence</span>
+          </div>
+
+          {/* Heading */}
+          <div className="relative">
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-primary-500 opacity-80 z-0">
+               <Crown className="w-12 h-12" strokeWidth={1} />
+            </div>
+            <h1 className="text-6xl md:text-8xl font-display font-bold tracking-tight text-white mb-2 relative z-10">
+              Account<span className="text-gradient">Store</span>
+            </h1>
+          </div>
+
+          {/* Subheading */}
+          <p className="text-dark-50 text-lg md:text-xl font-sans font-light max-w-2xl mx-auto opacity-80 leading-relaxed">
+            Elevate your digital presence with our curated selection of verified, high-tier accounts. Experience pure exclusivity.
+          </p>
+
         </div>
+
+      </div>
     </div>
   );
 }
