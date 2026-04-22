@@ -1,6 +1,19 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ShieldCheck, CreditCard, Lock, CheckCircle } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { 
+  ShieldCheck, 
+  CreditCard, 
+  Lock, 
+  CheckCircle, 
+  Wallet, 
+  Coins, 
+  ArrowLeft, 
+  Zap, 
+  Shield, 
+  AlertCircle,
+  ChevronRight
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Product {
   id: number;
@@ -12,177 +25,255 @@ interface Product {
 export function CheckoutPage() {
   const { productId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const initialQuantity = parseInt(queryParams.get("quantity") || "1");
+
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("credit_card");
   const [processing, setProcessing] = useState(false);
+  const [email, setEmail] = useState("");
 
   useEffect(() => {
-    fetch(`/api/products/${productId}`)
-      .then(res => res.json())
-      .then(data => {
-        setProduct(data);
+    // Simulated fetch
+    setTimeout(() => {
+        const mockProducts: Record<string, Product> = {
+            "1": { id: 1, title: "HULU NO ADS 🔥 FAST DELIVERY 🔥 3 MONTHS", price: 3.00, image: "https://picsum.photos/seed/hulu/200/200" },
+            "2": { id: 2, title: "Personal Account - NFLX 30days 4K UHD Premium", price: 2.75, image: "https://picsum.photos/seed/netflix/200/200" },
+            "5": { id: 5, title: "Disney+ Premium 12 Months Subscription", price: 15.50, image: "https://picsum.photos/seed/disney/200/200" }
+        };
+        setProduct(mockProducts[productId || ""] || mockProducts["1"]);
         setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
+    }, 800);
   }, [productId]);
 
   const handlePlaceOrder = async () => {
-    setProcessing(true);
-    try {
-        const res = await fetch('/api/orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                productId: product?.id,
-                quantity: 1,
-                paymentMethod
-            })
-        });
-        
-        if (res.ok) {
-            const order = await res.json();
-            navigate(`/order/${order.id}`);
-        } else {
-            alert("Failed to place order");
-        }
-    } catch (error) {
-        console.error("Order error:", error);
-        alert("An error occurred");
-    } finally {
-        setProcessing(false);
+    if (!email) {
+        alert("Please enter your delivery email");
+        return;
     }
+    setProcessing(true);
+    // Simulate API call
+    setTimeout(() => {
+        navigate(`/order/7782`);
+    }, 2000);
   };
 
-  if (loading) return <div className="p-8 text-center">Loading checkout...</div>;
-  if (!product) return <div className="p-8 text-center">Product not found</div>;
+  if (loading) {
+    return (
+        <div className="min-h-screen bg-dark-950 flex flex-col items-center justify-center">
+            <div className="w-12 h-12 border-4 border-primary-500/20 border-t-primary-500 rounded-full animate-spin mb-4"></div>
+            <p className="text-dark-50/40 text-xs font-bold uppercase tracking-widest">Initializing Secure Checkout...</p>
+        </div>
+    );
+  }
+
+  if (!product) return <div className="p-8 text-center bg-dark-950 text-white">Digital Asset Not Found</div>;
+
+  const serviceFee = 0.50;
+  const subtotal = product.price * initialQuantity;
+  const total = subtotal + serviceFee;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-2xl font-bold mb-6">Checkout</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Left Column: Payment & Billing */}
-        <div className="md:col-span-2 space-y-6">
-            
-            {/* Payment Methods */}
-            <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-                <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-[#FF3333]" />
-                    Payment Method
-                </h2>
-                
-                <div className="space-y-3">
-                    <label className={`flex items-center p-4 border rounded cursor-pointer transition-colors ${paymentMethod === 'credit_card' ? 'border-[#FF3333] bg-red-50' : 'border-gray-200'}`}>
-                        <input 
-                            type="radio" 
-                            name="payment" 
-                            value="credit_card" 
-                            checked={paymentMethod === 'credit_card'}
-                            onChange={(e) => setPaymentMethod(e.target.value)}
-                            className="text-[#FF3333] focus:ring-[#FF3333]"
-                        />
-                        <span className="ml-3 font-medium">Credit/Debit Card</span>
-                        <div className="ml-auto flex gap-2">
-                            <div className="w-8 h-5 bg-gray-200 rounded"></div>
-                            <div className="w-8 h-5 bg-gray-200 rounded"></div>
-                        </div>
-                    </label>
-
-                    <label className={`flex items-center p-4 border rounded cursor-pointer transition-colors ${paymentMethod === 'crypto' ? 'border-[#FF3333] bg-red-50' : 'border-gray-200'}`}>
-                        <input 
-                            type="radio" 
-                            name="payment" 
-                            value="crypto" 
-                            checked={paymentMethod === 'crypto'}
-                            onChange={(e) => setPaymentMethod(e.target.value)}
-                            className="text-[#FF3333] focus:ring-[#FF3333]"
-                        />
-                        <span className="ml-3 font-medium">Cryptocurrency</span>
-                        <span className="ml-auto text-xs text-gray-500">BTC, ETH, USDT</span>
-                    </label>
-
-                    <label className={`flex items-center p-4 border rounded cursor-pointer transition-colors ${paymentMethod === 'paypal' ? 'border-[#FF3333] bg-red-50' : 'border-gray-200'}`}>
-                        <input 
-                            type="radio" 
-                            name="payment" 
-                            value="paypal" 
-                            checked={paymentMethod === 'paypal'}
-                            onChange={(e) => setPaymentMethod(e.target.value)}
-                            className="text-[#FF3333] focus:ring-[#FF3333]"
-                        />
-                        <span className="ml-3 font-medium">PayPal</span>
-                    </label>
-                </div>
-            </div>
-
-            {/* Email Field (Mock) */}
-            <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-                <h2 className="text-lg font-medium mb-4">Contact Information</h2>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address for Delivery</label>
-                    <input type="email" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-[#FF3333]" placeholder="you@example.com" />
-                    <p className="text-xs text-gray-500 mt-1">Your product key will be sent to this email.</p>
+    <div className="min-h-screen bg-dark-950 text-white py-12 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center gap-4 mb-10">
+            <button onClick={() => navigate(-1)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5">
+                <ArrowLeft size={20} />
+            </button>
+            <div>
+                <h1 className="text-3xl font-display font-bold text-white tracking-tight">Secure Checkout</h1>
+                <div className="flex items-center gap-2 text-[10px] font-bold text-dark-50/30 uppercase tracking-widest mt-1">
+                    <span>Marketplace</span>
+                    <ChevronRight size={10} />
+                    <span>Cart</span>
+                    <ChevronRight size={10} />
+                    <span className="text-primary-500">Settlement</span>
                 </div>
             </div>
         </div>
-
-        {/* Right Column: Order Summary */}
-        <div className="md:col-span-1">
-            <div className="bg-white p-6 rounded shadow-sm border border-gray-200 sticky top-24">
-                <h2 className="text-lg font-medium mb-4">Order Summary</h2>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* Left Section: Settlement Protocol */}
+            <div className="lg:col-span-8 space-y-6">
                 
-                <div className="flex gap-3 mb-4">
-                    <img src={product.image} alt={product.title} className="w-16 h-16 object-cover rounded bg-gray-100" />
-                    <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium line-clamp-2">{product.title}</h3>
-                        <div className="text-xs text-gray-500 mt-1">Qty: 1</div>
+                {/* Contact Info */}
+                <div className="glass-card rounded-3xl p-8 border-white/5">
+                    <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                            <Zap size={18} />
+                        </div>
+                        Delivery Protocol
+                    </h2>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-dark-50/30 uppercase tracking-widest px-1">Receiver Email Address</label>
+                            <input 
+                                type="email" 
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-primary-500/50 focus:ring-4 focus:ring-primary-500/5 transition-all" 
+                                placeholder="you@example.com" 
+                            />
+                            <div className="flex items-center gap-2 px-1 text-[10px] text-dark-50/40 font-medium italic mt-1">
+                                <AlertCircle size={10} />
+                                Your digital asset will be transmitted to this destination.
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div className="border-t border-gray-100 py-4 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                        <span className="text-gray-600">Subtotal</span>
-                        <span>${product.price.toFixed(2)}</span>
+                {/* Payment Selection */}
+                <div className="glass-card rounded-3xl p-8 border-white/5">
+                    <h2 className="text-lg font-bold text-white mb-8 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-400">
+                            <CreditCard size={18} />
+                        </div>
+                        Financial Resolution
+                    </h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <PaymentMethod 
+                            id="credit_card" 
+                            selected={paymentMethod === "credit_card"} 
+                            onSelect={setPaymentMethod}
+                            icon={<CreditCard size={20} />}
+                            label="Debit / Credit Card"
+                            desc="Visa, Mastercard, Amex"
+                        />
+                        <PaymentMethod 
+                            id="crypto" 
+                            selected={paymentMethod === "crypto"} 
+                            onSelect={setPaymentMethod}
+                            icon={<Coins size={20} />}
+                            label="Cryptocurrency"
+                            desc="BTC, ETH, USDT (TRC20)"
+                        />
+                        <PaymentMethod 
+                            id="paypal" 
+                            selected={paymentMethod === "paypal"} 
+                            onSelect={setPaymentMethod}
+                            icon={<Wallet size={20} />}
+                            label="PayPal Wallet"
+                            desc="Instant clearance"
+                        />
+                        <div className="p-6 rounded-2xl border border-white/5 bg-white/2 opacity-40 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest">
+                            <Lock size={12} />
+                            More Options Loading...
+                        </div>
                     </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-600">Service Fee</span>
-                        <span>$0.50</span>
+                </div>
+            </div>
+
+            {/* Right Section: Transaction Ledger */}
+            <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-28">
+                <div className="glass-card rounded-3xl p-8 border-white/5 shadow-2xl relative overflow-hidden">
+                    <h2 className="text-sm font-bold text-dark-50/40 uppercase tracking-widest mb-6">Valuation Summary</h2>
+                    
+                    <div className="flex gap-4 mb-8">
+                        <div className="w-16 h-16 rounded-xl overflow-hidden border border-white/10 shrink-0">
+                            <img src={product.image} alt={product.title} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-bold text-white line-clamp-2 leading-tight">{product.title}</h3>
+                            <div className="text-[10px] text-primary-400 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
+                                <Zap size={10} fill="currentColor" />
+                                Instant Delivery
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 mb-8 text-sm">
+                        <div className="flex justify-between items-center text-dark-50/40">
+                            <span>Unit Valuation</span>
+                            <span className="text-white font-bold">${product.price.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-dark-50/40">
+                            <span>Quantity</span>
+                            <span className="text-white font-bold">x{initialQuantity}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-dark-50/40">
+                            <span>Protocol Service Fee</span>
+                            <span className="text-white font-bold">${serviceFee.toFixed(2)}</span>
+                        </div>
+                        <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+                            <span className="text-sm font-bold uppercase tracking-widest">Settlement Total</span>
+                            <span className="text-2xl font-display font-bold text-primary-400">${total.toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={handlePlaceOrder}
+                        disabled={processing}
+                        className="w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:scale-[1.02] active:scale-[0.98] text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary-500/20 transition-all disabled:opacity-50 group"
+                    >
+                        {processing ? (
+                            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                        ) : (
+                            <>
+                                <ShieldCheck size={20} className="group-hover:rotate-12 transition-transform" />
+                                Execute Settlement
+                            </>
+                        )}
+                    </button>
+
+                    <div className="mt-6 flex flex-col items-center gap-3 p-4 bg-white/2 rounded-2xl border border-white/5">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-dark-50/30 uppercase tracking-widest">
+                            <Shield size={12} className="text-green-500" />
+                            Titan AES-256 Encrypted
+                        </div>
+                        <div className="flex items-center gap-4 opacity-20 grayscale">
+                             <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-3" alt="Visa" />
+                             <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-4" alt="Mastercard" />
+                             <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-3" alt="Paypal" />
+                        </div>
                     </div>
                 </div>
 
-                <div className="border-t border-gray-100 pt-4 mb-6">
-                    <div className="flex justify-between font-bold text-lg">
-                        <span>Total</span>
-                        <span className="text-[#FF3333]">${(product.price + 0.50).toFixed(2)}</span>
+                <div className="p-6 bg-primary-500/5 rounded-3xl border border-primary-500/10">
+                    <div className="flex items-start gap-4">
+                        <div className="p-2 bg-primary-500/20 rounded-xl text-primary-400">
+                             <Lock size={16} />
+                        </div>
+                        <div>
+                            <h4 className="text-xs font-bold text-white mb-1 uppercase tracking-widest">Encrypted Escrow</h4>
+                            <p className="text-[10px] text-dark-50/50 leading-relaxed font-medium">Funds are held securely by the marketplace until the digital asset is successfully delivered and verified by the system.</p>
+                        </div>
                     </div>
-                </div>
-
-                <button 
-                    onClick={handlePlaceOrder}
-                    disabled={processing}
-                    className="w-full bg-[#FF3333] hover:bg-red-600 text-white font-bold py-3 rounded shadow-lg shadow-red-200 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
-                >
-                    {processing ? (
-                        <span>Processing...</span>
-                    ) : (
-                        <>
-                            <Lock className="w-4 h-4" />
-                            Pay Now
-                        </>
-                    )}
-                </button>
-
-                <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-500">
-                    <ShieldCheck className="w-4 h-4 text-green-500" />
-                    <span>Secure Encrypted Payment</span>
                 </div>
             </div>
         </div>
       </div>
     </div>
   );
+}
+
+function PaymentMethod({ id, selected, onSelect, icon, label, desc }: any) {
+    return (
+        <button 
+            onClick={() => onSelect(id)}
+            className={`flex flex-col gap-4 p-6 rounded-2xl border transition-all text-left relative overflow-hidden group ${
+                selected 
+                ? "bg-primary-500/10 border-primary-500/50 shadow-lg shadow-primary-500/5" 
+                : "bg-white/2 border-white/5 hover:bg-white/5 hover:border-white/10"
+            }`}
+        >
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                selected ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" : "bg-white/5 text-dark-50/40"
+            }`}>
+                {icon}
+            </div>
+            <div>
+                <div className="text-sm font-bold text-white mb-0.5">{label}</div>
+                <div className="text-[10px] font-bold text-dark-50/30 uppercase tracking-widest">{desc}</div>
+            </div>
+            {selected && (
+                <div className="absolute top-4 right-4 text-primary-400">
+                    <CheckCircle size={20} fill="currentColor" fillOpacity={0.2} />
+                </div>
+            )}
+        </button>
+    );
 }

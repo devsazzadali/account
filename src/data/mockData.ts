@@ -1,157 +1,113 @@
 export const STORE_PROFILE = {
-  name: "AccountStoreOne",
-  level: "Legendary",
-  memberSince: "30/08/2021",
-  orderCompletion: "90.43%",
-  disputeRate: "3.61%",
-  totalReviews: 17439,
-  last90Days: "91.0 %",
-  allReviews: "99.1%",
-  description: "Selling IPTV ACCOUNTS, 8k strong, trex, dino, etc Hbo max, Disney+, Paramount+, DirecTV, Spotify, Netflix, Origin, CrunchyRoll, Paramount + Minecraft etc.. accounts cheap! 10 AM to 23:00 support and service working! The best store for quality accounts. We provide the best service in the market with instant delivery and 24/7 support. All accounts are verified and come with a warranty. Buy with confidence from a trusted store with thousands of positive reviews. Contact us for bulk orders and special discounts.",
+  name: "TitanGames_Global",
+  level: "Legendary Seller",
+  memberSince: "12/10/2020",
+  orderCompletion: "99.82%",
+  disputeRate: "0.12%",
+  totalReviews: 45290,
+  last90Days: "100.0%",
+  allReviews: "99.9%",
+  description: "Premier distributor of high-tier gaming assets. Specializing in Valorant (Radiant/Immortal), League of Legends (All Skins), and Modded GTA V Accounts. 24/7 Automated delivery system. 100% Secure & Verified. We provide the most elite accounts in the market with a lifetime warranty. Trusted by thousands of professional gamers worldwide.",
   languages: [
-    { name: "American", level: "Fluent" },
-    { name: "Spanish", level: "Native" }
+    { name: "English", level: "Native" },
+    { name: "Chinese", level: "Fluent" }
   ]
 };
 
 export const FEATURED_ITEMS = [
   {
     id: 1,
-    title: "HULU NO ADS🔥FAST DELIVERY🔥3 MONTHS",
-    sold: 676,
-    price: 3.00,
-    image: "https://picsum.photos/seed/hulu/200/200",
-    badge: "🔥",
-    category: "Hulu Accounts"
+    title: "[RADIANT] Valorant Account - All Skins - Full Access - Region Global",
+    sold: 124,
+    price: 450.00,
+    image: "https://picsum.photos/seed/valorant/400/225",
+    badge: "RADIANT",
+    category: "Valorant Accounts"
   },
   {
     id: 2,
-    title: "Personal Account - NFLX 30days 4K UHD Premium - 1 Month-Need VPN",
-    sold: 11886,
-    price: 2.75,
-    image: "https://picsum.photos/seed/netflix/200/200",
-    badge: "NETFLIX",
-    category: "NETFLIX Account"
+    title: "LOL Account - LEVEL 30 - 50k BE - Unranked - Clean History",
+    sold: 15602,
+    price: 12.50,
+    image: "https://picsum.photos/seed/lol/400/225",
+    badge: "LVL 30",
+    category: "League of Legends"
   },
   {
     id: 3,
-    title: "🟢✅ Strong 8K IPTV🔥NO LAG🔥 PRIVATE🔥Subscription 12 Months – 4K & 8K UHD...",
-    sold: 567,
-    price: 33.75,
-    image: "https://picsum.photos/seed/iptv/200/200",
-    badge: "8K",
-    category: "Strong 8K IP TV Accounts"
+    title: "GTA V MODDED ACCOUNT - $1.5 BILLION - LVL 500 - ALL UNLOCKED",
+    sold: 892,
+    price: 35.00,
+    image: "https://picsum.photos/seed/gta/400/225",
+    badge: "MODDED",
+    category: "GTA V Accounts"
   },
   {
     id: 4,
-    title: "Spotify Premium Individual 1 Month Key | Global Region",
-    sold: 1205,
-    price: 1.99,
-    image: "https://picsum.photos/seed/spotify/200/200",
-    badge: "Spotify",
-    category: "Spotify Accounts"
+    title: "Roblox Account - 100k Robux - Limited Items - Registered 2012",
+    sold: 45,
+    price: 850.00,
+    image: "https://picsum.photos/seed/roblox/400/225",
+    badge: "2012",
+    category: "Roblox Items"
   },
   {
     id: 5,
-    title: "Disney+ Premium 12 Months Subscription [Private Account]",
-    sold: 892,
-    price: 15.50,
-    image: "https://picsum.photos/seed/disney/200/200",
-    badge: "Disney+",
-    category: "Disney+ Accounts"
+    title: "Steam Account - 500+ Games - Level 100 - CS2 Service Medals",
+    sold: 12,
+    price: 1200.00,
+    image: "https://picsum.photos/seed/steam/400/225",
+    badge: "LVL 100",
+    category: "Steam Accounts"
   },
   {
     id: 6,
-    title: "VPN 1 Year Subscription - High Speed & Secure",
-    sold: 450,
-    price: 12.00,
-    image: "https://picsum.photos/seed/vpn/200/200",
-    badge: "VPN",
-    category: "VPN Accounts"
+    title: "Mobile Legends - All Heroes - 200+ Skins - Mythic Glory",
+    sold: 340,
+    price: 120.00,
+    image: "https://picsum.photos/seed/mlbb/400/225",
+    badge: "MYTHIC",
+    category: "Mobile Legends"
   },
   {
     id: 7,
-    title: "Minecraft Java & Bedrock Edition Full Access Account",
-    sold: 2100,
-    price: 8.50,
-    image: "https://picsum.photos/seed/minecraft/200/200",
-    badge: "Game",
-    category: "Gaming Accounts"
+    title: "Fortnite OG Account - Renegade Raider + Pink Ghoul - Full Access",
+    sold: 3,
+    price: 2500.00,
+    image: "https://picsum.photos/seed/fortnite/400/225",
+    badge: "OG",
+    category: "Fortnite Accounts"
   },
   {
     id: 8,
-    title: "Youtube Premium 6 Months Upgrade to your own account",
-    sold: 340,
-    price: 5.99,
-    image: "https://picsum.photos/seed/youtube/200/200",
-    badge: "Youtube",
-    category: "Youtube Accounts"
-  },
-  {
-    id: 9,
-    title: "Crunchyroll Mega Fan 1 Year Warranty",
-    sold: 150,
-    price: 10.00,
-    image: "https://picsum.photos/seed/crunchyroll/200/200",
-    badge: "Anime",
-    category: "Anime Accounts"
-  },
-  {
-    id: 10,
-    title: "NETFLIX 4K UHD 1 YEAR WARRANTY",
-    sold: 5000,
-    price: 25.00,
-    image: "https://picsum.photos/seed/netflix2/200/200",
-    badge: "NETFLIX",
-    category: "NETFLIX Account"
-  },
-  {
-    id: 11,
-    title: "IPTV 12 Months 18K Channels + VOD",
-    sold: 1200,
-    price: 45.00,
-    image: "https://picsum.photos/seed/iptv2/200/200",
-    badge: "IPTV",
-    category: "IP TV Accounts"
-  },
-  {
-    id: 12,
-    title: "NordVPN 2 Year Account",
-    sold: 800,
-    price: 5.00,
-    image: "https://picsum.photos/seed/nordvpn/200/200",
-    badge: "VPN",
-    category: "VPN Accounts"
+    title: "Genshin Impact - AR 60 - C6 Raiden + C6 Nahida - Signature Weapons",
+    sold: 8,
+    price: 950.00,
+    image: "https://picsum.photos/seed/genshin/400/225",
+    badge: "AR 60",
+    category: "Genshin Impact"
   }
 ];
 
 export const CATEGORIES = [
-  { name: "NETFLIX Account", offers: 28 },
-  { name: "Hulu Accounts", offers: 2 },
-  { name: "IP TV Accounts", offers: 8 },
-  { name: "Spotify Accounts", offers: 15 },
-  { name: "Disney+ Accounts", offers: 10 },
-  { name: "VPN Accounts", offers: 20 },
-  { name: "Gaming Accounts", offers: 50 },
-  { name: "Youtube Accounts", offers: 5 },
-  { name: "Anime Accounts", offers: 8 },
-  { name: "Strong 8K IP TV Accounts", offers: 5 },
-  { name: "B1G IP TV Accounts", offers: 4 },
-  { name: "TiviOne IP TV Accounts", offers: 4 },
-  { name: "TREX IP TV Accounts", offers: 4 },
-  { name: "EVESTV IP TV Accounts", offers: 4 },
-  { name: "Ultra 8k IP TV Accounts", offers: 4 },
+  { name: "Valorant Accounts", offers: 1240 },
+  { name: "League of Legends", offers: 8500 },
+  { name: "GTA V Accounts", offers: 3200 },
+  { name: "Roblox Items", offers: 15000 },
+  { name: "Steam Accounts", offers: 450 },
+  { name: "Fortnite Accounts", offers: 980 },
+  { name: "Genshin Impact", offers: 2100 },
+  { name: "Mobile Legends", offers: 560 },
+  { name: "Free Fire Diamonds", offers: 12000 },
+  { name: "PUBG Mobile UC", offers: 8900 },
+  { name: "Discord Nitro", offers: 450 },
+  { name: "Minecraft Accounts", offers: 300 },
 ];
 
 export const REVIEWS = [
-  { type: 'positive', text: 'NETFLIX Account', buyer: 'Trapos***ich', date: '26/02/2026' },
-  { type: 'positive', text: 'Delivered quickly. Excellent service. Good response times. Eagle 4K IP TV Accounts', buyer: 'Hou199***991', date: '26/02/2026' },
-  { type: 'positive', text: 'Recieved and working, thanks. NETFLIX Account', buyer: 'Ahmada***ine', date: '26/02/2026' },
-  { type: 'positive', text: '*** instant delivery *** product as described *** thx again ***. DZ Accounts', buyer: 'LeChuc***uck', date: '26/02/2026' },
-  { type: 'positive', text: 'good. Hulu Accounts', buyer: 'Tilen2***n20', date: '25/02/2026' },
-  { type: 'negative', text: 'The support made two replacements, and it stopped working almost immediately. I don\'t recommend it. NETFLIX Account', buyer: 'timohf***ika', date: '25/02/2026' },
-  { type: 'positive', text: 'perfect. NETFLIX Account', buyer: 'Freefo***all', date: '25/02/2026' },
-  { type: 'positive', text: 'Bought 6 month subsription, stopped working in 2 weeks. Support not responsive. HBO Max Accounts', buyer: 'dr.tse***rma', date: '25/02/2026' },
-  { type: 'positive', text: 'Delivered exactly what i wanted in about 30-45 mins. IP TV Accounts', buyer: 'Hayyan***n--', date: '25/02/2026' },
-  { type: 'positive', text: 'Great service, fastest delivery. TiviOne IP TV Accounts', buyer: 'sk_mis***isc', date: '25/02/2026' },
+  { type: 'positive', text: 'Insane Valorant account! Radiant rank confirmed. Fast delivery.', buyer: 'ProGamer***99', date: '26/02/2026' },
+  { type: 'positive', text: 'GTA Modded account works perfectly. Level 500 as promised.', buyer: 'Modder***123', date: '26/02/2026' },
+  { type: 'positive', text: 'Fastest delivery ever for Roblox items. Trusted seller.', buyer: 'Roblox***King', date: '25/02/2026' },
+  { type: 'positive', text: 'LOL smurf account is clean. Highly recommended.', buyer: 'MidOrFe***ed', date: '25/02/2026' },
+  { type: 'negative', text: 'Wait time was a bit long (30 mins), but product is good.', buyer: 'Patience***Zero', date: '25/02/2026' },
 ];
