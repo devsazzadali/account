@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { 
   DollarSign, 
   ShoppingCart, 
@@ -11,33 +11,83 @@ import {
   Plus,
   Settings as SettingsIcon,
   Search,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "../../lib/supabase";
 
 export function AdminOverview() {
-  const stats = [
-    { title: "Net Revenue", value: "$12,845.00", change: "+18.2%", positive: true, icon: <DollarSign size={20} />, color: "text-primary-400", bg: "bg-primary-500/10" },
-    { title: "Active Sales", value: "84", change: "+5.4%", positive: true, icon: <ShoppingCart size={20} />, color: "text-blue-400", bg: "bg-blue-500/10" },
-    { title: "Total Inventory", value: "342", change: "+12", positive: true, icon: <Package size={20} />, color: "text-purple-400", bg: "bg-purple-500/10" },
-    { title: "Dispute Rate", value: "0.2%", change: "-0.1%", positive: true, icon: <ShieldCheck size={20} />, color: "text-green-400", bg: "bg-green-500/10" },
-  ];
+  const [stats, setStats] = useState([
+    { title: "Net Revenue", value: "$0.00", change: "+0%", positive: true, icon: <DollarSign size={20} />, color: "text-primary-400", bg: "bg-primary-500/10" },
+    { title: "Active Sales", value: "0", change: "+0%", positive: true, icon: <ShoppingCart size={20} />, color: "text-blue-400", bg: "bg-blue-500/10" },
+    { title: "Total Inventory", value: "0", change: "+0", positive: true, icon: <Package size={20} />, color: "text-purple-400", bg: "bg-purple-500/10" },
+    { title: "Dispute Rate", value: "0.0%", change: "0%", positive: true, icon: <ShieldCheck size={20} />, color: "text-green-400", bg: "bg-green-500/10" },
+  ]);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  async function fetchDashboardData() {
+    try {
+        setLoading(true);
+        
+        // 1. Fetch Orders for stats
+        const { data: orders, error: ordersError } = await supabase
+            .from('orders')
+            .select('*, products(title)')
+            .order('created_at', { ascending: false });
+        
+        if (ordersError) throw ordersError;
+
+        // 2. Fetch Products for stats
+        const { data: products, error: productsError } = await supabase
+            .from('products')
+            .select('*');
+        
+        if (productsError) throw productsError;
+
+        // Calculate Stats
+        const totalRevenue = orders?.reduce((acc, o) => acc + Number(o.total_price), 0) || 0;
+        const activeSales = orders?.length || 0;
+        const totalInventory = products?.reduce((acc, p) => acc + (p.stock || 0), 0) || 0;
+
+        setStats([
+            { title: "Net Revenue", value: `$${totalRevenue.toLocaleString()}`, change: "+100%", positive: true, icon: <DollarSign size={20} />, color: "text-primary-400", bg: "bg-primary-500/10" },
+            { title: "Active Sales", value: activeSales.toString(), change: "+100%", positive: true, icon: <ShoppingCart size={20} />, color: "text-blue-400", bg: "bg-blue-500/10" },
+            { title: "Total Inventory", value: totalInventory.toString(), change: `+${products?.length || 0}`, positive: true, icon: <Package size={20} />, color: "text-purple-400", bg: "bg-purple-500/10" },
+            { title: "Dispute Rate", value: "0.0%", change: "0%", positive: true, icon: <ShieldCheck size={20} />, color: "text-green-400", bg: "bg-green-500/10" },
+        ]);
+
+        setRecentOrders(orders?.slice(0, 4) || []);
+        setLowStockProducts(products?.filter(p => p.stock < 5).slice(0, 2) || []);
+
+    } catch (err: any) {
+        console.error("Dashboard Error:", err.message);
+    } finally {
+        setLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-8 pb-12">
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/2 p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden">
           <div className="relative z-10">
-              <h2 className="text-3xl font-display font-bold text-white mb-2">Command Center</h2>
+              <h2 className="text-3xl font-display font-bold text-white mb-2 italic">Command Center</h2>
               <p className="text-dark-50/40 text-xs font-bold uppercase tracking-[0.2em]">Operational Oversight & Settlement Monitoring</p>
           </div>
           <div className="flex gap-3 relative z-10">
+              <button onClick={fetchDashboardData} className="bg-white/5 hover:bg-white/10 text-white p-3 rounded-2xl border border-white/10 transition-all">
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
+              </button>
               <button className="bg-primary-600 hover:bg-primary-500 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-primary-500/20">
                   <Plus size={16} />
                   New Listing
-              </button>
-              <button className="bg-white/5 hover:bg-white/10 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest border border-white/10 transition-all">
-                  Generate Report
               </button>
           </div>
           {/* Background Glow */}
@@ -50,7 +100,7 @@ export function AdminOverview() {
           <motion.div 
             key={i}
             whileHover={{ y: -5 }}
-            className="glass-card p-6 rounded-3xl border border-white/5 relative overflow-hidden group"
+            className="glass-card p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group"
           >
             <div className="flex justify-between items-start mb-4">
               <div className={`p-3 ${stat.bg} rounded-xl ${stat.color} transition-colors group-hover:scale-110 duration-500`}>
@@ -63,7 +113,7 @@ export function AdminOverview() {
             </div>
             <div>
               <h3 className="text-dark-50/30 text-[10px] font-bold uppercase tracking-widest mb-1">{stat.title}</h3>
-              <div className="text-2xl font-display font-bold text-white">{stat.value}</div>
+              <div className="text-2xl font-display font-bold text-white leading-none">{stat.value}</div>
             </div>
             <div className={`absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-5 blur-2xl ${stat.bg}`}></div>
           </motion.div>
@@ -72,7 +122,7 @@ export function AdminOverview() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Recent Sales Table */}
-          <div className="lg:col-span-2 glass-card rounded-[2rem] border border-white/5 overflow-hidden">
+          <div className="lg:col-span-2 glass-card rounded-[2.5rem] border border-white/5 overflow-hidden">
             <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/2">
                 <div>
                     <h3 className="text-lg font-bold text-white mb-1">Live Sales Feed</h3>
@@ -86,29 +136,28 @@ export function AdminOverview() {
                 <table className="w-full text-left">
                     <thead className="text-dark-50/20 text-[9px] font-bold uppercase tracking-widest border-b border-white/5">
                     <tr>
-                        <th className="px-8 py-5">Order</th>
-                        <th className="px-8 py-5">Destination</th>
+                        <th className="px-8 py-5">Order ID</th>
+                        <th className="px-8 py-5">Receiver</th>
                         <th className="px-8 py-5">Asset</th>
                         <th className="px-8 py-5">Settlement</th>
                     </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                    {[
-                        { id: "#7782", email: "jishan@titan.io", product: "Valorant Radiant", price: "$450.00", status: "Delivered" },
-                        { id: "#7781", email: "alex@gaming.net", product: "LOL Master", price: "$12.50", status: "Paid" },
-                        { id: "#7780", email: "sarah@crypto.com", product: "GTA Modded", price: "$35.00", status: "Processing" },
-                        { id: "#7779", email: "titan@store.one", product: "Roblox 100k", price: "$850.00", status: "Delivered" },
-                    ].map((order, i) => (
+                    {loading ? (
+                        <tr><td colSpan={4} className="p-20 text-center text-dark-50/20 text-[10px] font-bold uppercase tracking-widest">Synchronizing Transmission...</td></tr>
+                    ) : recentOrders.length === 0 ? (
+                        <tr><td colSpan={4} className="p-20 text-center text-dark-50/20 text-[10px] font-bold uppercase tracking-widest">No Active Transmissions Found</td></tr>
+                    ) : recentOrders.map((order, i) => (
                         <tr key={i} className="hover:bg-white/2 transition-colors">
-                            <td className="px-8 py-5 font-bold text-dark-50/40 text-[10px]">{order.id}</td>
-                            <td className="px-8 py-5 font-medium text-white/60 text-xs">{order.email}</td>
+                            <td className="px-8 py-5 font-bold text-dark-50/40 text-[10px] truncate max-w-[100px]">{order.id.split('-')[0].toUpperCase()}</td>
+                            <td className="px-8 py-5 font-medium text-white/60 text-xs truncate max-w-[150px]">{order.customer_email}</td>
                             <td className="px-8 py-5">
-                                <div className="text-xs font-bold text-white">{order.product}</div>
+                                <div className="text-xs font-bold text-white truncate max-w-[200px]">{order.products?.title || "Unknown Asset"}</div>
                                 <div className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${
                                     order.status === "Delivered" ? "text-primary-400" : "text-yellow-400"
                                 }`}>{order.status}</div>
                             </td>
-                            <td className="px-8 py-5 font-bold text-white text-xs">{order.price}</td>
+                            <td className="px-8 py-5 font-bold text-white text-xs">${Number(order.total_price).toFixed(2)}</td>
                         </tr>
                     ))}
                     </tbody>
@@ -119,7 +168,7 @@ export function AdminOverview() {
           {/* Alerts & Quick Actions */}
           <div className="space-y-6">
               {/* Critical Alerts */}
-              <div className="glass-card rounded-[2rem] p-8 border border-white/5 bg-red-500/5 relative overflow-hidden">
+              <div className="glass-card rounded-[2.5rem] p-8 border border-white/5 bg-red-500/5 relative overflow-hidden">
                   <div className="flex items-center gap-3 mb-6">
                       <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400">
                           <AlertCircle size={20} />
@@ -127,19 +176,20 @@ export function AdminOverview() {
                       <h3 className="text-sm font-bold text-white uppercase tracking-widest">Stock Alerts</h3>
                   </div>
                   <div className="space-y-4">
-                      <div className="p-4 bg-dark-900/50 rounded-2xl border border-red-500/20">
-                          <div className="text-xs font-bold text-white mb-1">Valorant Smurfs</div>
-                          <div className="text-[10px] text-red-400 font-bold uppercase tracking-widest">Low Stock: 2 Units Left</div>
-                      </div>
-                      <div className="p-4 bg-dark-900/50 rounded-2xl border border-white/5">
-                          <div className="text-xs font-bold text-white mb-1">GTA Modded</div>
-                          <div className="text-[10px] text-dark-50/30 font-bold uppercase tracking-widest">Optimal: 15 Units</div>
-                      </div>
+                      {lowStockProducts.length === 0 && (
+                          <p className="text-[10px] text-dark-50/20 font-bold uppercase tracking-widest text-center py-4">All assets secured.</p>
+                      )}
+                      {lowStockProducts.map((p, i) => (
+                          <div key={i} className="p-4 bg-dark-900/50 rounded-2xl border border-red-500/20">
+                              <div className="text-xs font-bold text-white mb-1 truncate">{p.title}</div>
+                              <div className="text-[10px] text-red-400 font-bold uppercase tracking-widest">Critical Stock: {p.stock} Units</div>
+                          </div>
+                      ))}
                   </div>
               </div>
 
               {/* System Integrity */}
-              <div className="glass-card rounded-[2rem] p-8 border border-white/5">
+              <div className="glass-card rounded-[2.5rem] p-8 border border-white/5">
                   <h3 className="text-[10px] font-bold text-dark-50/30 uppercase tracking-[0.2em] mb-6">System Integrity</h3>
                   <div className="space-y-6">
                       <div className="flex items-center justify-between">
