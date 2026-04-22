@@ -112,6 +112,15 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
             <Zap className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform fill-current" />
           </Link>
       </div>
+    </Link>
+  );
+};
+
+interface MainContentProps {
+  selectedCategory: string;
+  setSelectedCategory: (category: string) => void;
+}
+
 export function MainContent({ selectedCategory, setSelectedCategory }: MainContentProps) {
   const [loading, setLoading] = useState(true);
   const [allProducts, setAllProducts] = useState<FeaturedItem[]>([]);
