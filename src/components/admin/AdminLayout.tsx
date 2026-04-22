@@ -3,18 +3,16 @@ import {
   LayoutDashboard, 
   Package, 
   ShoppingCart, 
-  Users, 
   Settings, 
   LogOut, 
   ChevronLeft, 
   ChevronRight,
-  CreditCard,
   Menu,
   Bell,
   Search,
-  User
+  User,
+  ShieldCheck
 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface AdminLayoutProps {
@@ -28,12 +26,10 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
   const username = localStorage.getItem("username") || "Admin";
 
   const menuItems = [
-    { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { id: "products", icon: Package, label: "Products" },
-    { id: "orders", icon: ShoppingCart, label: "Orders" },
-    { id: "customers", icon: Users, label: "Customers" },
-    { id: "transactions", icon: CreditCard, label: "Transactions" },
-    { id: "settings", icon: Settings, label: "Settings" },
+    { id: "dashboard", icon: LayoutDashboard, label: "Overview" },
+    { id: "products", icon: Package, label: "Manage Accounts" },
+    { id: "orders", icon: ShoppingCart, label: "Sales History" },
+    { id: "settings", icon: Settings, label: "Configuration" },
   ];
 
   return (
@@ -47,8 +43,8 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
         {/* Sidebar Header */}
         <div className="h-20 flex items-center px-6 border-b border-white/5">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-primary-500/20">
-                <span className="font-display font-bold text-xl">A</span>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-primary-500/20">
+                <ShieldCheck className="text-white" size={20} />
             </div>
             {!isSidebarCollapsed && (
               <motion.span 
@@ -56,21 +52,21 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
                 animate={{ opacity: 1 }}
                 className="font-display font-bold text-lg tracking-tight whitespace-nowrap"
               >
-                Gravity<span className="text-primary-400">Admin</span>
+                Titan<span className="text-primary-400">Control</span>
               </motion.span>
             )}
           </div>
         </div>
 
         {/* Menu Items */}
-        <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 py-8 px-3 space-y-1 overflow-y-auto custom-scrollbar">
           {menuItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`flex items-center gap-4 w-full px-4 py-3.5 rounded-xl transition-all duration-300 relative group ${
                 activeTab === item.id 
-                ? "bg-primary-500/10 text-primary-400 border border-primary-500/20" 
+                ? "bg-primary-500/10 text-primary-400 border border-primary-500/20 shadow-[0_0_20px_rgba(20,184,166,0.05)]" 
                 : "text-dark-50/40 hover:text-white hover:bg-white/5 border border-transparent"
               }`}
             >
@@ -79,7 +75,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
                 <motion.span 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="font-semibold text-sm tracking-wide"
+                  className="font-bold text-xs uppercase tracking-widest"
                 >
                   {item.label}
                 </motion.span>
@@ -101,11 +97,14 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
                 className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-dark-50/40 hover:text-white hover:bg-white/5 transition-all"
             >
                 {isSidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-                {!isSidebarCollapsed && <span className="text-xs font-bold uppercase tracking-widest">Collapse Menu</span>}
+                {!isSidebarCollapsed && <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Minimize</span>}
             </button>
-            <button className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-dark-50/40 hover:text-red-400 hover:bg-red-500/5 transition-all group">
+            <button 
+                onClick={() => window.location.href = "/"}
+                className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-dark-50/40 hover:text-red-400 hover:bg-red-500/5 transition-all group"
+            >
                 <LogOut size={20} className="group-hover:scale-110 transition-transform" />
-                {!isSidebarCollapsed && <span className="text-xs font-bold uppercase tracking-widest">Logout</span>}
+                {!isSidebarCollapsed && <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Exit Portal</span>}
             </button>
         </div>
       </motion.aside>
@@ -122,28 +121,26 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
               <div className="relative w-full group">
                   <input 
                     type="text" 
-                    placeholder="Search global records..." 
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-2.5 text-sm focus:outline-none focus:border-primary-500/50 focus:ring-4 focus:ring-primary-500/5 transition-all"
+                    placeholder="Search accounts, orders, or logs..." 
+                    className="w-full bg-white/2 border border-white/5 rounded-2xl pl-12 pr-4 py-2.5 text-xs font-medium focus:outline-none focus:border-primary-500/50 focus:ring-4 focus:ring-primary-500/5 transition-all"
                   />
-                  <Search className="absolute left-4 top-3 text-dark-50/20 group-focus-within:text-primary-400 transition-colors" size={18} />
+                  <Search className="absolute left-4 top-3 text-dark-50/20 group-focus-within:text-primary-400 transition-colors" size={16} />
               </div>
           </div>
 
           <div className="flex items-center gap-6">
             <button className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-dark-50/40 hover:text-white transition-all relative">
                 <Bell size={20} />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-primary-500 rounded-full border-2 border-dark-950"></span>
+                <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-primary-500 rounded-full border-2 border-dark-950"></span>
             </button>
 
             <div className="flex items-center gap-4 pl-6 border-l border-white/5">
                 <div className="text-right hidden sm:block">
-                    <div className="text-sm font-bold text-white">{username}</div>
-                    <div className="text-[10px] text-primary-500 font-bold uppercase tracking-widest">Admin Access</div>
+                    <div className="text-sm font-bold text-white leading-none mb-1">{username}</div>
+                    <div className="text-[9px] text-primary-500 font-bold uppercase tracking-widest">Root Authority</div>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-blue-500 p-[1px]">
-                    <div className="w-full h-full rounded-[11px] bg-dark-900 flex items-center justify-center overflow-hidden border border-white/10">
-                        <User className="text-white/40" size={20} />
-                    </div>
+                <div className="w-10 h-10 rounded-xl bg-white/5 p-[1px] border border-white/10 overflow-hidden">
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="Admin" className="w-full h-full object-cover" />
                 </div>
             </div>
           </div>
@@ -168,8 +165,8 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
 
       {/* Decorative Background */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-          <div className="absolute top-1/4 -left-20 w-[600px] h-[600px] bg-primary-600/5 blur-[120px] rounded-full"></div>
-          <div className="absolute bottom-1/4 -right-20 w-[500px] h-[500px] bg-blue-600/5 blur-[100px] rounded-full"></div>
+          <div className="absolute top-1/4 -left-20 w-[600px] h-[600px] bg-primary-600/2 blur-[120px] rounded-full"></div>
+          <div className="absolute bottom-1/4 -right-20 w-[500px] h-[500px] bg-blue-600/2 blur-[100px] rounded-full"></div>
       </div>
     </div>
   );
