@@ -1,5 +1,6 @@
 import { MessageCircle, ThumbsUp, Crown, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { STORE_PROFILE } from "../data/mockData";
 
 interface Language {
   name: string;
@@ -20,32 +21,8 @@ interface StoreProfile {
 }
 
 export function Sidebar() {
-  const [profile, setProfile] = useState<StoreProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/store/profile')
-      .then(async res => {
-        if (!res.ok) {
-            const text = await res.text();
-            console.error(`Profile fetch failed: ${res.status} ${res.statusText}`, text);
-            throw new Error(`Profile fetch failed: ${res.status}`);
-        }
-        const text = await res.text();
-        try {
-            const data = JSON.parse(text);
-            setProfile(data);
-            setLoading(false);
-        } catch (e) {
-            console.error("Failed to parse profile JSON:", text);
-            throw e;
-        }
-      })
-      .catch(err => {
-        console.error("Failed to fetch profile:", err);
-        setLoading(false);
-      });
-  }, []);
+  const [profile] = useState<StoreProfile | null>(STORE_PROFILE);
+  const [loading] = useState(false);
 
   if (loading) {
     return (

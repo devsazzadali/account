@@ -1,6 +1,8 @@
-import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award } from "lucide-react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { FEATURED_ITEMS, CATEGORIES, REVIEWS } from "../data/mockData";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface FeaturedItem {
   id: number;
@@ -36,77 +38,78 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
     return (
     <Link 
       to={`/product/${item.id}`} 
-      className="group bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all duration-300 hover:-translate-y-1 block h-full relative overflow-hidden flex flex-col"
+      className="group glass-card rounded-2xl p-4 hover:border-primary-500/50 transition-all duration-500 hover:-translate-y-1 block h-full relative overflow-hidden flex flex-col"
     >
-      <div className="flex gap-3 flex-1">
+      <div className="flex gap-4 flex-1">
         {/* Left Side: Content */}
         <div className="flex-1 flex flex-col justify-between min-w-0">
           <div>
             {item.category && (
-                <div className="text-[10px] text-gray-500 mb-1 truncate">{item.category}</div>
+                <div className="text-[10px] text-primary-400 font-medium uppercase tracking-wider mb-1.5 truncate">{item.category}</div>
             )}
-            <h3 className="text-[13px] font-medium text-gray-900 line-clamp-2 mb-2 group-hover:text-[#FF3333] transition-colors leading-snug" title={item.title}>
+            <h3 className="text-sm font-display font-semibold text-white line-clamp-2 mb-3 group-hover:text-primary-400 transition-colors leading-relaxed" title={item.title}>
               {item.title}
             </h3>
-            <div className="flex flex-wrap items-center gap-1 mb-2">
-               <span className="flex items-center gap-0.5 text-[10px] text-green-700 bg-green-50 px-1 py-0.5 rounded border border-green-100">
-                 <Zap className="w-3 h-3 fill-current" /> Instant
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+               <span className="flex items-center gap-1 text-[10px] text-primary-100 bg-primary-500/20 px-2 py-0.5 rounded-md border border-primary-500/30">
+                 <Zap className="w-3 h-3 text-primary-400 fill-current" /> Instant
                </span>
-               <span className="flex items-center gap-0.5 text-[10px] text-gray-500 bg-gray-50 px-1 py-0.5 rounded border border-gray-100">
-                 <Clock className="w-3 h-3" /> Auto
+               <span className="flex items-center gap-1 text-[10px] text-blue-100 bg-blue-500/20 px-2 py-0.5 rounded-md border border-blue-500/30">
+                 <Clock className="w-3 h-3 text-blue-400" /> Auto
                </span>
             </div>
           </div>
           
-          <div className="flex items-start gap-2 mt-1">
-            <div className="mt-0.5">
-                <Crown className="w-4 h-4 text-yellow-500 fill-current" />
-            </div>
-            <div className="flex flex-col">
-                <span className="text-xs text-gray-500 truncate leading-none mb-1">AccountStoreOne</span>
-                <div className="flex gap-0.5">
-                    {[1,2,3,4,5].map(i => (
-                        <div key={i} className="w-2 h-0.5 bg-yellow-400 rounded-full"></div>
-                    ))}
+          <div className="flex items-center gap-2.5 mt-2 bg-white/5 rounded-xl p-2 border border-white/5">
+            <div className="shrink-0">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-600 to-blue-600 flex items-center justify-center">
+                    <Crown className="w-4 h-4 text-white" />
                 </div>
+            </div>
+            <div className="flex flex-col min-w-0">
+                <span className="text-[10px] text-dark-50/70 truncate leading-tight mb-0.5">Verified Seller</span>
+                <span className="text-xs text-white font-medium truncate">AccountStoreOne</span>
             </div>
           </div>
         </div>
 
         {/* Right Side: Image & Price */}
-        <div className="flex flex-col items-end justify-between shrink-0 w-[80px]">
-          <div className="w-[80px] h-[80px] rounded-md overflow-hidden relative border border-gray-100 bg-gray-50">
+        <div className="flex flex-col items-end justify-between shrink-0 w-[90px]">
+          <div className="w-[90px] h-[90px] rounded-xl overflow-hidden relative border border-white/10 bg-dark-900 group-hover:border-primary-500/30 transition-colors">
              <img 
                 src={item.image} 
                 alt={item.title}
-                className="w-full h-full object-cover transform transition-transform duration-500 group-hover:scale-110" 
+                className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-115" 
              />
              {item.badge && (
-                <div className="absolute top-0 right-0 bg-[#FF3333] text-white text-[9px] px-1 font-bold shadow-sm z-10">
+                <div className="absolute top-0 right-0 bg-primary-500 text-white text-[9px] px-2 py-0.5 font-bold shadow-lg z-10 rounded-bl-lg">
                     {item.badge}
                 </div>
              )}
           </div>
-          <div className="mt-auto text-right w-full">
-            <div className="text-[10px] text-gray-400 leading-none mb-0.5">from</div>
-            <div className="font-bold text-gray-900 text-base leading-none">${item.price.toFixed(2)}</div>
+          <div className="mt-auto text-right w-full pt-4">
+            <div className="text-[10px] text-dark-50/40 uppercase tracking-widest leading-none mb-1">Price</div>
+            <div className="font-display font-bold text-white text-xl leading-none flex items-center justify-end gap-1">
+                <span className="text-primary-400 text-sm">$</span>
+                {item.price.toFixed(2)}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Quantity and Buy Button */}
-      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
-          <div className="flex items-center border border-gray-200 rounded h-7">
+      <div className="mt-5 pt-5 border-t border-white/5 flex items-center justify-between gap-3">
+          <div className="flex items-center bg-dark-900/50 border border-white/10 rounded-xl h-9 overflow-hidden">
               <button 
                 onClick={(e) => handleQuantityChange(e, -1)}
-                className="px-2 text-gray-500 hover:bg-gray-50 hover:text-[#FF3333] h-full flex items-center"
+                className="px-3 text-dark-50/60 hover:bg-white/5 hover:text-white h-full flex items-center transition-colors"
               >
                 -
               </button>
-              <span className="text-xs font-medium w-6 text-center">{quantity}</span>
+              <span className="text-xs font-semibold w-8 text-center text-white">{quantity}</span>
               <button 
                 onClick={(e) => handleQuantityChange(e, 1)}
-                className="px-2 text-gray-500 hover:bg-gray-50 hover:text-[#FF3333] h-full flex items-center"
+                className="px-3 text-dark-50/60 hover:bg-white/5 hover:text-white h-full flex items-center transition-colors"
               >
                 +
               </button>
@@ -114,9 +117,10 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
           <Link 
             to={`/checkout/${item.id}?quantity=${quantity}`}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#FF3333] hover:bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded transition-colors flex-1 text-center"
+            className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white text-xs font-bold h-9 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20 hover:shadow-primary-500/40 transform hover:-translate-y-0.5"
           >
-            Buy
+            <Zap className="w-3.5 h-3.5 fill-current" />
+            Buy Now
           </Link>
       </div>
     </Link>
@@ -163,152 +167,140 @@ interface MainContentProps {
 }
 
 export function MainContent({ selectedCategory, setSelectedCategory }: MainContentProps) {
-  const [featuredItems, setFeaturedItems] = useState<FeaturedItem[]>([]);
-  const [trendingItems, setTrendingItems] = useState<FeaturedItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [products, setProducts] = useState<FeaturedItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [featuredRes, trendingRes, categoriesRes, reviewsRes, productsRes] = await Promise.all([
-          fetch('/api/store/featured'),
-          fetch('/api/store/trending'),
-          fetch('/api/store/categories'),
-          fetch('/api/store/reviews'),
-          fetch('/api/products')
-        ]);
-
-        const featuredData = await featuredRes.json();
-        const trendingData = await trendingRes.json();
-        const categoriesData = await categoriesRes.json();
-        const reviewsData = await reviewsRes.json();
-        const productsData = await productsRes.json();
-
-        setFeaturedItems(Array.isArray(featuredData) ? featuredData : []);
-        setTrendingItems(Array.isArray(trendingData) ? trendingData : []);
-        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
-        setReviews(Array.isArray(reviewsData) ? reviewsData : []);
-        setProducts(Array.isArray(productsData) ? productsData : []);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching main content data:", error);
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+  const featuredItems = useMemo(() => {
+    return FEATURED_ITEMS.slice(0, 3);
   }, []);
 
-  const handleCategoryClick = async (categoryName: string) => {
-    setSelectedCategory(categoryName);
-    setLoading(true);
-    try {
-        const res = await fetch(`/api/products?category=${encodeURIComponent(categoryName)}`);
-        const data = await res.json();
-        setProducts(data);
-    } catch (error) {
-        console.error("Error fetching filtered products:", error);
-    } finally {
-        setLoading(false);
-    }
-  };
+  const trendingItems = useMemo(() => {
+    return [...FEATURED_ITEMS].reverse().slice(0, 3);
+  }, []);
 
-  if (loading) {
-    return (
-      <div className="flex-1 min-w-0 animate-pulse">
-        <div className="h-64 bg-gray-200 rounded mb-8"></div>
-        <div className="h-64 bg-gray-200 rounded mb-8"></div>
-        <div className="h-64 bg-gray-200 rounded"></div>
-      </div>
-    );
-  }
+  const categories = useMemo(() => CATEGORIES, []);
+  const reviews = useMemo(() => REVIEWS, []);
+
+  const products = useMemo(() => {
+    if (selectedCategory === 'All') return FEATURED_ITEMS;
+    return FEATURED_ITEMS.filter(p => p.category === selectedCategory || selectedCategory === 'Accounts');
+  }, [selectedCategory]);
+
+  const handleCategoryClick = (categoryName: string) => {
+    setSelectedCategory(categoryName);
+  };
 
   return (
     <div className="flex-1 min-w-0">
       {/* Featured List - Only show if All Categories is selected */}
+      <AnimatePresence mode="wait">
       {selectedCategory === 'All' && (
-          <>
-            <div className="mb-8">
-                <h2 className="text-lg font-medium text-[#111111] mb-4">Featured List</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="mb-12">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">
+                        <TrendingUp className="w-5 h-5 text-primary-400" />
+                    </div>
+                    <h2 className="text-2xl font-display font-bold text-white tracking-tight">Featured <span className="text-primary-400">List</span></h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {featuredItems.map((item) => (
                     <ProductCard key={item.id} item={item} />
                 ))}
                 </div>
             </div>
 
-            <div className="mb-8">
-                <h2 className="text-lg font-medium text-[#111111] mb-4">Trending Products</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="mb-12">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                        <Zap className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <h2 className="text-2xl font-display font-bold text-white tracking-tight">Trending <span className="text-blue-400">Products</span></h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {trendingItems.map((item) => (
                     <ProductCard key={item.id} item={item} />
                 ))}
                 </div>
             </div>
-          </>
+          </motion.div>
       )}
+      </AnimatePresence>
 
       {/* All Categories / Products List */}
-      <div className="bg-white rounded shadow-sm border border-gray-100 p-6 mb-8">
+      <div className="glass-card rounded-2xl p-8 mb-12 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/5 blur-[100px] rounded-full pointer-events-none"></div>
+        
         {selectedCategory === 'All' ? (
             <>
-                <h2 className="text-lg font-medium text-[#111111] mb-6">All Categories</h2>
-                <div className="border-b border-gray-200 mb-6 flex gap-4 overflow-x-auto">
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">
+                        <Award className="w-5 h-5 text-primary-400" />
+                    </div>
+                    <h2 className="text-2xl font-display font-bold text-white tracking-tight">Browse <span className="text-primary-400">Categories</span></h2>
+                </div>
+
+                <div className="flex gap-6 overflow-x-auto pb-4 mb-8 border-b border-white/5 scrollbar-hide">
                     {['Accounts', 'Items', 'Money', 'Boosting', 'Video Games', 'Top Up'].map((tab) => (
                         <button 
                             key={tab}
                             onClick={() => handleCategoryClick(tab === 'Accounts' ? 'All' : tab)}
-                            className={`${tab === 'Accounts' ? 'text-[#FF3333] border-b-2 border-[#FF3333]' : 'text-gray-500 hover:text-gray-700'} pb-2 px-1 text-sm font-medium whitespace-nowrap transition-colors`}
+                            className={`${tab === 'Accounts' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-dark-50/50 hover:text-white'} pb-3 px-2 text-sm font-semibold whitespace-nowrap transition-all duration-300`}
                         >
-                            {tab} {tab === 'Accounts' && `(${products.length})`}
+                            {tab} {tab === 'Accounts' && <span className="ml-1 opacity-50">({FEATURED_ITEMS.length})</span>}
                         </button>
                     ))}
                 </div>
 
-                <div className="relative mb-6">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <div className="relative mb-10 group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-50/30 group-focus-within:text-primary-400 transition-colors" />
                     <input 
                         type="text" 
-                        placeholder="Find all products in Accounts" 
-                        className="w-full border border-gray-200 rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-gray-400"
+                        placeholder="Search across all premium accounts..." 
+                        className="w-full bg-dark-900/50 border border-white/10 rounded-2xl py-4 pl-12 pr-6 text-sm text-white placeholder:text-dark-50/30 focus:outline-none focus:border-primary-500/50 focus:ring-4 focus:ring-primary-500/10 transition-all duration-300"
                     />
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-12">
                     {categories.map((cat, idx) => (
                         <div 
                             key={idx} 
                             onClick={() => handleCategoryClick(cat.name)}
-                            className="bg-[#F5F1E6] rounded p-4 flex flex-col items-center justify-center text-center hover:bg-[#ebe5d5] transition-colors cursor-pointer relative group h-24"
+                            className="glass-card bg-white/5 border border-white/5 rounded-2xl p-5 flex flex-col items-center justify-center text-center hover:bg-white/10 hover:border-primary-500/30 transition-all duration-500 cursor-pointer relative group h-28"
                         >
-                            <div className="absolute top-2 right-2 bg-[#B8A88A] text-white text-[10px] px-1.5 py-0.5 rounded opacity-80 group-hover:opacity-100">
-                                {cat.offers} Offers
+                            <div className="absolute top-3 right-3 bg-primary-500/20 text-primary-300 text-[9px] px-2 py-0.5 rounded-full border border-primary-500/30 font-bold uppercase tracking-wider">
+                                {cat.offers}
                             </div>
-                            <span className="text-xs font-medium text-gray-700 mt-2">{cat.name}</span>
+                            <span className="text-xs font-semibold text-white group-hover:text-primary-400 transition-colors uppercase tracking-widest">{cat.name}</span>
                         </div>
                     ))}
                 </div>
 
                 {/* Category Wise Products */}
-                {categories.map((cat) => {
-                    const catProducts = products.filter(p => p.category === cat.name);
+                {categories.slice(0, 3).map((cat) => {
+                    const catProducts = FEATURED_ITEMS.filter(p => p.category === cat.name);
                     if (catProducts.length === 0) return null;
                     return (
-                        <div key={cat.name} className="mb-8">
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-lg font-medium text-[#111111]">{cat.name}</h2>
+                        <div key={cat.name} className="mb-12 last:mb-0">
+                            <div className="flex justify-between items-end mb-6">
+                                <div>
+                                    <h3 className="text-xl font-display font-bold text-white mb-1">{cat.name}</h3>
+                                    <div className="h-1 w-12 bg-primary-500 rounded-full"></div>
+                                </div>
                                 <button 
                                     onClick={() => handleCategoryClick(cat.name)} 
-                                    className="text-sm text-[#FF3333] hover:underline font-medium"
+                                    className="text-xs font-bold text-primary-400 hover:text-primary-300 uppercase tracking-widest flex items-center gap-2 group"
                                 >
-                                    View All
+                                    Explore All
+                                    <TrendingUp className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                                 </button>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {catProducts.map((item) => (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {catProducts.slice(0, 3).map((item) => (
                                     <ProductCard key={item.id} item={item} />
                                 ))}
                             </div>
@@ -317,117 +309,79 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
                 })}
             </>
         ) : (
-            <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex flex-col md:flex-row gap-8">
                 {/* Left Sidebar Filters */}
-                <div className="w-full md:w-64 shrink-0 space-y-6">
+                <div className="w-full md:w-72 shrink-0 space-y-8">
                     <div>
-                        <h3 className="text-sm font-medium text-gray-700 mb-2">Product Name</h3>
+                        <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest text-primary-400">Search Offers</h3>
                         <div className="relative">
-                            <input type="text" placeholder="Search offers" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#FF3333]" />
-                            <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
+                            <input type="text" placeholder="Filter by name..." className="w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary-500/50 transition-all" />
+                            <Search className="absolute right-4 top-3.5 w-4 h-4 text-dark-50/30" />
                         </div>
                     </div>
 
                     <div>
-                        <h3 className="text-sm font-medium text-gray-700 mb-2">Price range (USD)</h3>
-                        <div className="flex gap-2 items-center">
-                            <input type="text" placeholder="From" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#FF3333]" />
-                            <span className="text-gray-400">-</span>
-                            <input type="text" placeholder="to" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#FF3333]" />
+                        <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest text-primary-400">Price Range</h3>
+                        <div className="flex gap-3 items-center">
+                            <input type="text" placeholder="Min" className="w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary-500/50 transition-all" />
+                            <span className="text-dark-50/20">—</span>
+                            <input type="text" placeholder="Max" className="w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary-500/50 transition-all" />
                         </div>
                     </div>
 
-                    <div>
-                        <div className="flex items-center justify-between mb-2 cursor-pointer">
-                            <h3 className="text-sm font-medium text-gray-700">Accounts Type</h3>
-                            <MinusCircle className="w-4 h-4 text-gray-400" />
-                        </div>
-                        <div className="space-y-2">
-                            {['Boosted Account', 'Fresh Account', 'Unique Account', 'Premium Edition'].map((type, i) => (
-                                <label key={i} className="flex items-center justify-between text-sm text-gray-600 cursor-pointer hover:text-gray-900">
-                                    <div className="flex items-center gap-2">
-                                        <input type="checkbox" className="rounded border-gray-300 text-[#FF3333] focus:ring-[#FF3333]" />
-                                        <span>{type}</span>
-                                    </div>
-                                    <span className="text-gray-400 text-xs">{Math.floor(Math.random() * 100)}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <div className="flex items-center justify-between mb-2 cursor-pointer">
-                            <h3 className="text-sm font-medium text-gray-700">Full Access</h3>
-                            <MinusCircle className="w-4 h-4 text-gray-400" />
-                        </div>
-                        <div className="space-y-2">
-                            {['yes', 'no'].map((type, i) => (
-                                <label key={i} className="flex items-center justify-between text-sm text-gray-600 cursor-pointer hover:text-gray-900">
-                                    <div className="flex items-center gap-2">
-                                        <input type="checkbox" className="rounded border-gray-300 text-[#FF3333] focus:ring-[#FF3333]" />
-                                        <span>{type}</span>
-                                    </div>
-                                    <span className="text-gray-400 text-xs">{Math.floor(Math.random() * 100)}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <h3 className="text-sm font-medium text-gray-700 mb-2">RP Rank</h3>
-                        <div className="flex gap-2 items-center">
-                            <input type="text" placeholder="From" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#FF3333]" />
-                            <span className="text-gray-400">-</span>
-                            <input type="text" placeholder="to" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#FF3333]" />
-                        </div>
-                    </div>
-
-                    <div>
-                        <h3 className="text-sm font-medium text-gray-700 mb-2">Money(M)</h3>
-                        <div className="flex gap-2 items-center">
-                            <input type="text" placeholder="From" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#FF3333]" />
-                            <span className="text-gray-400">-</span>
-                            <input type="text" placeholder="to" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#FF3333]" />
+                    <div className="space-y-6">
+                        <div className="pt-4 border-t border-white/5">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-bold text-white uppercase tracking-widest">Account Type</h3>
+                                <MinusCircle className="w-4 h-4 text-dark-50/30" />
+                            </div>
+                            <div className="space-y-3">
+                                {['Premium Account', 'Fresh Instance', 'Verified Only', 'Special Edition'].map((type, i) => (
+                                    <label key={i} className="flex items-center justify-between group cursor-pointer">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-5 h-5 rounded border border-white/10 bg-dark-900 flex items-center justify-center group-hover:border-primary-500/50 transition-colors">
+                                                <div className="w-2.5 h-2.5 bg-primary-500 rounded-sm opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                                            </div>
+                                            <span className="text-sm text-dark-50/60 group-hover:text-white transition-colors">{type}</span>
+                                        </div>
+                                        <span className="text-[10px] font-bold text-dark-50/20">{Math.floor(Math.random() * 100)}</span>
+                                    </label>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Right Product Grid */}
                 <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
-                        <div className="flex gap-4">
-                             <button 
-                                onClick={() => handleCategoryClick('All')}
-                                className="text-xs text-gray-500 hover:text-[#FF3333] flex items-center gap-1"
-                            >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                                Back to AccountStoreOne store offers
-                            </button>
+                    <div className="flex justify-between items-center mb-8 pb-6 border-b border-white/5">
+                        <button 
+                            onClick={() => handleCategoryClick('All')}
+                            className="text-xs font-bold text-dark-50/40 hover:text-primary-400 flex items-center gap-2 uppercase tracking-widest transition-colors group"
+                        >
+                            <div className="p-1.5 bg-white/5 rounded-lg group-hover:bg-primary-500/10 transition-colors">
+                                <TrendingUp className="w-3.5 h-3.5 rotate-[-90deg]" />
+                            </div>
+                            Back to Dashboard
+                        </button>
+                        <div className="text-xs font-bold text-dark-50/20 uppercase tracking-widest">
+                            Showing <span className="text-white">{products.length}</span> Results
                         </div>
                     </div>
                     
-                    <div className="flex justify-between items-center mb-4">
-                         <div className="flex gap-1">
-                            <div className="bg-white border border-gray-200 rounded-t px-4 py-2 text-sm font-medium text-[#FF3333] border-t-2 border-t-[#FF3333] relative top-[1px] z-10">
-                                Accounts ({products.length})
-                            </div>
+                    <div className="flex items-center gap-6 mb-8 overflow-x-auto scrollbar-hide">
+                         <div className="bg-primary-500/10 border-b-2 border-primary-500 px-6 py-3 text-sm font-bold text-primary-400 uppercase tracking-widest whitespace-nowrap">
+                            Available Accounts
                          </div>
-                         <div className="flex items-center gap-1 text-sm text-gray-500 cursor-pointer hover:text-gray-700">
-                            <span>Sort: Default</span>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                        </div>
+                         <div className="text-sm font-bold text-dark-50/30 hover:text-white px-6 py-3 uppercase tracking-widest cursor-pointer transition-colors whitespace-nowrap">
+                            Subscriptions
+                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {products.length > 0 ? (
-                            products.map((item) => (
-                                <ProductCard key={item.id} item={item} />
-                            ))
-                        ) : (
-                            DUMMY_PRODUCTS.map((item) => (
-                                <ProductCard key={item.id} item={item} />
-                            ))
-                        )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {products.map((item) => (
+                            <ProductCard key={item.id} item={item} />
+                        ))}
                     </div>
                 </div>
             </div>
@@ -435,45 +389,66 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
       </div>
 
       {/* Customer Reviews */}
-      <div className="bg-white rounded shadow-sm border border-gray-100 p-6">
-        <h2 className="text-lg font-medium text-[#111111] mb-6">Customer Reviews</h2>
-        
-        <div className="bg-gray-50 rounded p-4 mb-4 text-sm text-gray-500">
-            All reviews 17439
+      <div className="glass-card rounded-2xl p-8 mb-12">
+        <div className="flex justify-between items-center mb-10">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">
+                    <Star className="w-5 h-5 text-primary-400 fill-current" />
+                </div>
+                <h2 className="text-2xl font-display font-bold text-white tracking-tight">Customer <span className="text-primary-400">Reviews</span></h2>
+            </div>
+            <div className="text-xs font-bold text-dark-50/30 uppercase tracking-widest">
+                <span className="text-primary-400">17,439</span> Total Reviews
+            </div>
         </div>
-
-        <div className="space-y-0">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5 rounded-2xl overflow-hidden border border-white/5">
             {reviews.map((review, idx) => (
-                <div key={idx} className="flex items-start gap-4 py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors px-2">
-                    <div className="shrink-0 mt-1">
-                        {review.type === 'positive' ? (
-                            <div className="flex items-center gap-1 text-[#00C975] text-xs">
-                                <ThumbsUp className="w-3 h-3" />
-                                <span>Positive</span>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-1 text-[#FF3333] text-xs">
-                                <MinusCircle className="w-3 h-3" />
-                                <span>Negative</span>
-                            </div>
-                        )}
+                <div key={idx} className="bg-dark-950/50 p-6 hover:bg-white/5 transition-all duration-300 flex flex-col justify-between group">
+                    <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            {review.type === 'positive' ? (
+                                <div className="flex items-center gap-1.5 text-primary-400 bg-primary-500/10 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-primary-500/20">
+                                    <ThumbsUp className="w-3 h-3 fill-current" />
+                                    <span>Recommended</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-1.5 text-red-400 bg-red-500/10 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-red-500/20">
+                                    <MinusCircle className="w-3 h-3" />
+                                    <span>Issues</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="text-[10px] text-dark-50/30 font-bold uppercase tracking-widest">{review.date}</div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-xs text-blue-600 mb-1 line-clamp-2">{review.text}</p>
-                        <div className="text-[10px] text-gray-400">{review.text.split('.').pop()?.trim() || 'Product'}</div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                        <div className="text-xs text-gray-900 font-medium mb-1">buyer</div>
-                        <div className="text-xs text-gray-600 mb-1">{review.buyer}</div>
-                        <div className="text-[10px] text-gray-400">{review.date}</div>
+                    
+                    <p className="text-sm text-white/80 leading-relaxed mb-6 group-hover:text-white transition-colors line-clamp-3">
+                        "{review.text}"
+                    </p>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[10px] font-bold text-primary-400 border border-white/10">
+                                {review.buyer.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-white tracking-tight">{review.buyer}</span>
+                                <span className="text-[9px] text-dark-50/40 uppercase tracking-widest font-bold">Verified Buyer</span>
+                            </div>
+                        </div>
+                        <div className="flex gap-0.5">
+                            {[1,2,3,4,5].map(i => (
+                                <Star key={i} className="w-3 h-3 text-primary-500 fill-current" />
+                            ))}
+                        </div>
                     </div>
                 </div>
             ))}
         </div>
 
-        <div className="mt-8 flex justify-center">
-            <button className="border border-[#FF3333] text-[#FF3333] px-8 py-2 rounded-full text-sm hover:bg-red-50 transition-colors">
-                Loading More
+        <div className="mt-10 flex justify-center">
+            <button className="px-10 py-4 rounded-xl border border-primary-500/30 text-primary-400 text-xs font-bold uppercase tracking-widest hover:bg-primary-500/10 hover:border-primary-500/50 transition-all duration-300 shadow-lg shadow-primary-500/5">
+                Load More Testimonials
             </button>
         </div>
       </div>

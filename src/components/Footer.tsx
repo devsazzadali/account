@@ -1,88 +1,110 @@
-import { Facebook, Instagram, Mail, Globe, ArrowUp } from "lucide-react";
+import { Facebook, Instagram, Mail, Globe, ArrowUp, Zap, ShieldCheck } from "lucide-react";
 
 export function Footer() {
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <footer className="bg-[#0b0c15] text-white pt-12 pb-6">
-      <div className="container mx-auto px-4 max-w-7xl">
-        {/* Payment Methods */}
-        <div className="bg-white rounded-lg p-4 mb-8 flex flex-wrap justify-center gap-6 items-center">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/2560px-Visa_Inc._logo.svg.png" alt="Visa" className="h-6 object-contain" />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png" alt="Mastercard" className="h-8 object-contain" />
-            <span className="text-gray-400 text-xs font-mono">GCash</span>
-            <span className="text-gray-400 text-xs font-mono">G Pay</span>
-            <span className="text-gray-400 text-xs font-mono">Apple Pay</span>
-            <span className="text-gray-400 text-xs font-mono">Neteller</span>
-            <span className="text-gray-400 text-xs font-mono">Neosurf</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12 text-sm">
-          <div>
-            <h3 className="font-bold mb-4 text-gray-300 uppercase text-xs tracking-wider">Z2U.COM</h3>
-            <ul className="space-y-2 text-gray-400">
-              <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Game Index</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">News</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Affiliate Program</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-bold mb-4 text-gray-300 uppercase text-xs tracking-wider">SUPPORT</h3>
-            <ul className="space-y-2 text-gray-400">
-              <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Contact us</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">How to buy</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">How to Sell</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-bold mb-4 text-gray-300 uppercase text-xs tracking-wider">LEGAL</h3>
-            <ul className="space-y-2 text-gray-400">
-              <li><a href="#" className="hover:text-white transition-colors">Terms of use</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Cookie policy</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">DMCA</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">GDPR</a></li>
-            </ul>
-          </div>
-          <div className="flex flex-col items-end">
-             <div className="flex gap-4 mb-6">
-                <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
-                    <Facebook className="w-4 h-4" />
+    <footer className="bg-dark-950 text-white pt-20 pb-10 relative overflow-hidden border-t border-white/5">
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[300px] bg-primary-600/5 blur-[120px] rounded-full pointer-events-none"></div>
+      
+      <div className="container mx-auto px-4 max-w-7xl relative z-10">
+        {/* Top Section with Branding and Socials */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 pb-12 border-b border-white/5">
+            <div className="mb-8 md:mb-0">
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-blue-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
+                        <Zap className="w-6 h-6 text-white fill-current" />
+                    </div>
+                    <span className="text-2xl font-display font-bold tracking-tight">Account<span className="text-primary-400">Store</span></span>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center hover:bg-pink-600 transition-colors cursor-pointer">
-                    <Instagram className="w-4 h-4" />
-                </div>
-                <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center hover:bg-red-600 transition-colors cursor-pointer">
-                    <Mail className="w-4 h-4" />
-                </div>
-             </div>
-             <div className="border border-gray-700 rounded px-3 py-1 flex items-center gap-2 text-xs text-gray-400 cursor-pointer hover:border-gray-500">
-                <div className="w-4 h-4 rounded-full bg-green-800 flex items-center justify-center text-[8px] text-white font-bold">BD</div>
-                <span>Bangladesh, English, USD</span>
-             </div>
-             <div className="mt-4 flex items-center gap-2 text-gray-500 text-xs">
-                <div className="flex items-center gap-1">
-                    <div className="w-4 h-4 bg-gray-700 rounded-full"></div>
-                    <span>Google Safe Browsing</span>
-                </div>
-             </div>
-          </div>
-        </div>
-
-        <div className="border-t border-gray-800 pt-6 flex flex-wrap justify-between items-center text-xs text-gray-500">
-            <div className="flex gap-4 flex-wrap mb-4 md:mb-0">
-                <a href="#" className="hover:text-white">Genshin Impact Account</a>
-                <a href="#" className="hover:text-white">WoW MoP Classic Gold</a>
-                <a href="#" className="hover:text-white">NBA 2K26 MT</a>
-                <a href="#" className="hover:text-white">Madden 26 Coins</a>
-                <a href="#" className="hover:text-white">Fortnite Top Up</a>
+                <p className="text-dark-50/50 text-sm max-w-md leading-relaxed">
+                    The world's leading marketplace for premium digital assets and high-tier accounts. Experience pure excellence with 24/7 support and instant delivery.
+                </p>
             </div>
-            <p>Copyright © 2026 Z2U.com All rights reserved</p>
+            
+            <div className="flex flex-col items-start md:items-end gap-6">
+                <div className="flex gap-4">
+                    {[Facebook, Instagram, Mail].map((Icon, i) => (
+                        <div key={i} className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-primary-500/20 hover:border-primary-500/50 hover:text-primary-400 transition-all duration-500 cursor-pointer group">
+                            <Icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        </div>
+                    ))}
+                </div>
+                <div className="glass-card bg-white/5 border border-white/5 rounded-xl px-4 py-2 flex items-center gap-3 text-xs text-dark-50/70 cursor-pointer hover:border-primary-500/30 transition-all duration-300">
+                    <div className="w-5 h-5 rounded-full bg-primary-500/20 border border-primary-500/30 flex items-center justify-center text-[8px] text-primary-300 font-bold">WW</div>
+                    <span className="font-medium">Global Marketplace / USD / English</span>
+                </div>
+            </div>
+        </div>
+
+        {/* Links Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-20">
+          <div>
+            <h3 className="font-display font-bold mb-6 text-white text-sm uppercase tracking-widest flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
+                Platform
+            </h3>
+            <ul className="space-y-4 text-dark-50/50 text-sm">
+              <li><a href="#" className="hover:text-primary-400 transition-colors">About Universe</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Game Directory</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Premium Insights</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Creator Program</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-display font-bold mb-6 text-white text-sm uppercase tracking-widest flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                Assistance
+            </h3>
+            <ul className="space-y-4 text-dark-50/50 text-sm">
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Concierge Desk</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Security Center</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Buyer Protection</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Seller Handbook</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-display font-bold mb-6 text-white text-sm uppercase tracking-widest flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-primary-400 rounded-full"></div>
+                Governance
+            </h3>
+            <ul className="space-y-4 text-dark-50/50 text-sm">
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Service Terms</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Data Sovereignty</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Compliance</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Global Rights</a></li>
+            </ul>
+          </div>
+          <div className="glass-card bg-white/5 border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+                <div className="p-3 bg-primary-500/10 rounded-full border border-primary-500/20 mb-4">
+                    <ShieldCheck className="w-8 h-8 text-primary-400" />
+                </div>
+                <h4 className="font-display font-bold text-white mb-2 italic">Secured by Titan™</h4>
+                <p className="text-[10px] text-dark-50/40 uppercase tracking-widest font-bold">Military-Grade Encryption</p>
+          </div>
+        </div>
+
+        {/* Bottom Section */}
+        <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex gap-8 flex-wrap justify-center text-[10px] font-bold uppercase tracking-[0.2em] text-dark-50/30">
+                <a href="#" className="hover:text-primary-400 transition-colors">Verified Listings</a>
+                <a href="#" className="hover:text-primary-400 transition-colors">Instant Release</a>
+                <a href="#" className="hover:text-primary-400 transition-colors">Titan Security</a>
+                <a href="#" className="hover:text-primary-400 transition-colors">Global Node</a>
+            </div>
+            <div className="text-[10px] font-bold text-dark-50/20 uppercase tracking-widest">
+                © 2026 AccountStore. Developed for Excellence.
+            </div>
         </div>
       </div>
       
-      <button className="fixed bottom-8 right-8 bg-[#FF3333] text-white p-3 rounded-full shadow-lg hover:bg-red-600 transition-colors z-50">
-        <ArrowUp className="w-5 h-5" />
+      <button 
+        onClick={scrollToTop}
+        className="fixed bottom-10 right-10 w-14 h-14 bg-gradient-to-br from-primary-600 to-primary-500 text-white rounded-2xl shadow-2xl shadow-primary-500/40 hover:scale-110 active:scale-95 transition-all duration-300 z-50 flex items-center justify-center group"
+      >
+        <ArrowUp className="w-6 h-6 group-hover:-translate-y-1 transition-transform" />
       </button>
     </footer>
   );
