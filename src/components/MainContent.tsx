@@ -112,56 +112,44 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
             <Zap className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform fill-current" />
           </Link>
       </div>
-    </Link>
-  {
-    id: 1002,
-    title: "Spotify Premium Individual Upgrade | Lifetime Warranty",
-    sold: 850,
-    price: 5.00,
-    image: "https://picsum.photos/seed/dummy2/200/200",
-    badge: "BEST"
-  },
-  {
-    id: 1003,
-    title: "VPN Pro 1 Year Subscription | 5 Devices | High Speed",
-    sold: 2000,
-    price: 12.99,
-    image: "https://picsum.photos/seed/dummy3/200/200",
-    badge: "SALE"
-  },
-  {
-    id: 1004,
-    title: "Disney+ Bundle | No Ads | 6 Months Warranty",
-    sold: 450,
-    price: 7.99,
-    image: "https://picsum.photos/seed/dummy4/200/200",
-    badge: "NEW"
-  }
-];
-
-interface MainContentProps {
-  selectedCategory: string;
-  setSelectedCategory: (category: string) => void;
-}
-
 export function MainContent({ selectedCategory, setSelectedCategory }: MainContentProps) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [allProducts, setAllProducts] = useState<FeaturedItem[]>([]);
+
+  useEffect(() => {
+    async function fetchProducts() {
+        try {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('products')
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            setAllProducts(data || []);
+        } catch (err: any) {
+            console.error("Error fetching products:", err.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+    fetchProducts();
+  }, []);
 
   const featuredItems = useMemo(() => {
-    return FEATURED_ITEMS.slice(0, 3);
-  }, []);
+    return allProducts.slice(0, 3);
+  }, [allProducts]);
 
   const trendingItems = useMemo(() => {
-    return [...FEATURED_ITEMS].reverse().slice(0, 3);
-  }, []);
+    return [...allProducts].reverse().slice(0, 3);
+  }, [allProducts]);
 
   const categories = useMemo(() => CATEGORIES, []);
   const reviews = useMemo(() => REVIEWS, []);
 
   const products = useMemo(() => {
-    if (selectedCategory === 'All') return FEATURED_ITEMS;
-    return FEATURED_ITEMS.filter(p => p.category === selectedCategory || selectedCategory === 'Accounts');
-  }, [selectedCategory]);
+    if (selectedCategory === 'All') return allProducts;
+    return allProducts.filter(p => p.category === selectedCategory || selectedCategory === 'Accounts');
+  }, [selectedCategory, allProducts]);
 
   const handleCategoryClick = (categoryName: string) => {
     setSelectedCategory(categoryName);
@@ -229,7 +217,7 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
                             onClick={() => handleCategoryClick(tab === 'Accounts' ? 'All' : tab)}
                             className={`${tab === 'Accounts' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-dark-50/50 hover:text-white'} pb-3 px-2 text-sm font-semibold whitespace-nowrap transition-all duration-300`}
                         >
-                            {tab} {tab === 'Accounts' && <span className="ml-1 opacity-50">({FEATURED_ITEMS.length})</span>}
+                            {tab} {tab === 'Accounts' && <span className="ml-1 opacity-50">({allProducts.length})</span>}
                         </button>
                     ))}
                 </div>
@@ -260,7 +248,7 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
 
                 {/* Category Wise Products */}
                 {categories.slice(0, 3).map((cat) => {
-                    const catProducts = FEATURED_ITEMS.filter(p => p.category === cat.name);
+                    const catProducts = allProducts.filter(p => p.category === cat.name);
                     if (catProducts.length === 0) return null;
                     return (
                         <div key={cat.name} className="mb-12 last:mb-0">
