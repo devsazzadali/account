@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { 
   ShoppingBag, 
@@ -31,14 +31,60 @@ import {
   ArrowRight,
   Activity,
   User as UserIcon,
-  HelpCircle
+  HelpCircle,
+  Loader2
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "../lib/supabase";
 
 export function UserDashboardPage() {
   const userRole = localStorage.getItem("userRole");
   const username = localStorage.getItem("username") || "User";
   const isAdmin = userRole === "admin";
+
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    assetValue: 0,
+    totalOrders: 0,
+    activeOrders: 0,
+    completedOrders: 0
+  });
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  async function fetchUserData() {
+    try {
+        setLoading(true);
+        // In a real app, we would filter by user_id
+        const { data: orders, error } = await supabase
+            .from('orders')
+            .select('*, products(title, image)')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (orders) {
+            const totalValue = orders.reduce((acc, o) => acc + Number(o.total_price), 0);
+            const active = orders.filter(o => o.status !== 'Delivered' && o.status !== 'Completed').length;
+            const completed = orders.filter(o => o.status === 'Delivered' || o.status === 'Completed').length;
+
+            setStats({
+                assetValue: totalValue,
+                totalOrders: orders.length,
+                activeOrders: active,
+                completedOrders: completed
+            });
+            setRecentActivity(orders.slice(0, 3));
+        }
+    } catch (err: any) {
+        console.error("Dashboard Error:", err.message);
+    } finally {
+        setLoading(false);
+    }
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -82,7 +128,7 @@ export function UserDashboardPage() {
 
                 <div className="text-center md:text-left flex-1">
                     <div className="flex flex-col sm:flex-row items-center md:items-start gap-4 mb-3">
-                        <h1 className="text-4xl font-display font-bold tracking-tight text-white">Hello, {username}</h1>
+                        <h1 className="text-4xl font-display font-bold tracking-tight text-white italic">Hello, {username}</h1>
                         <span className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
                             isAdmin ? "bg-primary-500/10 text-primary-400 border-primary-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20"
                         }`}>
@@ -96,11 +142,14 @@ export function UserDashboardPage() {
                     <div className="flex flex-wrap justify-center md:justify-start gap-12">
                         <div>
                             <div className="text-[10px] font-bold text-dark-50/20 uppercase tracking-widest mb-1">Asset Value</div>
-                            <div className="text-2xl font-display font-bold text-white">$12,450<span className="text-sm text-dark-50/30">.00</span></div>
+                            <div className="text-2xl font-display font-bold text-white">
+                                {loading ? "---" : `$${stats.assetValue.toLocaleString()}`}
+                                <span className="text-sm text-dark-50/30">.00</span>
+                            </div>
                         </div>
                         <div>
                             <div className="text-[10px] font-bold text-dark-50/20 uppercase tracking-widest mb-1">Total Orders</div>
-                            <div className="text-2xl font-display font-bold text-white">1,245</div>
+                            <div className="text-2xl font-display font-bold text-white">{loading ? "---" : stats.totalOrders}</div>
                         </div>
                         <div>
                             <div className="text-[10px] font-bold text-dark-50/20 uppercase tracking-widest mb-1">Protection Status</div>
@@ -117,7 +166,7 @@ export function UserDashboardPage() {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                     >
-                        <Link to="/dashboard" className="px-8 py-4 bg-white text-dark-950 font-bold rounded-2xl flex items-center gap-3 shadow-xl hover:bg-white/90 transition-all">
+                        <Link to="/admin" className="px-8 py-4 bg-white text-dark-950 font-bold rounded-2xl flex items-center gap-3 shadow-xl hover:bg-white/90 transition-all">
                             <Activity size={20} />
                             Admin Console
                         </Link>
@@ -137,16 +186,16 @@ export function UserDashboardPage() {
         >
           {/* Section: Orders */}
           <DashboardSection title="Order Nexus" icon={<ShoppingBag className="text-primary-400" />}>
-            <DashboardLink icon={<List size={18} />} label="All Digital Acquisitions" count={1245} />
-            <DashboardLink icon={<Clock size={18} />} label="Awaiting Delivery" count={42} highlight />
-            <DashboardLink icon={<CheckCircle size={18} />} label="Verified Completions" count={1203} />
+            <DashboardLink icon={<List size={18} />} label="All Digital Acquisitions" count={stats.totalOrders} />
+            <DashboardLink icon={<Clock size={18} />} label="Awaiting Delivery" count={stats.activeOrders} highlight />
+            <DashboardLink icon={<CheckCircle size={18} />} label="Verified Completions" count={stats.completedOrders} />
             <DashboardLink icon={<Gavel size={18} />} label="Dispute Center" color="hover:text-red-400" />
           </DashboardSection>
 
           {/* Section: Support */}
           <DashboardSection title="Command Support" icon={<Ticket className="text-blue-400" />}>
             <DashboardLink icon={<PlusCircle size={18} />} label="Initialize Support Ticket" />
-            <DashboardLink icon={<MessageSquare size={18} />} label="Encrypted Messages" count={12} />
+            <DashboardLink icon={<MessageSquare size={18} />} label="Encrypted Messages" count={0} />
             <DashboardLink icon={<HelpCircle size={18} />} label="Platform Resource Hub" />
             <DashboardLink icon={<Phone size={18} />} label="Priority Concierge" />
           </DashboardSection>
@@ -160,7 +209,7 @@ export function UserDashboardPage() {
           </DashboardSection>
 
           {/* Recent Activity Mini-Tab */}
-          <div className="lg:col-span-2 glass-card bg-white/2 border-white/5 rounded-3xl p-8">
+          <div className="lg:col-span-2 glass-card bg-white/2 border border-white/5 rounded-3xl p-8">
             <div className="flex justify-between items-center mb-8">
                 <h3 className="text-xl font-bold text-white flex items-center gap-3">
                     <Activity size={20} className="text-primary-400" />
@@ -169,24 +218,36 @@ export function UserDashboardPage() {
                 <button className="text-[10px] font-bold text-primary-400 uppercase tracking-widest hover:text-primary-300">View Full Ledger</button>
             </div>
             <div className="space-y-6">
-                {[
-                    { type: 'ORDER', title: 'Netflix Premium UHD Acquisition', status: 'Completed', time: '14 minutes ago', amount: '$14.99' },
-                    { type: 'SYSTEM', title: 'Titan Security Shield Active', status: 'Optimal', time: '2 hours ago', amount: null },
-                    { type: 'ORDER', title: 'Spotify Yearly Master Key', status: 'Awaiting', time: '5 hours ago', amount: '$29.00' }
-                ].map((item, i) => (
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-10 opacity-20">
+                        <Loader2 className="animate-spin mb-4" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Scanning Ledger...</span>
+                    </div>
+                ) : recentActivity.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 opacity-20">
+                        <ShoppingBag size={40} className="mb-4" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">No Transmissions Found</span>
+                    </div>
+                ) : recentActivity.map((item, i) => (
                     <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/2 border border-white/5 hover:bg-white/5 transition-all group">
                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-dark-50/40 group-hover:text-primary-400 transition-colors">
-                                {item.type === 'ORDER' ? <ShoppingBag size={18} /> : <Shield size={18} />}
+                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-dark-50/40 group-hover:text-primary-400 transition-colors overflow-hidden">
+                                {item.products?.image ? (
+                                    <img src={item.products.image} className="w-full h-full object-cover" alt="" />
+                                ) : (
+                                    <ShoppingBag size={18} />
+                                )}
                             </div>
                             <div>
-                                <div className="text-sm font-bold text-white">{item.title}</div>
-                                <div className="text-[10px] text-dark-50/30 font-bold uppercase tracking-widest">{item.time}</div>
+                                <div className="text-sm font-bold text-white truncate max-w-[200px]">{item.products?.title || 'Unknown Asset'}</div>
+                                <div className="text-[10px] text-dark-50/30 font-bold uppercase tracking-widest">
+                                    {new Date(item.created_at).toLocaleDateString()}
+                                </div>
                             </div>
                         </div>
                         <div className="text-right">
-                            <div className="text-xs font-bold text-white">{item.amount || '---'}</div>
-                            <div className={`text-[10px] font-bold uppercase tracking-widest ${item.status === 'Completed' ? 'text-primary-400' : 'text-yellow-400'}`}>
+                            <div className="text-xs font-bold text-white">${Number(item.total_price).toFixed(2)}</div>
+                            <div className={`text-[10px] font-bold uppercase tracking-widest ${item.status === 'Paid' || item.status === 'Completed' ? 'text-primary-400' : 'text-yellow-400'}`}>
                                 {item.status}
                             </div>
                         </div>
@@ -199,10 +260,10 @@ export function UserDashboardPage() {
           <div className="glass-card bg-gradient-to-br from-primary-600 to-blue-600 rounded-3xl p-8 flex flex-col justify-between group overflow-hidden relative">
             <div className="relative z-10">
                 <Crown size={48} className="text-white/20 mb-6 group-hover:scale-110 transition-transform duration-500" />
-                <h3 className="text-2xl font-display font-bold text-white mb-2">Upgrade to Titan Pro</h3>
-                <p className="text-white/70 text-xs mb-8 leading-relaxed">Unlock lower fees, priority concierge support, and early access to ultra-premium account drops.</p>
+                <h3 className="text-2xl font-display font-bold text-white mb-2 italic">Upgrade to Titan Pro</h3>
+                <p className="text-white/70 text-[11px] mb-8 leading-relaxed font-medium">Unlock lower fees, priority concierge support, and early access to ultra-premium account drops.</p>
             </div>
-            <button className="relative z-10 w-full py-4 bg-white text-dark-950 font-bold rounded-2xl flex items-center justify-center gap-2 group/btn">
+            <button className="relative z-10 w-full py-4 bg-white text-dark-950 font-bold rounded-2xl flex items-center justify-center gap-2 group/btn shadow-xl shadow-black/20">
                 Experience Excellence
                 <ArrowRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
             </button>
@@ -213,6 +274,7 @@ export function UserDashboardPage() {
     </div>
   );
 }
+
 
 // Helper Components
 
