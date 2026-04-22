@@ -68,6 +68,8 @@ export function CheckoutPage() {
         const subtotal = (product?.price || 0) * initialQuantity;
         const total = subtotal + 0.50;
 
+        console.log("Placing order for product:", product?.id, "Email:", email);
+
         const { data, error } = await supabase
             .from('orders')
             .insert({
@@ -75,17 +77,27 @@ export function CheckoutPage() {
                 customer_email: email,
                 quantity: initialQuantity,
                 total_price: total,
-                status: 'Paid' // In a real app, this would depend on payment success
+                status: 'Paid'
             })
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase Insert Error:", error);
+            throw error;
+        }
+        
+        if (!data) {
+            throw new Error("Order created but no data returned");
+        }
+
+        console.log("Order created successfully:", data.id);
         
         // Success - redirect to order page
         navigate(`/order/${data.id}`);
     } catch (err: any) {
-        alert("Settlement Error: " + err.message);
+        console.error("Checkout Finalization Error:", err);
+        alert("Settlement Error: " + (err.message || "Unknown error occurred"));
         setProcessing(false);
     }
   };

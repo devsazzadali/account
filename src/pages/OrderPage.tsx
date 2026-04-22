@@ -21,26 +21,40 @@ export function OrderPage() {
   const { orderId } = useParams();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     async function fetchOrder() {
+        if (!orderId) {
+            setError("No Order ID provided");
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
-            const { data, error } = await supabase
+            setError(null);
+            console.log("Fetching order:", orderId);
+            
+            const { data, error: supabaseError } = await supabase
                 .from('orders')
                 .select('*, products(title, image)')
                 .eq('id', orderId)
                 .single();
-            if (error) throw error;
+
+            if (supabaseError) throw supabaseError;
+            if (!data) throw new Error("Order not found");
+            
             setOrder(data);
         } catch (err: any) {
             console.error("Error fetching order:", err.message);
+            setError(err.message);
         } finally {
             setLoading(false);
         }
     }
-    if (orderId) fetchOrder();
+    fetchOrder();
   }, [orderId]);
 
   const handleCopy = () => {
@@ -60,16 +74,21 @@ export function OrderPage() {
     );
   }
 
-  if (!order) {
+  if (error || !order) {
     return (
         <div className="min-h-screen bg-dark-950 flex flex-col items-center justify-center p-6 text-center">
             <AlertCircle size={48} className="text-red-500 mb-4" />
-            <h2 className="text-2xl font-bold text-white mb-2">Order Not Found</h2>
-            <p className="text-dark-50/40 text-sm mb-8">The transaction record you are looking for does not exist in our ledger.</p>
+            <h2 className="text-2xl font-bold text-white mb-2">{error === "Order not found" ? "Order Not Found" : "Transaction Error"}</h2>
+            <p className="text-dark-50/40 text-sm mb-8">{error || "The transaction record you are looking for does not exist in our ledger."}</p>
             <Link to="/" className="px-8 py-4 bg-white/5 border border-white/10 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all">Return to Hub</Link>
         </div>
     );
   }
+
+  // Safe ID display
+  const displayId = typeof order.id === 'string' && order.id.includes('-') 
+    ? order.id.split('-')[0].toUpperCase() 
+    : String(order.id).substring(0, 8).toUpperCase();
 
   return (
     <div className="min-h-screen bg-dark-950 text-white py-12 px-4">
@@ -104,7 +123,7 @@ export function OrderPage() {
                         <Zap size={14} className="text-yellow-400" />
                         Asset Access Portal
                     </h2>
-                    <span className="text-[9px] font-bold text-primary-400 bg-primary-500/10 px-3 py-1 rounded-lg border border-primary-500/20">LOG #{order.id.split('-')[0].toUpperCase()}</span>
+                    <span className="text-[9px] font-bold text-primary-400 bg-primary-500/10 px-3 py-1 rounded-lg border border-primary-500/20">LOG #{displayId}</span>
                   </div>
                   <div className="bg-dark-900/50 border border-white/5 rounded-3xl p-8 relative group">
                       <div className="text-[9px] font-bold text-dark-50/20 uppercase tracking-[0.3em] mb-4">Digital Key / Credentials</div>
@@ -130,7 +149,7 @@ export function OrderPage() {
                           <img src={order.products?.image || "https://picsum.photos/seed/default/200/200"} className="w-full h-full object-cover" alt="" />
                       </div>
                       <div>
-                          <h3 className="text-xs font-bold text-white mb-1">{order.products?.title}</h3>
+                          <h3 className="text-xs font-bold text-white mb-1">{order.products?.title || "Premium Digital Asset"}</h3>
                           <p className="text-[10px] text-dark-50/40 font-bold uppercase tracking-widest">Settlement Complete</p>
                       </div>
                   </div>
