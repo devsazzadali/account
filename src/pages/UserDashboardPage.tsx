@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { 
   ShoppingBag, 
   MessageSquare, 
@@ -25,163 +26,189 @@ import {
   Users,
   ChevronRight,
   ShieldCheck,
-  Shield
+  Shield,
+  Zap,
+  ArrowRight,
+  Activity,
+  User as UserIcon,
+  HelpCircle
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export function UserDashboardPage() {
   const userRole = localStorage.getItem("userRole");
   const username = localStorage.getItem("username") || "User";
   const isAdmin = userRole === "admin";
 
-  if (!isAdmin) {
-      // CUSTOMER DASHBOARD
-      return (
-        <div className="bg-[#F0F2F5] min-h-screen pb-12">
-            <div className="bg-white border-b border-gray-200 py-8">
-                <div className="container mx-auto px-4 max-w-7xl">
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-cyan-300 flex items-center justify-center text-2xl font-bold text-white shadow-md">
-                            {username.charAt(0).toUpperCase()}
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
+  return (
+    <div className="min-h-screen bg-dark-950 text-white font-sans pb-20 relative overflow-hidden">
+      {/* Background Glows */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-600/5 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-600/5 blur-[100px] rounded-full pointer-events-none"></div>
+
+      {/* Hero Header */}
+      <div className="relative pt-12 pb-24 border-b border-white/5 overflow-hidden">
+        <div className="container mx-auto px-4 max-w-7xl relative z-10">
+            <motion.div 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col md:flex-row items-center gap-8"
+            >
+                <div className="relative group">
+                    <div className="w-32 h-32 rounded-[2rem] bg-gradient-to-br from-primary-500 to-blue-500 p-[2px] shadow-2xl shadow-primary-500/20 group-hover:scale-105 transition-transform duration-500">
+                        <div className="w-full h-full rounded-[1.9rem] bg-dark-900 flex items-center justify-center overflow-hidden border border-white/10">
+                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="User" className="w-full h-full object-cover" />
+                        </div>
+                    </div>
+                    <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-xl bg-primary-500 border-4 border-dark-950 flex items-center justify-center shadow-lg">
+                        <Zap className="w-5 h-5 text-white fill-current" />
+                    </div>
+                </div>
+
+                <div className="text-center md:text-left flex-1">
+                    <div className="flex flex-col sm:flex-row items-center md:items-start gap-4 mb-3">
+                        <h1 className="text-4xl font-display font-bold tracking-tight text-white">Hello, {username}</h1>
+                        <span className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
+                            isAdmin ? "bg-primary-500/10 text-primary-400 border-primary-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                        }`}>
+                            {isAdmin ? "Titan Elite" : "Premium Member"}
+                        </span>
+                    </div>
+                    <p className="text-dark-50/40 text-sm max-w-lg mb-6 leading-relaxed">
+                        Welcome to your personalized portal. Monitor your acquisitions, track deliveries, and manage your high-tier digital assets with absolute security.
+                    </p>
+
+                    <div className="flex flex-wrap justify-center md:justify-start gap-12">
+                        <div>
+                            <div className="text-[10px] font-bold text-dark-50/20 uppercase tracking-widest mb-1">Asset Value</div>
+                            <div className="text-2xl font-display font-bold text-white">$12,450<span className="text-sm text-dark-50/30">.00</span></div>
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-800">Welcome, {username}</h1>
-                            <p className="text-gray-500 text-sm">Manage your orders and account settings</p>
+                            <div className="text-[10px] font-bold text-dark-50/20 uppercase tracking-widest mb-1">Total Orders</div>
+                            <div className="text-2xl font-display font-bold text-white">1,245</div>
+                        </div>
+                        <div>
+                            <div className="text-[10px] font-bold text-dark-50/20 uppercase tracking-widest mb-1">Protection Status</div>
+                            <div className="text-2xl font-display font-bold text-primary-400 flex items-center gap-2">
+                                <ShieldCheck size={24} />
+                                Active
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div className="container mx-auto px-4 max-w-7xl mt-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <DashboardCard title="My Orders" icon={<ShoppingBag className="text-blue-500" />}>
-                        <DashboardLink icon={<List size={16} />} label="All Orders" />
-                        <DashboardLink icon={<Clock size={16} />} label="Pending" />
-                        <DashboardLink icon={<CheckCircle size={16} />} label="Completed" />
-                    </DashboardCard>
-
-                    <DashboardCard title="Support" icon={<Ticket className="text-green-500" />}>
-                        <DashboardLink icon={<PlusCircle size={16} />} label="New Ticket" />
-                        <DashboardLink icon={<List size={16} />} label="My Tickets" />
-                    </DashboardCard>
-
-                    <DashboardCard title="Settings" icon={<Settings className="text-gray-500" />}>
-                        <DashboardLink icon={<Users size={16} />} label="Profile" />
-                        <DashboardLink icon={<Settings size={16} />} label="Account Security" />
-                    </DashboardCard>
-                </div>
-            </div>
+                
+                {isAdmin && (
+                    <motion.div 
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
+                        <Link to="/dashboard" className="px-8 py-4 bg-white text-dark-950 font-bold rounded-2xl flex items-center gap-3 shadow-xl hover:bg-white/90 transition-all">
+                            <Activity size={20} />
+                            Admin Console
+                        </Link>
+                    </motion.div>
+                )}
+            </motion.div>
         </div>
-      );
-  }
-
-  // ADMIN / OWNER DASHBOARD (Original Z2U Style - Modified for Single Vendor)
-  return (
-    <div className="bg-[#F0F2F5] min-h-screen pb-12">
-      {/* Blue Banner Section */}
-      <div className="bg-gradient-to-r from-[#003366] to-[#0055A5] text-white pt-8 pb-16 relative overflow-hidden">
-          <div className="container mx-auto px-4 max-w-7xl relative z-10">
-              {/* Profile Header */}
-              <div className="flex flex-col md:flex-row items-center gap-6 mb-8">
-                  <div className="relative">
-                      <div className="w-24 h-24 rounded-full bg-white p-1 shadow-lg">
-                          <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-cyan-300 flex items-center justify-center text-3xl font-bold text-white overflow-hidden">
-                            {username.charAt(0).toUpperCase()}
-                          </div>
-                      </div>
-                  </div>
-                  
-                  <div className="text-center md:text-left flex-1">
-                      <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
-                          <h1 className="text-2xl font-bold">{username}</h1>
-                          <span className="bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">ADMIN</span>
-                      </div>
-                      
-                      {/* Key Stats in Banner */}
-                      <div className="flex flex-wrap justify-center md:justify-start gap-8 mt-4">
-                          <div>
-                              <div className="text-xs text-blue-200 uppercase tracking-wider mb-1">Total Sales Amount</div>
-                              <div className="text-3xl font-bold text-white">$12,450.00</div>
-                          </div>
-                          <div>
-                              <div className="text-xs text-blue-200 uppercase tracking-wider mb-1">Total Orders</div>
-                              <div className="text-3xl font-bold text-white">1,245</div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          </div>
-          
-          {/* Decorative Circles */}
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white opacity-5 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 bg-blue-400 opacity-10 rounded-full blur-2xl"></div>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="container mx-auto px-4 max-w-7xl -mt-10 relative z-20">
-        
-        {/* Stats Cards Row */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-purple-500 flex items-center justify-between">
-                <div>
-                    <div className="text-gray-500 text-sm font-medium mb-1">Total Orders</div>
-                    <div className="text-2xl font-bold text-gray-800">1,245</div>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-500">
-                    <ShoppingBag size={24} />
-                </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500 flex items-center justify-between">
-                <div>
-                    <div className="text-gray-500 text-sm font-medium mb-1">Completed Orders</div>
-                    <div className="text-2xl font-bold text-gray-800">1,180</div>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-500">
-                    <CheckCircle size={24} />
-                </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-orange-500 flex items-center justify-between">
-                <div>
-                    <div className="text-gray-500 text-sm font-medium mb-1">Pending Orders</div>
-                    <div className="text-2xl font-bold text-gray-800">45</div>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-500">
-                    <Clock size={24} />
-                </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500 flex items-center justify-between">
-                <div>
-                    <div className="text-gray-500 text-sm font-medium mb-1">Active Listings</div>
-                    <div className="text-2xl font-bold text-gray-800">156</div>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
-                    <Store size={24} />
-                </div>
-            </div>
-        </div>
+      {/* Dashboard Content */}
+      <div className="container mx-auto px-4 max-w-7xl -mt-12 relative z-20">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+        >
+          {/* Section: Orders */}
+          <DashboardSection title="Order Nexus" icon={<ShoppingBag className="text-primary-400" />}>
+            <DashboardLink icon={<List size={18} />} label="All Digital Acquisitions" count={1245} />
+            <DashboardLink icon={<Clock size={18} />} label="Awaiting Delivery" count={42} highlight />
+            <DashboardLink icon={<CheckCircle size={18} />} label="Verified Completions" count={1203} />
+            <DashboardLink icon={<Gavel size={18} />} label="Dispute Center" color="hover:text-red-400" />
+          </DashboardSection>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Store Management (Replaces Seller Center) */}
-          <DashboardCard title="Store Management" icon={<Store className="text-red-500" />}>
-            <DashboardLink icon={<List size={16} />} label="All Sold Orders" href="/seller/orders" />
-            <DashboardLink icon={<PlusCircle size={16} />} label="Create New Listing" href="/seller/create-listing" />
-            <DashboardLink icon={<CheckCircle size={16} />} label="Active Listings" />
-            <DashboardDropdown label="Store Settings" />
-          </DashboardCard>
+          {/* Section: Support */}
+          <DashboardSection title="Command Support" icon={<Ticket className="text-blue-400" />}>
+            <DashboardLink icon={<PlusCircle size={18} />} label="Initialize Support Ticket" />
+            <DashboardLink icon={<MessageSquare size={18} />} label="Encrypted Messages" count={12} />
+            <DashboardLink icon={<HelpCircle size={18} />} label="Platform Resource Hub" />
+            <DashboardLink icon={<Phone size={18} />} label="Priority Concierge" />
+          </DashboardSection>
 
-          {/* Support & Disputes */}
-          <DashboardCard title="Support & Disputes" icon={<Gavel className="text-orange-500" />}>
-            <DashboardLink icon={<Gavel size={16} />} label="Dispute Center" />
-            <DashboardLink icon={<Ticket size={16} />} label="Service Tickets" />
-            <DashboardLink icon={<MessageSquare size={16} />} label="User Messages" />
-          </DashboardCard>
+          {/* Section: Settings */}
+          <DashboardSection title="System Config" icon={<Settings className="text-purple-400" />}>
+            <DashboardLink icon={<UserIcon size={18} />} label="Identity Profile" />
+            <DashboardLink icon={<Shield size={18} />} label="Titan™ Security Protocol" highlight />
+            <DashboardLink icon={<CreditCard size={18} />} label="Valuation Methods" />
+            <DashboardLink icon={<Bell size={18} />} label="Communication Preferences" />
+          </DashboardSection>
 
-          {/* Account Settings */}
-          <DashboardCard title="Account Settings" icon={<Settings className="text-gray-500" />}>
-            <DashboardLink icon={<Users size={16} />} label="Profile Information" />
-            <DashboardLink icon={<Shield size={16} />} label="Security Settings" />
-            <DashboardLink icon={<CreditCard size={16} />} label="Payment Methods" />
-          </DashboardCard>
-        </div>
+          {/* Recent Activity Mini-Tab */}
+          <div className="lg:col-span-2 glass-card bg-white/2 border-white/5 rounded-3xl p-8">
+            <div className="flex justify-between items-center mb-8">
+                <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                    <Activity size={20} className="text-primary-400" />
+                    Live Transmission Log
+                </h3>
+                <button className="text-[10px] font-bold text-primary-400 uppercase tracking-widest hover:text-primary-300">View Full Ledger</button>
+            </div>
+            <div className="space-y-6">
+                {[
+                    { type: 'ORDER', title: 'Netflix Premium UHD Acquisition', status: 'Completed', time: '14 minutes ago', amount: '$14.99' },
+                    { type: 'SYSTEM', title: 'Titan Security Shield Active', status: 'Optimal', time: '2 hours ago', amount: null },
+                    { type: 'ORDER', title: 'Spotify Yearly Master Key', status: 'Awaiting', time: '5 hours ago', amount: '$29.00' }
+                ].map((item, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/2 border border-white/5 hover:bg-white/5 transition-all group">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-dark-50/40 group-hover:text-primary-400 transition-colors">
+                                {item.type === 'ORDER' ? <ShoppingBag size={18} /> : <Shield size={18} />}
+                            </div>
+                            <div>
+                                <div className="text-sm font-bold text-white">{item.title}</div>
+                                <div className="text-[10px] text-dark-50/30 font-bold uppercase tracking-widest">{item.time}</div>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-xs font-bold text-white">{item.amount || '---'}</div>
+                            <div className={`text-[10px] font-bold uppercase tracking-widest ${item.status === 'Completed' ? 'text-primary-400' : 'text-yellow-400'}`}>
+                                {item.status}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Promotion Card */}
+          <div className="glass-card bg-gradient-to-br from-primary-600 to-blue-600 rounded-3xl p-8 flex flex-col justify-between group overflow-hidden relative">
+            <div className="relative z-10">
+                <Crown size={48} className="text-white/20 mb-6 group-hover:scale-110 transition-transform duration-500" />
+                <h3 className="text-2xl font-display font-bold text-white mb-2">Upgrade to Titan Pro</h3>
+                <p className="text-white/70 text-xs mb-8 leading-relaxed">Unlock lower fees, priority concierge support, and early access to ultra-premium account drops.</p>
+            </div>
+            <button className="relative z-10 w-full py-4 bg-white text-dark-950 font-bold rounded-2xl flex items-center justify-center gap-2 group/btn">
+                Experience Excellence
+                <ArrowRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
+            </button>
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 blur-[50px] rounded-full"></div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
@@ -189,15 +216,17 @@ export function UserDashboardPage() {
 
 // Helper Components
 
-function DashboardCard({ title, icon, children }: { title: string, icon: React.ReactNode, children: React.ReactNode }) {
+function DashboardSection({ title, icon, children }: { title: string, icon: React.ReactNode, children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded shadow-sm border border-gray-100 overflow-hidden h-full">
-      <div className="px-4 py-3 border-b border-gray-50 flex items-center gap-2 font-bold text-gray-700 bg-gray-50/50">
-        {icon}
-        <span>{title}</span>
+    <div className="glass-card bg-white/2 border-white/5 rounded-3xl overflow-hidden h-full group hover:border-white/10 transition-all">
+      <div className="px-8 py-6 border-b border-white/5 flex items-center gap-4 bg-white/2">
+        <div className="p-2 bg-white/5 rounded-xl group-hover:scale-110 transition-transform duration-500">
+            {icon}
+        </div>
+        <span className="text-lg font-bold text-white tracking-tight">{title}</span>
       </div>
-      <div className="p-2">
-        <ul className="flex flex-col gap-1">
+      <div className="p-4">
+        <ul className="flex flex-col gap-2">
           {children}
         </ul>
       </div>
@@ -205,29 +234,44 @@ function DashboardCard({ title, icon, children }: { title: string, icon: React.R
   );
 }
 
-function DashboardLink({ icon, label, href }: { icon?: React.ReactNode, label: string, href?: string }) {
+function DashboardLink({ icon, label, count, color, highlight }: { icon: React.ReactNode, label: string, count?: number, color?: string, highlight?: boolean }) {
   return (
     <li>
-      <a href={href || "#"} className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-blue-600 rounded transition-colors group">
-        <span className="text-gray-400 group-hover:text-blue-500 transition-colors">
-            {icon || <div className="w-4" />}
-        </span>
-        <span>{label}</span>
+      <a href="#" className={`flex items-center justify-between p-4 rounded-2xl transition-all duration-300 group/link ${
+        highlight ? "bg-primary-500/5 border border-primary-500/10" : "hover:bg-white/5"
+      }`}>
+        <div className="flex items-center gap-4">
+            <div className={`text-dark-50/30 group-hover/link:text-primary-400 transition-colors ${color}`}>
+                {icon}
+            </div>
+            <span className={`text-sm font-semibold transition-colors ${highlight ? "text-primary-400" : "text-dark-50/60 group-hover/link:text-white"}`}>
+                {label}
+            </span>
+        </div>
+        {count !== undefined && (
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 text-dark-50/40 group-hover/link:bg-primary-500/20 group-hover/link:text-primary-400 transition-all`}>
+                {count}
+            </span>
+        )}
       </a>
     </li>
   );
 }
 
-function DashboardDropdown({ label }: { label: string }) {
+function Crown({ size, className }: { size: number, className?: string }) {
     return (
-        <li>
-            <button className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-blue-600 rounded transition-colors group text-left">
-                <div className="flex items-center gap-3">
-                    <span className="w-4"></span>
-                    <span>{label}</span>
-                </div>
-                <ChevronRight size={14} className="text-gray-400" />
-            </button>
-        </li>
-    )
+        <svg 
+            width={size} 
+            height={size} 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            className={className}
+        >
+            <path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14" />
+        </svg>
+    );
 }
