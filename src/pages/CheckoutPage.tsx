@@ -104,34 +104,38 @@ export function CheckoutPage() {
 
   if (loading) {
     return (
-        <div className="min-h-screen bg-dark-950 flex flex-col items-center justify-center">
-            <div className="w-12 h-12 border-4 border-primary-500/20 border-t-primary-500 rounded-full animate-spin mb-4"></div>
-            <p className="text-dark-50/40 text-xs font-bold uppercase tracking-widest">Initializing Secure Checkout...</p>
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
+            <Loader2 className="w-12 h-12 text-primary-500 animate-spin mb-4" />
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Initializing Secure Checkout...</p>
         </div>
     );
   }
 
-  if (!product) return <div className="p-8 text-center bg-dark-950 text-white">Digital Asset Not Found</div>;
+  if (!product) return <div className="p-8 text-center bg-slate-50 text-slate-900">Digital Asset Not Found</div>;
 
   const serviceFee = 0.50;
   const subtotal = product.price * initialQuantity;
   const total = subtotal + serviceFee;
 
   return (
-    <div className="min-h-screen bg-dark-950 text-white py-12 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-slate-50 text-slate-900 py-12 px-4 relative overflow-hidden font-sans">
+      {/* Background Glows */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/5 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/5 blur-[100px] rounded-full pointer-events-none"></div>
+
+      <div className="max-w-6xl mx-auto relative z-10">
         <div className="flex items-center gap-4 mb-10">
-            <button onClick={() => navigate(-1)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5">
-                <ArrowLeft size={20} />
+            <button onClick={() => navigate(-1)} className="p-3 bg-white hover:bg-slate-50 rounded-2xl transition-all border border-slate-200 shadow-sm">
+                <ArrowLeft size={20} className="text-slate-600" />
             </button>
             <div>
-                <h1 className="text-3xl font-display font-bold text-white tracking-tight">Secure Checkout</h1>
-                <div className="flex items-center gap-2 text-[10px] font-bold text-dark-50/30 uppercase tracking-widest mt-1">
+                <h1 className="text-4xl font-display font-bold text-slate-900 tracking-tight italic">Secure Checkout</h1>
+                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                     <span>Marketplace</span>
                     <ChevronRight size={10} />
                     <span>Cart</span>
                     <ChevronRight size={10} />
-                    <span className="text-primary-500">Settlement</span>
+                    <span className="text-primary-600">Settlement</span>
                 </div>
             </div>
         </div>
@@ -142,38 +146,38 @@ export function CheckoutPage() {
             <div className="lg:col-span-8 space-y-6">
                 
                 {/* 1. Account Selection */}
-                <div className="glass-card rounded-[2rem] border border-white/5 p-8 relative overflow-hidden">
+                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm relative overflow-hidden">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-400">
+                        <div className="p-2.5 bg-primary-50 rounded-xl text-primary-600 border border-primary-100 shadow-sm">
                             <Lock size={20} />
                         </div>
-                        <h3 className="text-lg font-bold text-white uppercase tracking-widest">Delivery Protocol</h3>
+                        <h3 className="text-lg font-bold text-slate-900 uppercase tracking-widest">Delivery Protocol</h3>
                     </div>
                     
                     <div className="space-y-6">
                         <div>
-                            <label className="text-[10px] font-bold text-dark-50/30 uppercase tracking-[0.2em] mb-3 block">Recipient Portal (Email)</label>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3 block px-1">Recipient Portal (Email)</label>
                             <input 
                                 type="email" 
                                 placeholder="Your primary delivery address"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-primary-500/50 transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all shadow-sm"
                             />
-                            <p className="text-[9px] text-dark-50/20 font-bold mt-2 uppercase tracking-widest flex items-center gap-2">
-                                <AlertCircle size={10} /> Credentials will be transmitted to this address immediately.
+                            <p className="text-[9px] text-slate-400 font-bold mt-3 uppercase tracking-widest flex items-center gap-2">
+                                <AlertCircle size={12} className="text-primary-600" /> Credentials will be transmitted to this address immediately.
                             </p>
                         </div>
                     </div>
                 </div>
 
                 {/* 2. Payment Gateway Selection */}
-                <div className="glass-card rounded-[2rem] border border-white/5 p-8">
+                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                        <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600 border border-blue-100 shadow-sm">
                             <CreditCard size={20} />
                         </div>
-                        <h3 className="text-lg font-bold text-white uppercase tracking-widest">Payment Gateway</h3>
+                        <h3 className="text-lg font-bold text-slate-900 uppercase tracking-widest">Payment Gateway</h3>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -188,15 +192,15 @@ export function CheckoutPage() {
                                 onClick={() => setPaymentMethod(method.id)}
                                 className={`flex items-center justify-between p-5 rounded-2xl border transition-all duration-300 ${
                                     paymentMethod === method.id 
-                                    ? "bg-primary-500/10 border-primary-500/50 text-white" 
-                                    : "bg-white/2 border-white/5 text-dark-50/40 hover:bg-white/5 hover:border-white/10"
+                                    ? "bg-primary-50 border-primary-200 text-primary-600 shadow-md ring-1 ring-primary-500/20" 
+                                    : "bg-slate-50 border-slate-100 text-slate-400 hover:bg-white hover:border-slate-200 hover:shadow-sm"
                                 }`}
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className={paymentMethod === method.id ? "text-primary-400" : ""}>{method.icon}</div>
+                                    <div className={paymentMethod === method.id ? "text-primary-600" : ""}>{method.icon}</div>
                                     <span className="text-xs font-bold uppercase tracking-widest">{method.name}</span>
                                 </div>
-                                {paymentMethod === method.id && <div className="w-2 h-2 rounded-full bg-primary-500 shadow-[0_0_8px_rgba(20,184,166,0.5)]"></div>}
+                                {paymentMethod === method.id && <div className="w-2 h-2 rounded-full bg-primary-600 shadow-[0_0_8px_rgba(20,184,166,0.5)]"></div>}
                             </button>
                         ))}
                     </div>
@@ -204,13 +208,13 @@ export function CheckoutPage() {
 
                 {/* Security Badges */}
                 <div className="flex flex-wrap gap-4 pt-4">
-                    <div className="flex items-center gap-2 text-[9px] font-bold text-dark-50/30 uppercase tracking-widest px-4 py-2 border border-white/5 rounded-full">
+                    <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest px-4 py-2 border border-slate-200 bg-white rounded-full shadow-sm">
                         <Shield size={12} className="text-green-500" /> SSL Encrypted
                     </div>
-                    <div className="flex items-center gap-2 text-[9px] font-bold text-dark-50/30 uppercase tracking-widest px-4 py-2 border border-white/5 rounded-full">
-                        <ShieldCheck size={12} className="text-primary-500" /> TitanGuard Protection
+                    <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest px-4 py-2 border border-slate-200 bg-white rounded-full shadow-sm">
+                        <ShieldCheck size={12} className="text-primary-600" /> TitanGuard Protection
                     </div>
-                    <div className="flex items-center gap-2 text-[9px] font-bold text-dark-50/30 uppercase tracking-widest px-4 py-2 border border-white/5 rounded-full">
+                    <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest px-4 py-2 border border-slate-200 bg-white rounded-full shadow-sm">
                         <Lock size={12} className="text-blue-500" /> PCI Compliance
                     </div>
                 </div>
@@ -218,37 +222,37 @@ export function CheckoutPage() {
 
             {/* Right Section: Order Recap */}
             <div className="lg:col-span-4 sticky top-24">
-                <div className="glass-card rounded-[2.5rem] border border-white/5 overflow-hidden">
-                    <div className="p-8 border-b border-white/5 bg-white/2">
-                        <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-1">Asset Verification</h3>
-                        <p className="text-[9px] text-dark-50/30 uppercase tracking-[0.2em] font-bold">Review your acquisition</p>
+                <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-lg">
+                    <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-1">Asset Verification</h3>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-bold">Review your acquisition</p>
                     </div>
                     
                     <div className="p-8 space-y-8">
                         <div className="flex gap-4">
-                            <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10 shrink-0">
+                            <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-100 shrink-0 shadow-sm">
                                 <img src={product.image || "https://picsum.photos/seed/default/200/200"} className="w-full h-full object-cover" alt={product.title} />
                             </div>
                             <div className="flex flex-col justify-between py-1">
-                                <h4 className="text-xs font-bold text-white leading-relaxed line-clamp-2">{product.title}</h4>
-                                <div className="text-[10px] font-bold text-primary-400">x{initialQuantity} Unit</div>
+                                <h4 className="text-xs font-bold text-slate-900 leading-relaxed line-clamp-2">{product.title}</h4>
+                                <div className="text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100 w-fit">x{initialQuantity} Unit</div>
                             </div>
                         </div>
 
-                        <div className="space-y-4 pt-4 border-t border-white/5">
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
                             <div className="flex justify-between text-xs">
-                                <span className="text-dark-50/40 font-medium">Subtotal</span>
-                                <span className="text-white font-bold">${subtotal.toFixed(2)}</span>
+                                <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Subtotal</span>
+                                <span className="text-slate-900 font-bold">${subtotal.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-xs">
-                                <span className="text-dark-50/40 font-medium">Service Protocol Fee</span>
-                                <span className="text-white font-bold">${serviceFee.toFixed(2)}</span>
+                                <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Service Protocol Fee</span>
+                                <span className="text-slate-900 font-bold">${serviceFee.toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between pt-4 border-t border-white/5">
-                                <span className="text-sm font-bold text-white uppercase tracking-widest">Total Settlement</span>
+                            <div className="flex justify-between pt-4 border-t border-slate-100">
+                                <span className="text-sm font-bold text-slate-900 uppercase tracking-widest">Total Settlement</span>
                                 <div className="text-right">
-                                    <div className="text-xl font-display font-bold text-primary-400 leading-none">${total.toFixed(2)}</div>
-                                    <div className="text-[9px] text-dark-50/20 font-bold uppercase mt-1">VAT Included</div>
+                                    <div className="text-2xl font-display font-bold text-primary-600 leading-none">${total.toFixed(2)}</div>
+                                    <div className="text-[9px] text-slate-400 font-bold uppercase mt-1">VAT Included</div>
                                 </div>
                             </div>
                         </div>
@@ -271,8 +275,8 @@ export function CheckoutPage() {
                             )}
                         </button>
 
-                        <div className="p-4 bg-white/2 border border-white/5 rounded-2xl">
-                             <p className="text-[9px] text-dark-50/40 font-medium leading-relaxed text-center">
+                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed text-center">
                                 By confirming this acquisition, you agree to the Digital Asset Protocol Terms and TitanGuard Secure Escrow conditions.
                              </p>
                         </div>

@@ -10,17 +10,17 @@ export function AdminCustomers() {
   ];
 
   return (
-    <div className="glass-card rounded-3xl border border-white/5 overflow-hidden">
-        <div className="p-8 border-b border-white/5 flex justify-between items-center">
+    <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm relative">
+        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
             <div>
-                <h3 className="text-xl font-bold text-white mb-1">Member Directory</h3>
-                <p className="text-xs text-dark-50/30 uppercase tracking-widest font-bold">Manage your acquisition base</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-1">Member Directory</h3>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Manage your acquisition base</p>
             </div>
-            <button className="px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-xs font-bold uppercase tracking-widest text-dark-50/60 hover:text-white transition-all">Export Directory</button>
+            <button className="px-6 py-3 bg-white border border-slate-200 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-slate-900 transition-all shadow-sm">Export Directory</button>
         </div>
         <div className="overflow-x-auto">
             <table className="w-full text-left">
-                <thead className="bg-white/2 text-dark-50/30 text-[10px] font-bold uppercase tracking-widest border-b border-white/5">
+                <thead className="bg-slate-50/20 text-slate-400 text-[9px] font-bold uppercase tracking-widest border-b border-slate-100">
                 <tr>
                     <th className="px-8 py-5">Member</th>
                     <th className="px-8 py-5">Communication</th>
@@ -30,29 +30,31 @@ export function AdminCustomers() {
                     <th className="px-8 py-5 text-right">Actions</th>
                 </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-slate-100">
                 {customers.map((customer, i) => (
-                    <tr key={i} className="hover:bg-white/5 transition-colors group">
+                    <tr key={i} className="hover:bg-slate-50 transition-colors group">
                         <td className="px-8 py-5">
                             <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-primary-400 group-hover:scale-110 transition-transform">
+                                <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-primary-600 group-hover:scale-110 transition-transform border border-slate-200 shadow-sm">
                                     <User size={18} />
                                 </div>
-                                <span className="font-bold text-white text-sm">{customer.name}</span>
+                                <span className="font-bold text-slate-900 text-sm">{customer.name}</span>
                             </div>
                         </td>
-                        <td className="px-8 py-5 font-medium text-dark-50/60 text-sm italic">{customer.email}</td>
-                        <td className="px-8 py-5 font-medium text-dark-50/40 text-xs">{customer.joined}</td>
-                        <td className="px-8 py-5 font-bold text-white text-sm">{customer.orders}</td>
-                        <td className="px-8 py-5 font-bold text-primary-400 text-sm">{customer.spent}</td>
+                        <td className="px-8 py-5 font-bold text-slate-600 text-xs italic">{customer.email}</td>
+                        <td className="px-8 py-5 font-bold text-slate-400 text-[10px]">{customer.joined}</td>
+                        <td className="px-8 py-5 font-bold text-slate-900 text-sm">{customer.orders}</td>
+                        <td className="px-8 py-5 font-bold text-primary-600 text-sm">{customer.spent}</td>
                         <td className="px-8 py-5 text-right">
-                            <button className="p-2 text-dark-50/20 hover:text-white transition-colors"><MoreVertical size={16} /></button>
+                            <button className="p-2 text-slate-300 hover:text-slate-900 transition-colors"><MoreVertical size={16} /></button>
                         </td>
                     </tr>
                 ))}
                 </tbody>
             </table>
         </div>
+        {/* Background Decoration */}
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 blur-[100px] rounded-full pointer-events-none"></div>
     </div>
   );
 }

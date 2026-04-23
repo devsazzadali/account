@@ -22,9 +22,9 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-950 flex flex-col md:flex-row overflow-hidden font-sans">
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden font-sans text-slate-900">
       {/* Left Side: Illustration / Branding (Visible on Desktop) */}
-      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-primary-900 via-dark-900 to-blue-900 relative p-16 flex-col justify-between overflow-hidden">
+      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-slate-900 via-slate-800 to-primary-950 relative p-16 flex-col justify-between overflow-hidden">
         {/* Animated Background Elements */}
         <div className="absolute top-[-20%] left-[-10%] w-[80%] h-[80%] bg-primary-500/10 blur-[120px] rounded-full animate-float"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-blue-500/10 blur-[100px] rounded-full animate-float" style={{ animationDelay: '2s' }}></div>
@@ -44,9 +44,9 @@ export function LoginPage() {
                 className="max-w-md"
             >
                 <h1 className="text-5xl font-display font-bold text-white leading-tight mb-6">
-                    Access the World's Most <span className="text-gradient">Premium</span> Accounts.
+                    Access the World's Most <span className="bg-gradient-to-r from-primary-400 to-blue-400 bg-clip-text text-transparent">Premium</span> Accounts.
                 </h1>
-                <p className="text-lg text-primary-100/60 font-light leading-relaxed mb-10">
+                <p className="text-lg text-slate-300 font-light leading-relaxed mb-10">
                     Join thousands of elite users who trust AccountStore for their digital asset needs. Secure, instant, and reliable.
                 </p>
 
@@ -56,7 +56,7 @@ export function LoginPage() {
                         "24/7 Premium Support Access",
                         "Verified & Secure Transactions"
                     ].map((text, i) => (
-                        <div key={i} className="flex items-center gap-3 text-sm text-primary-200/80">
+                        <div key={i} className="flex items-center gap-3 text-sm text-slate-300">
                             <CheckCircle2 className="w-5 h-5 text-primary-400" />
                             <span>{text}</span>
                         </div>
@@ -66,15 +66,15 @@ export function LoginPage() {
         </div>
 
         <div className="relative z-10">
-            <div className="glass-card p-6 rounded-2xl border-white/5 bg-white/5">
+            <div className="bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-2xl">
                 <div className="flex items-center gap-4 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-blue-500 flex items-center justify-center text-white font-bold">JD</div>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-blue-500 flex items-center justify-center text-white font-bold shadow-lg">JD</div>
                     <div>
                         <div className="text-sm font-bold text-white">James Dupont</div>
                         <div className="text-[10px] text-primary-400 uppercase tracking-widest font-bold">Elite Member</div>
                     </div>
                 </div>
-                <p className="text-xs text-white/60 italic leading-relaxed">
+                <p className="text-xs text-slate-300 italic leading-relaxed">
                     "The quality of service and account security is unmatched. I've been using AccountStore for 2 years and never had a single issue."
                 </p>
             </div>
@@ -82,12 +82,12 @@ export function LoginPage() {
       </div>
 
       {/* Right Side: Login Form */}
-      <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-16 bg-dark-950 relative">
+      <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-16 bg-white relative">
         {/* Mobile Header */}
         <div className="md:hidden absolute top-8 left-8">
             <Link to="/" className="flex items-center gap-2">
-                <Zap className="w-6 h-6 text-primary-400 fill-current" />
-                <span className="text-xl font-display font-bold text-white">Account<span className="text-primary-400">Store</span></span>
+                <Zap className="w-6 h-6 text-primary-600 fill-current" />
+                <span className="text-xl font-display font-bold text-slate-900">Account<span className="text-primary-600">Store</span></span>
             </Link>
         </div>
 
@@ -98,22 +98,22 @@ export function LoginPage() {
             className="w-full max-w-[440px]"
         >
             <div className="mb-10 text-center md:text-left">
-                <h2 className="text-3xl font-display font-bold text-white mb-2">Welcome Back</h2>
-                <p className="text-dark-50/50">Enter your credentials to access your account.</p>
+                <h2 className="text-3xl font-display font-bold text-slate-900 mb-2">Welcome Back</h2>
+                <p className="text-slate-500">Enter your credentials to access your account.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-xs font-bold text-dark-50/40 uppercase tracking-widest mb-2 ml-1">Email / Username</label>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Email / Username</label>
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <User className="h-5 w-5 text-dark-50/30 group-focus-within:text-primary-400 transition-colors" />
+                                <User className="h-5 w-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
                             </div>
                             <input
                                 type="text"
                                 required
-                                className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-dark-50/20 focus:outline-none focus:border-primary-500/50 focus:ring-4 focus:ring-primary-500/5 transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all shadow-sm"
                                 placeholder="name@domain.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -123,17 +123,17 @@ export function LoginPage() {
 
                     <div>
                         <div className="flex justify-between items-center mb-2 ml-1">
-                            <label className="block text-xs font-bold text-dark-50/40 uppercase tracking-widest">Password</label>
-                            <a href="#" className="text-[10px] font-bold text-primary-400 hover:text-primary-300 transition-colors uppercase tracking-widest">Forgot?</a>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Password</label>
+                            <a href="#" className="text-[10px] font-bold text-primary-600 hover:text-primary-500 transition-colors uppercase tracking-widest">Forgot?</a>
                         </div>
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <Lock className="h-5 w-5 text-dark-50/30 group-focus-within:text-primary-400 transition-colors" />
+                                <Lock className="h-5 w-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
                             </div>
                             <input
                                 type="password"
                                 required
-                                className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-dark-50/20 focus:outline-none focus:border-primary-500/50 focus:ring-4 focus:ring-primary-500/5 transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all shadow-sm"
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -143,8 +143,8 @@ export function LoginPage() {
                 </div>
 
                 <div className="flex items-center gap-3 ml-1">
-                    <input type="checkbox" id="remember" className="w-4 h-4 rounded border-white/10 bg-white/5 text-primary-500 focus:ring-primary-500/20" />
-                    <label htmlFor="remember" className="text-xs text-dark-50/50 cursor-pointer select-none">Remember me for 30 days</label>
+                    <input type="checkbox" id="remember" className="w-4 h-4 rounded border-slate-200 bg-slate-50 text-primary-600 focus:ring-primary-500/20" />
+                    <label htmlFor="remember" className="text-xs text-slate-500 cursor-pointer select-none">Remember me for 30 days</label>
                 </div>
 
                 <button
@@ -157,20 +157,20 @@ export function LoginPage() {
 
                 <div className="relative py-4">
                     <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-white/5"></div>
+                        <div className="w-full border-t border-slate-100"></div>
                     </div>
                     <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-[0.3em]">
-                        <span className="px-4 bg-dark-950 text-dark-50/20">Or continue with</span>
+                        <span className="px-4 bg-white text-slate-400">Or continue with</span>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
                     {[
-                        { icon: Globe, label: "Google", color: "hover:bg-red-500/10 hover:text-red-400" },
-                        { icon: Github, label: "Github", color: "hover:bg-white/10 hover:text-white" },
-                        { icon: Mail, label: "Discord", color: "hover:bg-indigo-500/10 hover:text-indigo-400" }
+                        { icon: Globe, label: "Google", color: "hover:bg-red-50 hover:text-red-600 border-slate-100" },
+                        { icon: Github, label: "Github", color: "hover:bg-slate-50 hover:text-slate-900 border-slate-100" },
+                        { icon: Mail, label: "Discord", color: "hover:bg-indigo-50 hover:text-indigo-600 border-slate-100" }
                     ].map((item, i) => (
-                        <button key={i} type="button" className={`flex flex-col items-center justify-center py-3 rounded-xl border border-white/5 bg-white/2 backdrop-blur-sm transition-all duration-300 ${item.color}`}>
+                        <button key={i} type="button" className={`flex flex-col items-center justify-center py-3 rounded-xl border bg-white shadow-sm transition-all duration-300 ${item.color}`}>
                             <item.icon className="w-5 h-5 mb-1" />
                             <span className="text-[10px] font-bold uppercase tracking-widest">{item.label}</span>
                         </button>
@@ -179,8 +179,8 @@ export function LoginPage() {
             </form>
 
             <div className="mt-12 text-center text-sm">
-                <span className="text-dark-50/40">Don't have an account? </span>
-                <Link to="/signup" className="text-primary-400 font-bold hover:text-primary-300 transition-colors underline underline-offset-4">Join now</Link>
+                <span className="text-slate-500">Don't have an account? </span>
+                <Link to="/signup" className="text-primary-600 font-bold hover:text-primary-500 transition-colors underline underline-offset-4">Join now</Link>
             </div>
         </motion.div>
         

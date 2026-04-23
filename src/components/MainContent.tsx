@@ -28,59 +28,59 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
     return (
     <Link 
       to={`/product/${item.id}`} 
-      className="group glass-card rounded-2xl p-4 hover:border-primary-500/50 transition-all duration-500 hover:-translate-y-1 block h-full relative overflow-hidden flex flex-col"
+      className="group bg-white rounded-2xl p-4 border border-slate-200 hover:border-primary-500/50 transition-all duration-500 hover:shadow-xl hover:-translate-y-1 block h-full relative overflow-hidden flex flex-col shadow-sm"
     >
       <div className="flex gap-4 flex-1">
         {/* Left Side: Content */}
         <div className="flex-1 flex flex-col justify-between min-w-0">
           <div>
             {item.category && (
-                <div className="text-[10px] text-primary-400 font-medium uppercase tracking-wider mb-1.5 truncate">{item.category}</div>
+                <div className="text-[10px] text-primary-600 font-medium uppercase tracking-wider mb-1.5 truncate">{item.category}</div>
             )}
-            <h3 className="text-sm font-display font-semibold text-white line-clamp-2 mb-3 group-hover:text-primary-400 transition-colors leading-relaxed" title={item.title}>
+            <h3 className="text-sm font-display font-semibold text-slate-900 line-clamp-2 mb-3 group-hover:text-primary-600 transition-colors leading-relaxed" title={item.title}>
               {item.title}
             </h3>
             <div className="flex flex-wrap items-center gap-2 mb-3">
-               <span className="flex items-center gap-1 text-[10px] text-primary-100 bg-primary-500/20 px-2 py-0.5 rounded-md border border-primary-500/30">
-                 <Zap className="w-3 h-3 text-primary-400 fill-current" /> Instant
+               <span className="flex items-center gap-1 text-[10px] text-primary-700 bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100">
+                 <Zap className="w-3 h-3 text-primary-500 fill-current" /> Instant
                </span>
-               <span className="flex items-center gap-1 text-[10px] text-blue-100 bg-blue-500/20 px-2 py-0.5 rounded-md border border-blue-500/30">
-                 <Clock className="w-3 h-3 text-blue-400" /> Auto
+               <span className="flex items-center gap-1 text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                 <Clock className="w-3 h-3 text-blue-500" /> Auto
                </span>
             </div>
           </div>
           
-          <div className="flex items-center gap-2.5 mt-2 bg-white/5 rounded-xl p-2 border border-white/5">
+          <div className="flex items-center gap-2.5 mt-2 bg-slate-50 rounded-xl p-2 border border-slate-100">
             <div className="shrink-0">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-600 to-blue-600 flex items-center justify-center">
                     <Crown className="w-4 h-4 text-white" />
                 </div>
             </div>
             <div className="flex flex-col min-w-0">
-                <span className="text-[10px] text-dark-50/70 truncate leading-tight mb-0.5">Verified Seller</span>
-                <span className="text-xs text-white font-medium truncate">TitanGames_Global</span>
+                <span className="text-[10px] text-slate-500 truncate leading-tight mb-0.5">Verified Seller</span>
+                <span className="text-xs text-slate-900 font-medium truncate">TitanGames_Global</span>
             </div>
           </div>
         </div>
 
         {/* Right Side: Image & Price */}
         <div className="flex flex-col items-end justify-between shrink-0 w-[90px]">
-          <div className="w-[90px] h-[90px] rounded-xl overflow-hidden relative border border-white/10 bg-dark-900 group-hover:border-primary-500/30 transition-colors">
+          <div className="w-[90px] h-[90px] rounded-xl overflow-hidden relative border border-slate-200 bg-slate-100 group-hover:border-primary-500/30 transition-colors">
              <img 
                 src={item.image || "https://picsum.photos/seed/default/400/225"} 
                 alt={item.title}
-                className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-115" 
+                className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110" 
              />
              {item.badge && (
-                <div className="absolute top-0 right-0 bg-primary-500 text-white text-[9px] px-2 py-0.5 font-bold shadow-lg z-10 rounded-bl-lg uppercase">
+                <div className="absolute top-0 right-0 bg-primary-600 text-white text-[9px] px-2 py-0.5 font-bold shadow-lg z-10 rounded-bl-lg uppercase">
                     {item.badge}
                 </div>
              )}
           </div>
           <div className="mt-auto text-right w-full pt-4">
-            <div className="text-[10px] text-dark-50/40 uppercase tracking-widest leading-none mb-1">Price</div>
-            <div className="font-display font-bold text-white text-xl leading-none flex items-center justify-end gap-1">
-                <span className="text-primary-400 text-sm">$</span>
+            <div className="text-[10px] text-slate-400 uppercase tracking-widest leading-none mb-1">Price</div>
+            <div className="font-display font-bold text-slate-900 text-xl leading-none flex items-center justify-end gap-1">
+                <span className="text-primary-600 text-sm">$</span>
                 {item.price.toFixed(2)}
             </div>
           </div>
@@ -89,17 +89,17 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
 
       {/* Quantity and Buy Button */}
       <div className="mt-5 flex items-center gap-2 relative z-20">
-          <div className="flex items-center bg-white/5 border border-white/5 rounded-xl p-1 shrink-0">
+          <div className="flex items-center bg-slate-100 border border-slate-200 rounded-xl p-1 shrink-0">
               <button 
                   onClick={(e) => handleQuantityChange(e, -1)}
-                  className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors text-dark-50/40 hover:text-white"
+                  className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-lg transition-colors text-slate-400 hover:text-slate-900 shadow-sm"
               >
                   <Minus size={14} />
               </button>
-              <span className="w-8 text-center text-xs font-bold text-white">{quantity}</span>
+              <span className="w-8 text-center text-xs font-bold text-slate-900">{quantity}</span>
               <button 
                   onClick={(e) => handleQuantityChange(e, 1)}
-                  className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors text-dark-50/40 hover:text-white"
+                  className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-lg transition-colors text-slate-400 hover:text-slate-900 shadow-sm"
               >
                   <Plus size={14} />
               </button>
@@ -178,9 +178,9 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
             <div className="mb-12">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">
-                        <TrendingUp className="w-5 h-5 text-primary-400" />
+                        <TrendingUp className="w-5 h-5 text-primary-600" />
                     </div>
-                    <h2 className="text-2xl font-display font-bold text-white tracking-tight">Featured <span className="text-primary-400">List</span></h2>
+                    <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">Featured <span className="text-primary-600">List</span></h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {featuredItems.map((item) => (
@@ -192,9 +192,9 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
             <div className="mb-12">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                        <Zap className="w-5 h-5 text-blue-400" />
+                        <Zap className="w-5 h-5 text-blue-600" />
                     </div>
-                    <h2 className="text-2xl font-display font-bold text-white tracking-tight">Trending <span className="text-blue-400">Products</span></h2>
+                    <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">Trending <span className="text-blue-600">Products</span></h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {trendingItems.map((item) => (
@@ -207,24 +207,24 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
       </AnimatePresence>
 
       {/* All Categories / Products List */}
-      <div className="glass-card rounded-2xl p-8 mb-12 relative overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 p-8 mb-12 relative overflow-hidden shadow-sm">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/5 blur-[100px] rounded-full pointer-events-none"></div>
         
         {selectedCategory === 'All' ? (
             <>
                 <div className="flex items-center gap-3 mb-8">
                     <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">
-                        <Award className="w-5 h-5 text-primary-400" />
+                        <Award className="w-5 h-5 text-primary-600" />
                     </div>
-                    <h2 className="text-2xl font-display font-bold text-white tracking-tight">Browse <span className="text-primary-400">Categories</span></h2>
+                    <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">Browse <span className="text-primary-600">Categories</span></h2>
                 </div>
 
-                <div className="flex gap-6 overflow-x-auto pb-4 mb-8 border-b border-white/5 scrollbar-hide">
+                <div className="flex gap-6 overflow-x-auto pb-4 mb-8 border-b border-slate-100 scrollbar-hide">
                     {['Accounts', 'Items', 'Money', 'Boosting', 'Video Games', 'Top Up'].map((tab) => (
                         <button 
                             key={tab}
                             onClick={() => handleCategoryClick(tab === 'Accounts' ? 'All' : tab)}
-                            className={`${tab === 'Accounts' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-dark-50/50 hover:text-white'} pb-3 px-2 text-sm font-semibold whitespace-nowrap transition-all duration-300`}
+                            className={`${tab === 'Accounts' ? 'text-primary-600 border-b-2 border-primary-600' : 'text-slate-400 hover:text-slate-900'} pb-3 px-2 text-sm font-semibold whitespace-nowrap transition-all duration-300`}
                         >
                             {tab} {tab === 'Accounts' && <span className="ml-1 opacity-50">({allProducts.length})</span>}
                         </button>
@@ -232,11 +232,11 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
                 </div>
 
                 <div className="relative mb-10 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-50/30 group-focus-within:text-primary-400 transition-colors" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
                     <input 
                         type="text" 
                         placeholder="Search across all premium accounts..." 
-                        className="w-full bg-dark-900/50 border border-white/10 rounded-2xl py-4 pl-12 pr-6 text-sm text-white placeholder:text-dark-50/30 focus:outline-none focus:border-primary-500/50 focus:ring-4 focus:ring-primary-500/10 transition-all duration-300"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-6 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 focus:bg-white transition-all duration-300 shadow-sm"
                     />
                 </div>
 
@@ -245,12 +245,12 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
                         <div 
                             key={idx} 
                             onClick={() => handleCategoryClick(cat.name)}
-                            className="glass-card bg-white/5 border border-white/5 rounded-2xl p-5 flex flex-col items-center justify-center text-center hover:bg-white/10 hover:border-primary-500/30 transition-all duration-500 cursor-pointer relative group h-28"
+                            className="bg-slate-50 border border-slate-100 rounded-2xl p-5 flex flex-col items-center justify-center text-center hover:bg-white hover:border-primary-500/30 hover:shadow-md transition-all duration-500 cursor-pointer relative group h-28 shadow-sm"
                         >
-                            <div className="absolute top-3 right-3 bg-primary-500/20 text-primary-300 text-[9px] px-2 py-0.5 rounded-full border border-primary-500/30 font-bold uppercase tracking-wider">
+                            <div className="absolute top-3 right-3 bg-primary-50 text-primary-600 text-[9px] px-2 py-0.5 rounded-full border border-primary-100 font-bold uppercase tracking-wider">
                                 {cat.offers}
                             </div>
-                            <span className="text-xs font-semibold text-white group-hover:text-primary-400 transition-colors uppercase tracking-widest">{cat.name}</span>
+                            <span className="text-xs font-semibold text-slate-900 group-hover:text-primary-600 transition-colors uppercase tracking-widest">{cat.name}</span>
                         </div>
                     ))}
                 </div>
@@ -263,12 +263,12 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
                         <div key={cat.name} className="mb-12 last:mb-0">
                             <div className="flex justify-between items-end mb-6">
                                 <div>
-                                    <h3 className="text-xl font-display font-bold text-white mb-1">{cat.name}</h3>
-                                    <div className="h-1 w-12 bg-primary-500 rounded-full"></div>
+                                    <h3 className="text-xl font-display font-bold text-slate-900 mb-1">{cat.name}</h3>
+                                    <div className="h-1 w-12 bg-primary-600 rounded-full"></div>
                                 </div>
                                 <button 
                                     onClick={() => handleCategoryClick(cat.name)} 
-                                    className="text-xs font-bold text-primary-400 hover:text-primary-300 uppercase tracking-widest flex items-center gap-2 group"
+                                    className="text-xs font-bold text-primary-600 hover:text-primary-500 uppercase tracking-widest flex items-center gap-2 group"
                                 >
                                     Explore All
                                     <TrendingUp className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
@@ -288,38 +288,38 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
                 {/* Left Sidebar Filters */}
                 <div className="w-full md:w-72 shrink-0 space-y-8">
                     <div>
-                        <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest text-primary-400">Search Offers</h3>
+                        <h3 className="text-sm font-bold text-slate-900 mb-4 uppercase tracking-widest text-primary-600">Search Offers</h3>
                         <div className="relative">
-                            <input type="text" placeholder="Filter by name..." className="w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary-500/50 transition-all" />
-                            <Search className="absolute right-4 top-3.5 w-4 h-4 text-dark-50/30" />
+                            <input type="text" placeholder="Filter by name..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-primary-500/50 transition-all shadow-sm" />
+                            <Search className="absolute right-4 top-3.5 w-4 h-4 text-slate-300" />
                         </div>
                     </div>
 
                     <div>
-                        <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest text-primary-400">Price Range</h3>
+                        <h3 className="text-sm font-bold text-slate-900 mb-4 uppercase tracking-widest text-primary-600">Price Range</h3>
                         <div className="flex gap-3 items-center">
-                            <input type="text" placeholder="Min" className="w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary-500/50 transition-all" />
-                            <span className="text-dark-50/20">—</span>
-                            <input type="text" placeholder="Max" className="w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary-500/50 transition-all" />
+                            <input type="text" placeholder="Min" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-primary-500/50 transition-all shadow-sm" />
+                            <span className="text-slate-300">—</span>
+                            <input type="text" placeholder="Max" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-primary-500/50 transition-all shadow-sm" />
                         </div>
                     </div>
 
                     <div className="space-y-6">
-                        <div className="pt-4 border-t border-white/5">
+                        <div className="pt-4 border-t border-slate-100">
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-bold text-white uppercase tracking-widest">Account Type</h3>
-                                <MinusCircle className="w-4 h-4 text-dark-50/30" />
+                                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Account Type</h3>
+                                <MinusCircle className="w-4 h-4 text-slate-300" />
                             </div>
                             <div className="space-y-3">
                                 {['Premium Account', 'Fresh Instance', 'Verified Only', 'Special Edition'].map((type, i) => (
                                     <label key={i} className="flex items-center justify-between group cursor-pointer">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-5 h-5 rounded border border-white/10 bg-dark-900 flex items-center justify-center group-hover:border-primary-500/50 transition-colors">
+                                            <div className="w-5 h-5 rounded border border-slate-200 bg-slate-50 flex items-center justify-center group-hover:border-primary-500 transition-colors shadow-inner">
                                                 <div className="w-2.5 h-2.5 bg-primary-500 rounded-sm opacity-0 group-hover:opacity-20 transition-opacity"></div>
                                             </div>
-                                            <span className="text-sm text-dark-50/60 group-hover:text-white transition-colors">{type}</span>
+                                            <span className="text-sm text-slate-500 group-hover:text-slate-900 transition-colors">{type}</span>
                                         </div>
-                                        <span className="text-[10px] font-bold text-dark-50/20">0</span>
+                                        <span className="text-[10px] font-bold text-slate-300">0</span>
                                     </label>
                                 ))}
                             </div>
@@ -329,26 +329,26 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
 
                 {/* Right Product Grid */}
                 <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-8 pb-6 border-b border-white/5">
+                    <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-100">
                         <button 
                             onClick={() => handleCategoryClick('All')}
-                            className="text-xs font-bold text-dark-50/40 hover:text-primary-400 flex items-center gap-2 uppercase tracking-widest transition-colors group"
+                            className="text-xs font-bold text-slate-400 hover:text-primary-600 flex items-center gap-2 uppercase tracking-widest transition-colors group"
                         >
-                            <div className="p-1.5 bg-white/5 rounded-lg group-hover:bg-primary-500/10 transition-colors">
+                            <div className="p-1.5 bg-slate-100 rounded-lg group-hover:bg-primary-50 transition-colors">
                                 <TrendingUp className="w-3.5 h-3.5 rotate-[-90deg]" />
                             </div>
                             Back to Dashboard
                         </button>
-                        <div className="text-xs font-bold text-dark-50/20 uppercase tracking-widest">
-                            Showing <span className="text-white">{products.length}</span> Results
+                        <div className="text-xs font-bold text-slate-300 uppercase tracking-widest">
+                            Showing <span className="text-slate-900">{products.length}</span> Results
                         </div>
                     </div>
                     
-                    <div className="flex items-center gap-6 mb-8 overflow-x-auto scrollbar-hide">
-                         <div className="bg-primary-500/10 border-b-2 border-primary-500 px-6 py-3 text-sm font-bold text-primary-400 uppercase tracking-widest whitespace-nowrap">
+                    <div className="flex items-center gap-6 mb-8 overflow-x-auto scrollbar-hide border-b border-slate-100">
+                         <div className="border-b-2 border-primary-600 px-6 py-3 text-sm font-bold text-primary-600 uppercase tracking-widest whitespace-nowrap">
                             Available Accounts
                          </div>
-                         <div className="text-sm font-bold text-dark-50/30 hover:text-white px-6 py-3 uppercase tracking-widest cursor-pointer transition-colors whitespace-nowrap">
+                         <div className="text-sm font-bold text-slate-400 hover:text-slate-900 px-6 py-3 uppercase tracking-widest cursor-pointer transition-colors whitespace-nowrap">
                             Subscriptions
                          </div>
                     </div>
@@ -364,51 +364,51 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
       </div>
 
       {/* Customer Reviews */}
-      <div className="glass-card rounded-2xl p-8 mb-12">
+      <div className="bg-white rounded-2xl border border-slate-200 p-8 mb-12 shadow-sm">
         <div className="flex justify-between items-center mb-10">
             <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">
-                    <Star className="w-5 h-5 text-primary-400 fill-current" />
+                    <Star className="w-5 h-5 text-primary-600 fill-current" />
                 </div>
-                <h2 className="text-2xl font-display font-bold text-white tracking-tight">Customer <span className="text-primary-400">Reviews</span></h2>
+                <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">Customer <span className="text-primary-600">Reviews</span></h2>
             </div>
-            <div className="text-xs font-bold text-dark-50/30 uppercase tracking-widest">
-                <span className="text-primary-400">{reviews.length}</span> Total Reviews
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <span className="text-primary-600">{reviews.length}</span> Total Reviews
             </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5 rounded-2xl overflow-hidden border border-white/5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-slate-100 rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
             {reviews.map((review, idx) => (
-                <div key={idx} className="bg-dark-950/50 p-6 hover:bg-white/5 transition-all duration-300 flex flex-col justify-between group">
+                <div key={idx} className="bg-white p-6 hover:bg-slate-50 transition-all duration-300 flex flex-col justify-between group">
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-2">
                             {review.type === 'positive' ? (
-                                <div className="flex items-center gap-1.5 text-primary-400 bg-primary-500/10 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-primary-500/20">
+                                <div className="flex items-center gap-1.5 text-primary-600 bg-primary-50 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-primary-100">
                                     <ThumbsUp className="w-3 h-3 fill-current" />
                                     <span>Recommended</span>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-1.5 text-red-400 bg-red-500/10 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-red-500/20">
+                                <div className="flex items-center gap-1.5 text-red-600 bg-red-50 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-red-100">
                                     <MinusCircle className="w-3 h-3" />
                                     <span>Issues</span>
                                 </div>
                             )}
                         </div>
-                        <div className="text-[10px] text-dark-50/30 font-bold uppercase tracking-widest">{review.date}</div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{review.date}</div>
                     </div>
                     
-                    <p className="text-sm text-white/80 leading-relaxed mb-6 group-hover:text-white transition-colors line-clamp-3">
+                    <p className="text-sm text-slate-600 leading-relaxed mb-6 group-hover:text-slate-900 transition-colors line-clamp-3 italic">
                         "{review.text}"
                     </p>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[10px] font-bold text-primary-400 border border-white/10">
+                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-bold text-primary-600 border border-slate-200">
                                 {review.buyer.substring(0, 2).toUpperCase()}
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-xs font-bold text-white tracking-tight">{review.buyer}</span>
-                                <span className="text-[9px] text-dark-50/40 uppercase tracking-widest font-bold">Verified Buyer</span>
+                                <span className="text-xs font-bold text-slate-900 tracking-tight">{review.buyer}</span>
+                                <span className="text-[9px] text-slate-400 uppercase tracking-widest font-bold">Verified Buyer</span>
                             </div>
                         </div>
                         <div className="flex gap-0.5">
@@ -422,7 +422,7 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
         </div>
 
         <div className="mt-10 flex justify-center">
-            <button className="px-10 py-4 rounded-xl border border-primary-500/30 text-primary-400 text-xs font-bold uppercase tracking-widest hover:bg-primary-500/10 hover:border-primary-500/50 transition-all duration-300 shadow-lg shadow-primary-500/5">
+            <button className="px-10 py-4 rounded-xl border border-primary-200 text-primary-600 text-xs font-bold uppercase tracking-widest hover:bg-primary-50 hover:border-primary-500 transition-all duration-300 shadow-sm">
                 Load More Testimonials
             </button>
         </div>

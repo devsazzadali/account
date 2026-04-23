@@ -20,7 +20,7 @@ import { SoldOrdersPage } from "./pages/Seller/SoldOrdersPage";
 export default function App() {
   return (
     <Router>
-      <div className="min-h-screen flex flex-col bg-dark-950">
+      <div className="min-h-screen flex flex-col bg-slate-50">
         <Header />
         
         <Routes>
