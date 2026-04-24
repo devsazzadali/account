@@ -2,13 +2,20 @@ import { Search, User, ShoppingCart, Menu, LayoutDashboard, ShoppingBag, Store, 
 import React from "react";
 import { Link } from "react-router-dom";
 
-export function Header() {
+export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   const userRole = localStorage.getItem("userRole");
   const username = localStorage.getItem("username") || "User";
   const isLoggedIn = !!userRole;
   const isAdmin = userRole === "admin";
+  const [searchValue, setSearchValue] = React.useState("");
 
   const [revenue, setRevenue] = React.useState(0);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSearchValue(val);
+    if (onSearch) onSearch(val);
+  };
 
   React.useEffect(() => {
     async function fetchRevenue() {
@@ -61,6 +68,8 @@ export function Header() {
                 <input 
                     type="text" 
                     placeholder="Search for premium accounts..." 
+                    value={searchValue}
+                    onChange={handleSearchChange}
                     className="w-full bg-slate-100 border border-slate-200 rounded-full pl-5 pr-12 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:bg-white focus:ring-1 focus:ring-primary-500 transition-all duration-300"
                 />
                 <button className="absolute right-1 top-1 h-[calc(100%-8px)] px-4 bg-primary-600 hover:bg-primary-500 text-white rounded-full flex items-center justify-center transition-colors">
@@ -187,6 +196,8 @@ export function Header() {
             <input 
                 type="text" 
                 placeholder="Search premium accounts..." 
+                value={searchValue}
+                onChange={handleSearchChange}
                 className="w-full bg-slate-100 border border-slate-200 rounded-full pl-5 pr-12 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
             />
             <button className="absolute right-1 top-1 h-[calc(100%-8px)] px-4 bg-primary-600 text-white rounded-full flex items-center justify-center">

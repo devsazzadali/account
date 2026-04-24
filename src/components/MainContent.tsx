@@ -28,7 +28,7 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
     return (
     <Link 
       to={`/product/${item.id}`} 
-      className="group bg-white rounded-2xl p-4 border border-slate-200 hover:border-primary-500/50 transition-all duration-500 hover:shadow-xl hover:-translate-y-1 block h-full relative overflow-hidden flex flex-col shadow-sm"
+      className="group ios-card p-4 hover:border-[#1dbf73]/50 transition-all duration-500 hover:shadow-xl hover:-translate-y-1 block h-full relative overflow-hidden flex flex-col"
     >
       <div className="flex gap-4 flex-1">
         {/* Left Side: Content */}
@@ -119,9 +119,10 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
 interface MainContentProps {
   selectedCategory: string;
   setSelectedCategory: (category: string) => void;
+  searchQuery?: string;
 }
 
-export function MainContent({ selectedCategory, setSelectedCategory }: MainContentProps) {
+export function MainContent({ selectedCategory, setSelectedCategory, searchQuery }: MainContentProps) {
   const [loading, setLoading] = useState(true);
   const [allProducts, setAllProducts] = useState<FeaturedItem[]>([]);
 
@@ -156,9 +157,19 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
   const reviews = useMemo(() => REVIEWS, []);
 
   const products = useMemo(() => {
+    let filtered = allProducts;
+    
+    if (searchQuery) {
+        filtered = filtered.filter(p => 
+            p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.category?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        return filtered;
+    }
+
     if (selectedCategory === 'All') return allProducts;
     return allProducts.filter(p => p.category === selectedCategory || selectedCategory === 'Accounts');
-  }, [selectedCategory, allProducts]);
+  }, [selectedCategory, allProducts, searchQuery]);
 
   const handleCategoryClick = (categoryName: string) => {
     setSelectedCategory(categoryName);
@@ -166,9 +177,44 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
 
   return (
     <div className="flex-1 min-w-0">
-      {/* Featured List - Only show if All Categories is selected */}
+      {/* Featured List / Search Results */}
       <AnimatePresence mode="wait">
-      {selectedCategory === 'All' && (
+      {searchQuery ? (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-12"
+          >
+             <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">
+                        <Search className="w-5 h-5 text-primary-600" />
+                    </div>
+                    <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">Search <span className="text-primary-600">Results</span></h2>
+                </div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    Found <span className="text-primary-600">{products.length}</span> Matching Offers
+                </div>
+             </div>
+             
+             {products.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-slate-200 p-20 text-center flex flex-col items-center shadow-sm">
+                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
+                        <AlertCircle size={32} />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-2">No results found for "{searchQuery}"</h3>
+                    <p className="text-slate-500 text-sm max-w-xs mx-auto">Try checking your spelling or using more general keywords to find what you're looking for.</p>
+                </div>
+             ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {products.map((item) => (
+                        <ProductCard key={item.id} item={item} />
+                    ))}
+                </div>
+             )}
+          </motion.div>
+      ) : selectedCategory === 'All' && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -206,11 +252,12 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
       )}
       </AnimatePresence>
 
-      {/* All Categories / Products List */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-8 mb-12 relative overflow-hidden shadow-sm">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/5 blur-[100px] rounded-full pointer-events-none"></div>
-        
-        {selectedCategory === 'All' ? (
+      {/* All Categories / Products List - Hide when searching */}
+      {!searchQuery && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 mb-12 relative overflow-hidden shadow-sm">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/5 blur-[100px] rounded-full pointer-events-none"></div>
+          
+          {selectedCategory === 'All' ? (
             <>
                 <div className="flex items-center gap-3 mb-8">
                     <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">
@@ -362,6 +409,7 @@ export function MainContent({ selectedCategory, setSelectedCategory }: MainConte
             </div>
         )}
       </div>
+      )}
 
       {/* Customer Reviews */}
       <div className="bg-white rounded-2xl border border-slate-200 p-8 mb-12 shadow-sm">

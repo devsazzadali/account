@@ -3,7 +3,7 @@ import { Sidebar } from "../components/Sidebar";
 import { MainContent } from "../components/MainContent";
 import { Banner } from "../components/Banner";
 
-export function StorePage() {
+export function StorePage({ searchQuery }: { searchQuery?: string }) {
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   return (
@@ -15,15 +15,19 @@ export function StorePage() {
       <div className="container mx-auto px-4 max-w-7xl relative">
            <div className="flex flex-col md:flex-row gap-6">
                {/* Sidebar - Overlaps Banner on Desktop - Only visible on Home (All Categories) */}
-               {selectedCategory === 'All' && (
+               {selectedCategory === 'All' && !searchQuery && (
                    <div className="w-full md:w-[280px] shrink-0 relative z-30 md:-mt-20">
                        <Sidebar />
                    </div>
                )}
                
                {/* Main Content */}
-               <div className={`flex-1 min-w-0 ${selectedCategory === 'All' ? 'pt-8' : 'pt-8'}`}>
-                   <MainContent selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} />
+               <div className={`flex-1 min-w-0 pt-8`}>
+                   <MainContent 
+                    selectedCategory={selectedCategory} 
+                    setSelectedCategory={setSelectedCategory} 
+                    searchQuery={searchQuery}
+                   />
                </div>
            </div>
       </div>

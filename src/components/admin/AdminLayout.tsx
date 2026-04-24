@@ -107,16 +107,16 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
         </AnimatePresence>
       </main>
 
-      {/* Mobile Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#e4e5e7] px-6 py-3 flex justify-between items-center z-[100]">
+      {/* Mobile Navigation - iOS Floating Style */}
+      <div className="lg:hidden fixed bottom-6 left-6 right-6 ios-glass border border-white/20 ios-rounded px-8 py-3 flex justify-between items-center z-[100] shadow-[0_8px_32px_rgba(0,0,0,0.1)]">
           {menuItems.slice(0, 4).map((item) => (
               <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex flex-col items-center gap-1 ${activeTab === item.id ? "text-[#1dbf73]" : "text-[#b5b6ba]"}`}
+                  className={`flex flex-col items-center gap-1 transition-all ${activeTab === item.id ? "text-[#1dbf73] scale-110" : "text-slate-400"}`}
               >
                   <item.icon size={20} />
-                  <span className="text-[10px] font-bold">{item.label.split('/')[0]}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
               </button>
           ))}
       </div>

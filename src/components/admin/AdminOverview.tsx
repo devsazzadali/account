@@ -6,10 +6,12 @@ import {
   Zap, 
   DollarSign,
   TrendingUp,
-  MoreHorizontal,
   ChevronRight,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Calendar,
+  History,
+  Activity
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase";
@@ -17,7 +19,12 @@ import { supabase } from "../../lib/supabase";
 export function AdminOverview({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const [loading, setLoading] = useState(true);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
-  const [revenue, setRevenue] = useState(0);
+  const [stats, setStats] = useState({
+    fifteenDays: 0,
+    thirtyDays: 0,
+    oneYear: 0,
+    lifetime: 0
+  });
   const username = localStorage.getItem("username") || "Admin";
 
   useEffect(() => {
@@ -27,35 +34,56 @@ export function AdminOverview({ setActiveTab }: { setActiveTab?: (tab: string) =
   async function fetchDashboardData() {
     try {
         setLoading(true);
-        const { data: orders } = await supabase.from('orders').select('total_price, status, created_at').order('created_at', { ascending: false });
-        
-        const totalRevenue = orders?.reduce((acc, o) => acc + Number(o.total_price), 0) || 0;
-        setRevenue(totalRevenue);
+        const now = new Date();
+        const fifteenDaysAgo = new Date(now.getTime() - (15 * 24 * 60 * 60 * 1000)).toISOString();
+        const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)).toISOString();
+        const oneYearAgo = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000)).toISOString();
 
-        const { data: recent } = await supabase
+        const { data: allOrders, error } = await supabase
             .from('orders')
-            .select('*, products(title)')
-            .order('created_at', { ascending: false })
-            .limit(3);
-        setRecentOrders(recent || []);
+            .select('total_price, created_at, status, products(title)')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const results = {
+            fifteenDays: 0,
+            thirtyDays: 0,
+            oneYear: 0,
+            lifetime: 0
+        };
+
+        allOrders?.forEach(order => {
+            const price = Number(order.total_price) || 0;
+            const createdDate = new Date(order.created_at);
+            
+            results.lifetime += price;
+            if (createdDate >= new Date(fifteenDaysAgo)) results.fifteenDays += price;
+            if (createdDate >= new Date(thirtyDaysAgo)) results.thirtyDays += price;
+            if (createdDate >= new Date(oneYearAgo)) results.oneYear += price;
+        });
+
+        setStats(results);
+        setRecentOrders(allOrders?.slice(0, 3) || []);
 
     } catch (err: any) {
-        console.error("Dashboard Fetch Error:", err.message);
+        console.error("Analytics Error:", err.message);
     } finally {
         setLoading(false);
     }
   }
 
-  const sellerStats = [
-    { label: "Response Rate", value: "100%", color: "bg-[#1dbf73]" },
-    { label: "Delivered on Time", value: "100%", color: "bg-[#1dbf73]" },
-    { label: "Order Completion", value: "98%", color: "bg-[#1dbf73]" },
+  const salesPeriods = [
+    { label: "Last 15 Days", value: stats.fifteenDays, icon: Activity, color: "text-[#1dbf73]" },
+    { label: "Last 30 Days", value: stats.thirtyDays, icon: Calendar, color: "text-blue-500" },
+    { label: "Last 1 Year", value: stats.oneYear, icon: History, color: "text-purple-500" },
+    { label: "Lifetime Sales", value: stats.lifetime, icon: TrendingUp, color: "text-amber-500" },
   ];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       
-      {/* Left Column: User Profile & Stats */}
+      {/* Left Column: Analytics Breakdown */}
       <div className="lg:col-span-4 space-y-6">
           <div className="bg-white border border-[#e4e5e7] rounded-sm p-6 shadow-sm">
               <div className="flex flex-col items-center text-center pb-6 border-b border-[#e4e5e7]">
@@ -64,69 +92,53 @@ export function AdminOverview({ setActiveTab }: { setActiveTab?: (tab: string) =
                       <div className="absolute bottom-1 right-1 w-5 h-5 bg-[#1dbf73] border-2 border-white rounded-full"></div>
                   </div>
                   <h3 className="text-lg font-bold text-[#404145]">{username}</h3>
-                  <div className="flex items-center gap-1 mt-1">
-                      <div className="flex text-[#ffbe5b]">
-                          {[1,2,3,4,5].map(i => <Star key={i} size={14} fill="currentColor" />)}
-                      </div>
-                      <span className="text-[13px] font-bold text-[#404145]">5.0</span>
-                      <span className="text-[13px] text-[#b5b6ba]">(1k+ reviews)</span>
-                  </div>
+                  <div className="text-[12px] font-bold text-[#1dbf73] uppercase tracking-widest mt-1">Main Administrator</div>
               </div>
 
-              <div className="py-6 space-y-4">
-                  {sellerStats.map((stat, i) => (
-                      <div key={i} className="space-y-2">
-                          <div className="flex justify-between text-[14px]">
-                              <span className="text-[#62646a] font-medium">{stat.label}</span>
-                              <span className="text-[#404145] font-bold">{stat.value}</span>
+              <div className="py-6 space-y-6">
+                  <h4 className="text-[14px] font-bold text-[#404145] uppercase tracking-wider mb-4">Revenue Performance</h4>
+                  {salesPeriods.map((period, i) => (
+                      <div key={i} className="flex items-center gap-4 p-3 hover:bg-[#f7f7f7] rounded transition-all group">
+                          <div className={`w-10 h-10 rounded flex items-center justify-center bg-white border border-[#e4e5e7] ${period.color}`}>
+                              <period.icon size={20} />
                           </div>
-                          <div className="h-1 bg-[#efeff0] rounded-full overflow-hidden">
-                              <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: stat.value }}
-                                className={`h-full ${stat.color}`}
-                              />
+                          <div>
+                              <div className="text-[12px] font-medium text-[#62646a]">{period.label}</div>
+                              <div className="text-[16px] font-bold text-[#404145]">${period.value.toLocaleString()}</div>
                           </div>
                       </div>
                   ))}
               </div>
-
-              <div className="pt-6 border-t border-[#e4e5e7] space-y-4">
-                  <div className="flex justify-between text-[14px]">
-                      <span className="text-[#62646a] font-medium">Earned in April</span>
-                      <span className="text-[#404145] font-bold">${revenue.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-[14px]">
-                      <span className="text-[#62646a] font-medium">Response Time</span>
-                      <span className="text-[#404145] font-bold">1 Hour</span>
-                  </div>
-              </div>
           </div>
       </div>
 
-      {/* Right Column: Active Orders & Actions */}
+      {/* Right Column: Active Sales Feed */}
       <div className="lg:col-span-8 space-y-6">
           
-          {/* Earnings Card */}
-          <div className="bg-white border border-[#e4e5e7] rounded-sm p-8 shadow-sm flex items-center justify-between">
-              <div>
-                  <h4 className="text-[16px] font-bold text-[#404145] mb-1">Total Balance</h4>
-                  <div className="text-3xl font-bold text-[#1dbf73]">${revenue.toLocaleString()}</div>
+          {/* Total Overview Card */}
+          <div className="bg-[#404145] rounded-sm p-8 shadow-lg text-white relative overflow-hidden">
+              <div className="absolute -right-10 -bottom-10 opacity-5">
+                  <TrendingUp size={240} />
               </div>
-              <button 
-                onClick={() => setActiveTab?.('earnings')}
-                className="px-6 py-3 border-2 border-[#404145] text-[#404145] font-bold rounded-md hover:bg-[#404145] hover:text-white transition-all text-sm"
-              >
-                  Withdraw Funds
-              </button>
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div>
+                      <h4 className="text-[14px] font-bold text-white/60 uppercase tracking-widest mb-1">Total Lifetime Revenue</h4>
+                      <div className="text-4xl font-black">${stats.lifetime.toLocaleString()}</div>
+                  </div>
+                  <div className="h-12 w-px bg-white/10 hidden md:block"></div>
+                  <div>
+                      <h4 className="text-[14px] font-bold text-white/60 uppercase tracking-widest mb-1">Verified Sales</h4>
+                      <div className="text-2xl font-bold">{recentOrders.length}+ Records</div>
+                  </div>
+              </div>
           </div>
 
-          {/* Active Orders */}
+          {/* Recent Sales Activity */}
           <div className="bg-white border border-[#e4e5e7] rounded-sm shadow-sm overflow-hidden">
               <div className="p-6 border-b border-[#e4e5e7] flex items-center justify-between">
-                  <h4 className="text-[16px] font-bold text-[#404145]">Active Orders</h4>
+                  <h4 className="text-[16px] font-bold text-[#404145]">Real-Time Sales Feed</h4>
                   <button onClick={() => setActiveTab?.('orders')} className="text-[#1dbf73] text-[14px] font-bold flex items-center gap-1 hover:underline">
-                      View All <ChevronRight size={16} />
+                      View Ledger <ChevronRight size={16} />
                   </button>
               </div>
               
@@ -134,53 +146,32 @@ export function AdminOverview({ setActiveTab }: { setActiveTab?: (tab: string) =
                   {loading ? (
                       <div className="p-12 text-center text-[#b5b6ba]">
                           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                          <span className="text-sm font-medium">Fetching orders...</span>
+                          <span className="text-sm font-medium">Processing Analytics...</span>
                       </div>
                   ) : recentOrders.length === 0 ? (
                       <div className="p-12 text-center text-[#b5b6ba]">
                           <AlertCircle className="w-8 h-8 mx-auto mb-2" />
-                          <span className="text-sm font-medium">No active orders found</span>
+                          <span className="text-sm font-medium">No sales data available</span>
                       </div>
-                  ) : recentOrders.map((order) => (
-                      <div key={order.id} className="p-6 flex items-center justify-between hover:bg-[#f7f7f7] transition-all cursor-pointer group">
+                  ) : recentOrders.map((order, i) => (
+                      <div key={i} className="p-6 flex items-center justify-between hover:bg-[#f7f7f7] transition-all group">
                           <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-[#efeff0] rounded flex items-center justify-center text-[#b5b6ba]">
-                                  <Zap size={24} />
+                              <div className="w-12 h-12 bg-[#efeff0] rounded flex items-center justify-center text-[#1dbf73]">
+                                  <DollarSign size={24} />
                               </div>
                               <div>
-                                  <div className="text-[14px] font-bold text-[#404145] group-hover:text-[#1dbf73] transition-colors">{order.products?.title}</div>
-                                  <div className="text-[12px] text-[#62646a] font-medium mt-0.5">Buyer: {order.customer_email.split('@')[0]}</div>
+                                  <div className="text-[14px] font-bold text-[#404145]">{order.products?.title || "Product Purchase"}</div>
+                                  <div className="text-[11px] text-[#b5b6ba] font-bold mt-0.5 uppercase tracking-tighter">
+                                      {new Date(order.created_at).toLocaleString()}
+                                  </div>
                               </div>
                           </div>
                           <div className="text-right">
-                              <div className="text-[14px] font-bold text-[#404145]">${Number(order.total_price).toFixed(2)}</div>
-                              <div className={`text-[11px] font-bold uppercase tracking-wider mt-1 ${order.status === 'Delivered' ? 'text-[#1dbf73]' : 'text-[#ffbe5b]'}`}>
-                                  {order.status}
-                              </div>
+                              <div className="text-[16px] font-bold text-[#404145]">${Number(order.total_price).toFixed(2)}</div>
+                              <div className="text-[11px] font-bold text-[#1dbf73] uppercase tracking-widest mt-1">Verified</div>
                           </div>
                       </div>
                   ))}
-              </div>
-          </div>
-
-          {/* Quick Actions / Tips */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-[#1dbf73] rounded-sm p-6 text-white relative overflow-hidden group">
-                  <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
-                      <TrendingUp size={120} />
-                  </div>
-                  <h4 className="text-lg font-bold mb-2">Boost your sales</h4>
-                  <p className="text-sm text-white/80 mb-6 font-medium leading-relaxed">Share your profile on social media to reach more buyers and increase your revenue.</p>
-                  <button className="bg-white text-[#1dbf73] px-4 py-2 rounded font-bold text-xs uppercase tracking-widest hover:bg-opacity-90 transition-all">
-                      Promote Products
-                  </button>
-              </div>
-              <div className="bg-white border border-[#e4e5e7] rounded-sm p-6 relative group">
-                  <h4 className="text-lg font-bold text-[#404145] mb-2">Need help?</h4>
-                  <p className="text-sm text-[#62646a] mb-6 font-medium leading-relaxed">Check out our guides on how to become a top-rated seller in no time.</p>
-                  <button className="border-2 border-[#404145] text-[#404145] px-4 py-2 rounded font-bold text-xs uppercase tracking-widest hover:bg-[#404145] hover:text-white transition-all">
-                      Read Guides
-                  </button>
               </div>
           </div>
       </div>
