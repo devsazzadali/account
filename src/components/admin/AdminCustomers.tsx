@@ -1,5 +1,5 @@
 import React from "react";
-import { User, Mail, Calendar, MoreVertical, ShieldCheck } from "lucide-react";
+import { User, Mail, Calendar, MoreVertical, ShieldCheck, Search, Filter } from "lucide-react";
 
 export function AdminCustomers() {
   const customers = [
@@ -10,51 +10,87 @@ export function AdminCustomers() {
   ];
 
   return (
-    <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm relative">
-        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+    <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
             <div>
-                <h3 className="text-xl font-bold text-slate-900 mb-1">Member Directory</h3>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Manage your acquisition base</p>
+                <h2 className="text-xl font-bold text-slate-900">Customers</h2>
+                <p className="text-[13px] text-slate-500 font-medium">Manage your acquisition base and view customer insights.</p>
             </div>
-            <button className="px-6 py-3 bg-white border border-slate-200 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-slate-900 transition-all shadow-sm">Export Directory</button>
+            <button className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-slate-800 transition-all flex items-center gap-2">
+                <Mail size={16} />
+                Email customers
+            </button>
         </div>
-        <div className="overflow-x-auto">
-            <table className="w-full text-left">
-                <thead className="bg-slate-50/20 text-slate-400 text-[9px] font-bold uppercase tracking-widest border-b border-slate-100">
-                <tr>
-                    <th className="px-8 py-5">Member</th>
-                    <th className="px-8 py-5">Communication</th>
-                    <th className="px-8 py-5">Joined Date</th>
-                    <th className="px-8 py-5">Order Vol</th>
-                    <th className="px-8 py-5">Total Value</th>
-                    <th className="px-8 py-5 text-right">Actions</th>
-                </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                {customers.map((customer, i) => (
-                    <tr key={i} className="hover:bg-slate-50 transition-colors group">
-                        <td className="px-8 py-5">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-primary-600 group-hover:scale-110 transition-transform border border-slate-200 shadow-sm">
-                                    <User size={18} />
-                                </div>
-                                <span className="font-bold text-slate-900 text-sm">{customer.name}</span>
-                            </div>
-                        </td>
-                        <td className="px-8 py-5 font-bold text-slate-600 text-xs italic">{customer.email}</td>
-                        <td className="px-8 py-5 font-bold text-slate-400 text-[10px]">{customer.joined}</td>
-                        <td className="px-8 py-5 font-bold text-slate-900 text-sm">{customer.orders}</td>
-                        <td className="px-8 py-5 font-bold text-primary-600 text-sm">{customer.spent}</td>
-                        <td className="px-8 py-5 text-right">
-                            <button className="p-2 text-slate-300 hover:text-slate-900 transition-colors"><MoreVertical size={16} /></button>
-                        </td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
+
+        {/* Customers Table - Shopify Style */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex items-center gap-4 bg-slate-50/30">
+                <div className="flex-1 relative">
+                    <input 
+                      type="text" 
+                      placeholder="Search customers" 
+                      className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-4 py-1.5 text-xs font-medium focus:outline-none focus:border-slate-400 transition-all"
+                    />
+                    <Search className="absolute left-3 top-2 text-slate-400" size={14} />
+                </div>
+                <button className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-white transition-all flex items-center gap-2">
+                    <Filter size={14} />
+                    Filters
+                </button>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-slate-50/50">
+                            <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100 w-12 text-center">
+                                <input type="checkbox" className="rounded border-slate-300" />
+                            </th>
+                            <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100">Customer Name</th>
+                            <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100">Location</th>
+                            <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100">Orders</th>
+                            <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100">Amount Spent</th>
+                            <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                        {customers.map((customer, i) => (
+                            <tr key={i} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
+                                <td className="px-6 py-4 border-b border-slate-50 text-center">
+                                    <input type="checkbox" className="rounded border-slate-300" />
+                                </td>
+                                <td className="px-6 py-4 border-b border-slate-50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200 font-bold text-xs uppercase tracking-tighter">
+                                            {customer.name.substring(0, 2)}
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-900 group-hover:text-primary-600 transition-colors">{customer.name}</div>
+                                            <div className="text-[11px] text-slate-500 font-medium">{customer.email}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 border-b border-slate-50 text-xs font-medium text-slate-500 italic">
+                                    Verified Protocol
+                                </td>
+                                <td className="px-6 py-4 border-b border-slate-50 text-sm font-medium text-slate-600">
+                                    {customer.orders} orders
+                                </td>
+                                <td className="px-6 py-4 border-b border-slate-50 text-sm font-bold text-slate-900">
+                                    {customer.spent}
+                                </td>
+                                <td className="px-6 py-4 border-b border-slate-50 text-right">
+                                    <button className="p-1.5 text-slate-400 hover:text-slate-900 transition-colors">
+                                        <MoreVertical size={16} />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
-        {/* Background Decoration */}
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 blur-[100px] rounded-full pointer-events-none"></div>
     </div>
   );
 }

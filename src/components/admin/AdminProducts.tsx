@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Edit, Trash2, Filter, Zap, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Filter, Zap, Loader2, Search } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
 
 export function AdminProducts() {
@@ -65,147 +66,169 @@ export function AdminProducts() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Add Product Modal/Form */}
-      {showAddForm && (
-        <div className="bg-white rounded-[2rem] border border-primary-200 p-8 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="flex justify-between items-center mb-8">
-                <h3 className="text-xl font-bold text-slate-900 uppercase tracking-widest">New Asset Deployment</h3>
-                <button onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-slate-900">Cancel</button>
-            </div>
-            <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Asset Title</label>
-                    <input 
-                        required
-                        type="text" 
-                        value={newProduct.title}
-                        onChange={(e) => setNewProduct({...newProduct, title: e.target.value})}
-                        placeholder="e.g. Netflix Premium Lifetime"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:border-primary-500 outline-none transition-all shadow-sm"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Market Valuation ($)</label>
-                    <input 
-                        required
-                        type="number" 
-                        step="0.01"
-                        value={newProduct.price}
-                        onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
-                        placeholder="0.00"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:border-primary-500 outline-none transition-all shadow-sm"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Image URL</label>
-                    <input 
-                        type="text" 
-                        value={newProduct.image}
-                        onChange={(e) => setNewProduct({...newProduct, image: e.target.value})}
-                        placeholder="https://..."
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:border-primary-500 outline-none transition-all shadow-sm"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stock Units</label>
-                    <input 
-                        type="number" 
-                        value={newProduct.stock}
-                        onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:border-primary-500 outline-none transition-all shadow-sm"
-                    />
-                </div>
-                <div className="md:col-span-2">
-                    <button type="submit" className="w-full py-4 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-2xl shadow-xl shadow-primary-500/20 transition-all uppercase tracking-[0.2em] text-xs">
-                        Finalize Deployment
-                    </button>
-                </div>
-            </form>
-        </div>
-      )}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+          <div>
+              <h2 className="text-xl font-bold text-slate-900">Products</h2>
+              <p className="text-[13px] text-slate-500 font-medium">Manage your store's digital assets and inventory.</p>
+          </div>
+          <button 
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-slate-800 transition-all flex items-center gap-2"
+          >
+            <Plus size={16} />
+            {showAddForm ? "Cancel" : "Add product"}
+          </button>
+      </div>
 
-      <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
-        <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-50/50">
-            <div>
-                <h3 className="text-xl font-bold text-slate-900 mb-1">Asset Inventory</h3>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Manage your premium digital listings</p>
-            </div>
-            <div className="flex items-center gap-3">
-                <button onClick={fetchProducts} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-slate-900 transition-all shadow-sm">
-                    {loading ? <Loader2 size={18} className="animate-spin" /> : <Filter size={18} />}
-                </button>
-                <button 
-                    onClick={() => setShowAddForm(true)}
-                    className="bg-gradient-to-r from-primary-600 to-primary-500 hover:scale-[1.02] active:scale-[0.98] text-white px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-primary-500/20"
-                >
-                    <Plus size={16} />
-                    Deploy Asset
-                </button>
-            </div>
-        </div>
-        
-        <div className="overflow-x-auto">
-            {loading ? (
-                <div className="p-20 text-center">
-                    <Loader2 size={48} className="animate-spin text-primary-500 mx-auto mb-4 opacity-20" />
-                    <p className="text-slate-300 text-[10px] font-bold uppercase tracking-widest">Accessing Secure Vault...</p>
+      {/* Add Product Form - Integrated */}
+      <AnimatePresence>
+          {showAddForm && (
+            <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+            >
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+                    <h3 className="text-sm font-bold text-slate-900 mb-6 uppercase tracking-tight">New Product Deployment</h3>
+                    <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-500 uppercase">Title</label>
+                            <input 
+                                required
+                                type="text" 
+                                value={newProduct.title}
+                                onChange={(e) => setNewProduct({...newProduct, title: e.target.value})}
+                                placeholder="e.g. Netflix Premium"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium focus:outline-none focus:border-slate-400 focus:bg-white transition-all"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-500 uppercase">Price (USD)</label>
+                            <input 
+                                required
+                                type="number" 
+                                step="0.01"
+                                value={newProduct.price}
+                                onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                                placeholder="0.00"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium focus:outline-none focus:border-slate-400 focus:bg-white transition-all"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-500 uppercase">Initial Stock</label>
+                            <input 
+                                type="number" 
+                                value={newProduct.stock}
+                                onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium focus:outline-none focus:border-slate-400 focus:bg-white transition-all"
+                            />
+                        </div>
+                        <div className="md:col-span-2 space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-500 uppercase">Image URL</label>
+                            <input 
+                                type="text" 
+                                value={newProduct.image}
+                                onChange={(e) => setNewProduct({...newProduct, image: e.target.value})}
+                                placeholder="https://..."
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium focus:outline-none focus:border-slate-400 focus:bg-white transition-all"
+                            />
+                        </div>
+                        <div className="flex items-end">
+                            <button type="submit" className="w-full py-2 bg-primary-600 text-white font-bold rounded-lg hover:bg-primary-500 transition-all text-sm">
+                                Save Product
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            ) : (
-                <table className="w-full text-left">
-                    <thead className="bg-slate-50/50 text-slate-400 text-[9px] font-bold uppercase tracking-widest border-b border-slate-100">
-                    <tr>
-                        <th className="px-8 py-5">Digital Asset</th>
-                        <th className="px-8 py-5">Market Valuation</th>
-                        <th className="px-8 py-5">Inventory Status</th>
-                        <th className="px-8 py-5">Deployment</th>
-                        <th className="px-8 py-5 text-right">Operations</th>
-                    </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                    {products.map((product, i) => (
-                        <tr key={product.id} className="hover:bg-slate-50 transition-colors group">
-                            <td className="px-8 py-5">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-primary-600 group-hover:scale-110 transition-transform overflow-hidden shadow-sm border border-slate-200">
-                                        <img src={product.image} className="w-full h-full object-cover" alt="" />
-                                    </div>
-                                    <span className="font-bold text-slate-900 text-xs">{product.title}</span>
-                                </div>
-                            </td>
-                            <td className="px-8 py-5 font-bold text-slate-900 text-xs">${Number(product.price).toFixed(2)}</td>
-                            <td className="px-8 py-5">
-                                <div className="flex items-center gap-3">
-                                    <span className="text-[10px] font-bold text-slate-500">{product.stock}U</span>
-                                    <div className="h-1 w-20 bg-slate-100 rounded-full overflow-hidden">
-                                        <div className={`h-full ${product.stock > 10 ? "bg-primary-500" : product.stock > 0 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${Math.min(product.stock * 2, 100)}%` }}></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td className="px-8 py-5">
-                                <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest border ${
-                                product.stock > 0 ? "bg-primary-50 text-primary-600 border-primary-100" : "bg-red-50 text-red-600 border-red-100"
-                                }`}>
-                                {product.stock > 0 ? "Active" : "Depleted"}
-                                </span>
-                            </td>
-                            <td className="px-8 py-5 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                    <button className="p-2 text-slate-300 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all shadow-sm"><Edit size={14} /></button>
-                                    <button 
+            </motion.div>
+          )}
+      </AnimatePresence>
+
+      {/* Product List - Shopify Style */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center gap-4 bg-slate-50/30">
+              <div className="flex-1 relative">
+                  <input 
+                    type="text" 
+                    placeholder="Filter products" 
+                    className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-4 py-1.5 text-xs font-medium focus:outline-none focus:border-slate-400 transition-all"
+                  />
+                  <Search className="absolute left-3 top-2 text-slate-400" size={14} />
+              </div>
+              <button className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-white transition-all flex items-center gap-2">
+                  <Filter size={14} />
+                  Filters
+              </button>
+          </div>
+
+          <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                  <thead>
+                      <tr className="bg-slate-50/50">
+                          <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100 w-12 text-center">
+                              <input type="checkbox" className="rounded border-slate-300" />
+                          </th>
+                          <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100">Product</th>
+                          <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100">Status</th>
+                          <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100">Inventory</th>
+                          <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100">Price</th>
+                          <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100 text-right">Actions</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                      {loading ? (
+                          <tr><td colSpan={6} className="p-20 text-center text-slate-400 text-sm font-medium">Loading products...</td></tr>
+                      ) : products.length === 0 ? (
+                          <tr><td colSpan={6} className="p-20 text-center text-slate-400 text-sm font-medium">No products found</td></tr>
+                      ) : products.map((product) => (
+                          <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
+                              <td className="px-6 py-4 border-b border-slate-50 text-center">
+                                  <input type="checkbox" className="rounded border-slate-300" />
+                              </td>
+                              <td className="px-6 py-4 border-b border-slate-50">
+                                  <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                                          <img src={product.image} className="w-full h-full object-cover" alt="" />
+                                      </div>
+                                      <span className="text-sm font-bold text-slate-900 group-hover:text-primary-600 transition-colors">{product.title}</span>
+                                  </div>
+                              </td>
+                              <td className="px-6 py-4 border-b border-slate-50">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight ${
+                                      product.stock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                  }`}>
+                                      {product.stock > 0 ? "Active" : "Archived"}
+                                  </span>
+                              </td>
+                              <td className="px-6 py-4 border-b border-slate-50">
+                                  <span className={`text-sm font-medium ${product.stock <= 5 ? "text-red-600 font-bold" : "text-slate-600"}`}>
+                                      {product.stock} in stock
+                                  </span>
+                              </td>
+                              <td className="px-6 py-4 border-b border-slate-50 text-sm font-bold text-slate-900">
+                                  ${Number(product.price).toFixed(2)}
+                              </td>
+                              <td className="px-6 py-4 border-b border-slate-50 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                      <button className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-white rounded-md transition-all">
+                                          <Edit size={14} />
+                                      </button>
+                                      <button 
                                         onClick={() => handleDelete(product.id)}
-                                        className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                    </tbody>
-                </table>
-            )}
-        </div>
+                                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all"
+                                      >
+                                          <Trash2 size={14} />
+                                      </button>
+                                  </div>
+                              </td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+          </div>
       </div>
     </div>
   );

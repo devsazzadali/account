@@ -12,7 +12,10 @@ import {
   Settings as SettingsIcon,
   Search,
   ExternalLink,
-  Loader2
+  Loader2,
+  Calendar,
+  ShoppingBag,
+  User
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase";
@@ -70,146 +73,174 @@ export function AdminOverview({ setActiveTab }: { setActiveTab?: (tab: string) =
   }
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-slate-200 relative overflow-hidden shadow-sm">
-          <div className="relative z-10">
-              <h2 className="text-3xl font-display font-bold text-slate-900 mb-2 italic">Command Center</h2>
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em]">Operational Oversight & Settlement Monitoring</p>
+    <div className="space-y-6">
+      {/* Home Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+              <h2 className="text-xl font-bold text-slate-900">Home</h2>
+              <p className="text-[13px] text-slate-500 font-medium">Here's what's happening with your store today.</p>
           </div>
-          <div className="flex gap-3 relative z-10">
-              <button onClick={fetchDashboardData} className="bg-slate-50 hover:bg-slate-100 text-slate-600 p-3 rounded-2xl border border-slate-200 transition-all shadow-sm">
-                  {loading ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
-              </button>
-              <button 
-                onClick={() => setActiveTab?.('products')}
-                className="bg-primary-600 hover:bg-primary-500 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-primary-500/20"
-              >
-                  <Plus size={16} />
-                  New Listing
-              </button>
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+              <Calendar size={14} />
+              Last 30 days: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - Today
           </div>
-          {/* Background Glow */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 blur-[80px] rounded-full"></div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => (
-          <motion.div 
-            key={i}
-            whileHover={{ y: -5 }}
-            className="bg-white p-6 rounded-[2rem] border border-slate-200 relative overflow-hidden group shadow-sm hover:shadow-md transition-all"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className={`p-3 ${stat.bg} rounded-xl ${stat.color} transition-colors group-hover:scale-110 duration-500 border border-slate-100/50`}>
-                {stat.icon}
-              </div>
-              <div className={`flex items-center gap-1 text-[10px] font-bold ${stat.positive ? "text-green-600" : "text-red-600"}`}>
-                {stat.positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                {stat.change}
-              </div>
-            </div>
-            <div>
-              <h3 className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">{stat.title}</h3>
-              <div className="text-2xl font-display font-bold text-slate-900 leading-none">{stat.value}</div>
-            </div>
-            <div className={`absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-10 blur-2xl ${stat.bg}`}></div>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Recent Sales Table */}
-          <div className="lg:col-span-2 bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm">
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
-                <div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-1">Live Sales Feed</h3>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Latest marketplace acquisitions</p>
-                </div>
-                <button className="p-2 bg-white rounded-lg border border-slate-200 hover:bg-slate-50 transition-all shadow-sm">
-                    <ExternalLink size={16} className="text-slate-400" />
-                </button>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                    <thead className="text-slate-400 text-[9px] font-bold uppercase tracking-widest border-b border-slate-100 bg-slate-50/20">
-                    <tr>
-                        <th className="px-8 py-5">Order ID</th>
-                        <th className="px-8 py-5">Receiver</th>
-                        <th className="px-8 py-5">Asset</th>
-                        <th className="px-8 py-5">Settlement</th>
-                    </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                    {loading ? (
-                        <tr><td colSpan={4} className="p-20 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">Synchronizing Transmission...</td></tr>
-                    ) : recentOrders.length === 0 ? (
-                        <tr><td colSpan={4} className="p-20 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">No Active Transmissions Found</td></tr>
-                    ) : recentOrders.map((order, i) => (
-                        <tr key={i} className="hover:bg-slate-50 transition-colors">
-                            <td className="px-8 py-5 font-bold text-slate-400 text-[10px] truncate max-w-[100px]">{order.id.split('-')[0].toUpperCase()}</td>
-                            <td className="px-8 py-5 font-medium text-slate-600 text-xs truncate max-w-[150px]">{order.customer_email}</td>
-                            <td className="px-8 py-5">
-                                <div className="text-xs font-bold text-slate-900 truncate max-w-[200px]">{order.products?.title || "Unknown Asset"}</div>
-                                <div className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${
-                                    order.status === "Delivered" ? "text-primary-600" : "text-yellow-600"
-                                }`}>{order.status}</div>
-                            </td>
-                            <td className="px-8 py-5 font-bold text-slate-900 text-xs">${Number(order.total_price).toFixed(2)}</td>
-                        </tr>
-                    ))}
-                    </tbody>
-                </table>
-            </div>
+      {/* Today's Stats - Shopify Style */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-tight">Today's Performance</h3>
+              <button onClick={fetchDashboardData} className="text-slate-400 hover:text-slate-900 transition-all">
+                  <Loader2 size={16} className={loading ? "animate-spin" : ""} />
+              </button>
           </div>
-
-          {/* Alerts & Quick Actions */}
-          <div className="space-y-6">
-              {/* Critical Alerts */}
-              <div className="bg-white rounded-[2.5rem] p-8 border border-red-100 bg-red-50/30 relative overflow-hidden shadow-sm">
-                  <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600 shadow-sm border border-red-200/50">
-                          <AlertCircle size={20} />
+          <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+              {stats.map((stat, i) => (
+                  <div key={i} className="p-6 hover:bg-slate-50/50 transition-all group">
+                      <div className="flex justify-between items-start mb-1">
+                          <span className="text-[12px] font-semibold text-slate-500">{stat.title}</span>
+                          <span className={`text-[11px] font-bold ${stat.positive ? "text-green-600" : "text-red-600"}`}>
+                              {stat.change}
+                          </span>
                       </div>
-                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Stock Alerts</h3>
+                      <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
+                      {/* Simple Sparkline Placeholder */}
+                      <div className="mt-4 h-1 bg-slate-100 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: "60%" }}
+                            className={`h-full ${stat.positive ? "bg-primary-500" : "bg-red-500"}`}
+                          />
+                      </div>
                   </div>
-                  <div className="space-y-4">
-                      {lowStockProducts.length === 0 && (
-                          <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest text-center py-4">All assets secured.</p>
+              ))}
+          </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Feed / Chart */}
+          <div className="lg:col-span-2 space-y-6">
+              {/* Next Steps / Tasks */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                  <h3 className="text-[14px] font-bold text-slate-900 mb-4">Next steps for your store</h3>
+                  <div className="space-y-3">
+                      {recentOrders.filter(o => o.status !== "Delivered").length > 0 && (
+                        <div className="flex items-center gap-4 p-4 bg-primary-50/30 rounded-xl border border-primary-100">
+                            <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
+                                <ShoppingBag size={20} />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-[13px] font-bold text-slate-900">Fulfill {recentOrders.filter(o => o.status !== "Delivered").length} orders</h4>
+                                <p className="text-[12px] text-slate-500 font-medium">You have orders waiting for digital delivery.</p>
+                            </div>
+                            <button 
+                                onClick={() => setActiveTab?.('orders')}
+                                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-900 hover:bg-slate-50 transition-all"
+                            >
+                                View Orders
+                            </button>
+                        </div>
                       )}
-                      {lowStockProducts.map((p, i) => (
-                          <div key={i} className="p-4 bg-white rounded-2xl border border-red-200/50 shadow-sm">
-                              <div className="text-xs font-bold text-slate-900 mb-1 truncate">{p.title}</div>
-                              <div className="text-[10px] text-red-600 font-bold uppercase tracking-widest">Critical Stock: {p.stock} Units</div>
+                      <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                          <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center text-slate-600">
+                              <Plus size={20} />
+                          </div>
+                          <div className="flex-1">
+                              <h4 className="text-[13px] font-bold text-slate-900">Add more products</h4>
+                              <p className="text-[12px] text-slate-500 font-medium">Expand your catalog to reach more customers.</p>
+                          </div>
+                          <button 
+                             onClick={() => setActiveTab?.('products')}
+                             className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-900 hover:bg-slate-50 transition-all"
+                          >
+                              Add Product
+                          </button>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Sales Chart Area */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-[14px] font-bold text-slate-900">Total Sales</h3>
+                      <div className="flex gap-2">
+                          <div className="w-3 h-3 rounded-full bg-primary-500"></div>
+                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Revenue</span>
+                      </div>
+                  </div>
+                  <div className="h-64 flex items-end gap-2 px-2">
+                      {[40, 70, 45, 90, 65, 85, 100, 75, 55, 95, 80, 110].map((h, i) => (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                              <motion.div 
+                                initial={{ height: 0 }}
+                                animate={{ height: `${h}%` }}
+                                className="w-full bg-slate-100 rounded-t-sm group-hover:bg-primary-500 transition-colors relative"
+                              >
+                                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-1.5 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                      ${h * 12}
+                                  </div>
+                              </motion.div>
+                              <span className="text-[9px] font-bold text-slate-300">{i + 1}</span>
                           </div>
                       ))}
                   </div>
               </div>
+          </div>
 
-              {/* System Integrity */}
-              <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm">
-                  <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6">System Integrity</h3>
-                  <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                              <Zap size={16} className="text-yellow-500" />
-                              <span className="text-xs font-bold text-slate-900">Payment Gateway</span>
+          {/* Activity Sidebar */}
+          <div className="space-y-6">
+              {/* Recent Sales Feed */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="p-4 border-b border-slate-100">
+                      <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-tight">Recent Activity</h3>
+                  </div>
+                  <div className="divide-y divide-slate-50">
+                      {recentOrders.length === 0 ? (
+                          <div className="p-8 text-center text-slate-400 text-[12px] font-medium italic">No recent activity</div>
+                      ) : recentOrders.slice(0, 5).map((order, i) => (
+                          <div key={i} className="p-4 hover:bg-slate-50 transition-all flex items-start gap-3">
+                              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                                  <User size={14} />
+                              </div>
+                              <div className="flex-1 overflow-hidden">
+                                  <p className="text-[12px] text-slate-900 leading-tight">
+                                      <span className="font-bold">New order</span> from {order.customer_email.split('@')[0]}
+                                  </p>
+                                  <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">{order.products?.title}</p>
+                                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight block mt-1">Just now</span>
+                              </div>
+                              <div className="text-[12px] font-bold text-slate-900">
+                                  ${Number(order.total_price).toFixed(2)}
+                              </div>
                           </div>
-                          <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                              <ShieldCheck size={16} className="text-primary-600" />
-                              <span className="text-xs font-bold text-slate-900">Escrow Protocol</span>
+                      ))}
+                  </div>
+                  <button 
+                    onClick={() => setActiveTab?.('orders')}
+                    className="w-full p-3 text-[11px] font-bold text-primary-600 hover:bg-slate-50 border-t border-slate-100 transition-all"
+                  >
+                      View all activity
+                  </button>
+              </div>
+
+              {/* Inventory Alerts */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                  <h3 className="text-[13px] font-bold text-slate-900 mb-4 flex items-center gap-2">
+                      <AlertCircle size={16} className="text-amber-500" />
+                      Inventory Alert
+                  </h3>
+                  <div className="space-y-4">
+                      {lowStockProducts.length === 0 ? (
+                          <p className="text-[11px] text-slate-400 font-medium italic text-center py-2">All items are in stock</p>
+                      ) : lowStockProducts.slice(0, 3).map((p, i) => (
+                          <div key={i} className="flex justify-between items-center group cursor-pointer" onClick={() => setActiveTab?.('products')}>
+                              <div className="overflow-hidden">
+                                  <p className="text-[12px] font-bold text-slate-900 truncate group-hover:text-primary-600 transition-colors">{p.title}</p>
+                                  <p className="text-[11px] text-slate-500 font-medium">{p.stock} remaining</p>
+                              </div>
+                              <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
                           </div>
-                          <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
-                      </div>
-                      <div className="pt-4 border-t border-slate-100">
-                          <button className="w-full py-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all text-slate-600 border border-slate-200/50 shadow-sm">
-                              Run Diagnostics
-                          </button>
-                      </div>
+                      ))}
                   </div>
               </div>
           </div>
