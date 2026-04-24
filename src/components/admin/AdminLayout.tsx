@@ -29,7 +29,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { id: "messages", icon: MessageSquare, label: "Messages" },
     { id: "orders", icon: ShoppingCart, label: "Orders" },
-    { id: "products", icon: Package, label: "Gigs/Products" },
+    { id: "products", icon: Package, label: "Products" },
     { id: "customers", icon: Users, label: "Users" },
     { id: "earnings", icon: Wallet, label: "Earnings" },
     { id: "settings", icon: Settings, label: "Settings" },

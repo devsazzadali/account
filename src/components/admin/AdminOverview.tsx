@@ -172,7 +172,7 @@ export function AdminOverview({ setActiveTab }: { setActiveTab?: (tab: string) =
                   <h4 className="text-lg font-bold mb-2">Boost your sales</h4>
                   <p className="text-sm text-white/80 mb-6 font-medium leading-relaxed">Share your profile on social media to reach more buyers and increase your revenue.</p>
                   <button className="bg-white text-[#1dbf73] px-4 py-2 rounded font-bold text-xs uppercase tracking-widest hover:bg-opacity-90 transition-all">
-                      Promote Gigs
+                      Promote Products
                   </button>
               </div>
               <div className="bg-white border border-[#e4e5e7] rounded-sm p-6 relative group">
