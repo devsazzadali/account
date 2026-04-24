@@ -11,6 +11,7 @@ import {
   Bell,
   Search,
   User,
+  MessageSquare,
   ShieldCheck,
   Users,
   ChevronDown
