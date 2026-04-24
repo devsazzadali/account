@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { 
-  MessageSquare, 
-  Send, 
-  Trash2, 
-  Clock, 
-  User, 
-  CheckCircle2, 
   Search, 
   Filter, 
+  MessageSquare, 
+  User, 
+  Send, 
+  Clock, 
+  CheckCircle2, 
+  Trash2,
+  MoreVertical,
   Loader2,
-  Reply,
-  X,
   Inbox,
-  AlertCircle
+  AlertCircle,
+  X,
+  MailOpen
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
 
 export function AdminMessages() {
@@ -23,7 +23,7 @@ export function AdminMessages() {
   const [selectedMessage, setSelectedMessage] = useState<any | null>(null);
   const [replyText, setReplyText] = useState("");
   const [isReplying, setIsReplying] = useState(false);
-  const [filter, setFilter] = useState("all"); // all, unread, replied
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     fetchMessages();
@@ -39,6 +39,11 @@ export function AdminMessages() {
         
         if (error) throw error;
         setMessages(data || []);
+        
+        // Auto-select first message if none selected
+        if (data && data.length > 0 && !selectedMessage) {
+            setSelectedMessage(data[0]);
+        }
     } catch (err: any) {
         console.error("Fetch Error:", err.message);
     } finally {
@@ -66,6 +71,7 @@ export function AdminMessages() {
         setReplyText("");
         setSelectedMessage({...selectedMessage, reply: replyText, status: 'replied'});
         fetchMessages();
+        alert("Response sent successfully.");
     } catch (err: any) {
         alert("Error sending response: " + err.message);
     } finally {
@@ -74,7 +80,7 @@ export function AdminMessages() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to permanently erase this signal?")) return;
+    if (!confirm("Are you sure you want to delete this inquiry?")) return;
     try {
         const { error } = await supabase.from('messages').delete().eq('id', id);
         if (error) throw error;
@@ -92,145 +98,164 @@ export function AdminMessages() {
   });
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[calc(100vh-200px)]">
-      {/* Messages Sidebar */}
-      <div className="lg:col-span-1 bg-white border border-slate-200 rounded-[2rem] shadow-sm flex flex-col overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2 mb-4">
-                <Inbox size={16} className="text-primary-600" />
-                Signal Receiver
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 h-[calc(100vh-180px)] bg-white border border-[#e4e5e7] rounded-sm shadow-sm overflow-hidden">
+      
+      {/* Sidebar: Message List */}
+      <div className="lg:col-span-4 border-r border-[#e4e5e7] flex flex-col overflow-hidden bg-white">
+        <div className="p-6 border-b border-[#e4e5e7] bg-[#f7f7f7]/50">
+            <h3 className="text-[14px] font-bold text-[#404145] uppercase tracking-wider flex items-center gap-2 mb-4">
+                <Inbox size={18} className="text-[#1dbf73]" />
+                Customer Inquiries
             </h3>
             <div className="flex gap-2">
-                <FilterButton active={filter === "all"} label="All" onClick={() => setFilter("all")} />
-                <FilterButton active={filter === "unread"} label="Unread" onClick={() => setFilter("unread")} />
-                <FilterButton active={filter === "replied"} label="Replied" onClick={() => setFilter("replied")} />
+                {["all", "unread", "replied"].map((f) => (
+                    <button 
+                        key={f}
+                        onClick={() => setFilter(f)}
+                        className={`flex-1 px-3 py-1.5 rounded text-[11px] font-bold uppercase transition-all ${
+                            filter === f 
+                            ? "bg-[#404145] text-white" 
+                            : "bg-white text-[#62646a] border border-[#e4e5e7] hover:bg-[#f7f7f7]"
+                        }`}
+                    >
+                        {f}
+                    </button>
+                ))}
             </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {loading ? (
+        <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-[#e4e5e7]">
+            {loading && messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 opacity-30">
-                    <Loader2 className="animate-spin mb-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Scanning Waves...</span>
+                    <Loader2 className="animate-spin text-[#1dbf73]" />
                 </div>
             ) : filteredMessages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 opacity-30">
-                    <MessageSquare size={48} className="mb-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">No Signals Captured</span>
+                <div className="flex flex-col items-center justify-center py-20 text-[#b5b6ba]">
+                    <MessageSquare size={48} className="mb-4 opacity-20" />
+                    <span className="text-xs font-bold uppercase">No inquiries found</span>
                 </div>
             ) : filteredMessages.map((msg) => (
                 <button 
                     key={msg.id}
                     onClick={() => setSelectedMessage(msg)}
-                    className={`w-full text-left p-6 border-b border-slate-50 transition-all hover:bg-slate-50 group relative ${
-                        selectedMessage?.id === msg.id ? "bg-slate-50 border-l-4 border-l-primary-500" : ""
+                    className={`w-full text-left p-6 transition-all hover:bg-[#f7f7f7] border-l-4 ${
+                        selectedMessage?.id === msg.id ? "bg-[#f7f7f7] border-l-[#1dbf73]" : "border-l-transparent"
                     }`}
                 >
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
-                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} className="w-full h-full object-cover" alt="" />
+                            <div className="w-8 h-8 rounded-full bg-[#efeff0] flex items-center justify-center text-[#1dbf73]">
+                                <User size={14} />
                             </div>
-                            <span className="text-xs font-bold text-slate-900">{msg.username}</span>
+                            <span className="text-[13px] font-bold text-[#404145]">{msg.username}</span>
                         </div>
-                        <span className="text-[9px] font-bold text-slate-400">{new Date(msg.created_at).toLocaleDateString()}</span>
+                        <span className="text-[10px] font-bold text-[#b5b6ba] uppercase">{new Date(msg.created_at).toLocaleDateString()}</span>
                     </div>
-                    <div className="text-xs font-bold text-slate-700 truncate mb-1">{msg.subject}</div>
-                    <p className="text-[10px] text-slate-400 line-clamp-2">{msg.message}</p>
+                    <div className="text-[12px] font-bold text-[#404145] truncate mb-1">{msg.subject}</div>
+                    <p className="text-[11px] text-[#62646a] line-clamp-1">{msg.message}</p>
                     
-                    {msg.status === 'unread' && (
-                        <div className="absolute top-6 right-6 w-2 h-2 bg-primary-500 rounded-full animate-pulse shadow-glow shadow-primary-500/50"></div>
+                    {msg.status === 'replied' && (
+                        <div className="mt-2 flex items-center gap-1 text-[#1dbf73]">
+                            <CheckCircle2 size={10} />
+                            <span className="text-[10px] font-bold uppercase tracking-tighter">Replied</span>
+                        </div>
                     )}
                 </button>
             ))}
         </div>
       </div>
 
-      {/* Message Content & Reply */}
-      <div className="lg:col-span-2 bg-white border border-slate-200 rounded-[2.5rem] shadow-xl shadow-slate-200/50 flex flex-col overflow-hidden relative">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-500 to-blue-500"></div>
-        
+      {/* Main: Conversation View */}
+      <div className="lg:col-span-8 flex flex-col overflow-hidden bg-[#f7f7f7]/30">
         {selectedMessage ? (
             <>
-                {/* Header */}
-                <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                {/* Inquiry Header */}
+                <div className="p-8 bg-white border-b border-[#e4e5e7] flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 p-1 shadow-sm overflow-hidden">
-                             <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedMessage.username}`} className="w-full h-full object-cover rounded-xl" alt="" />
+                        <div className="w-12 h-12 rounded-full bg-[#efeff0] flex items-center justify-center text-[#1dbf73]">
+                            <User size={24} />
                         </div>
                         <div>
-                            <h4 className="text-lg font-bold text-slate-900">{selectedMessage.username}</h4>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date(selectedMessage.created_at).toLocaleString()}</p>
+                            <h4 className="text-[16px] font-bold text-[#404145]">{selectedMessage.username}</h4>
+                            <p className="text-[12px] text-[#b5b6ba] font-medium">Inquiry ID: {selectedMessage.id.split('-')[0].toUpperCase()}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                         <button 
                             onClick={() => handleDelete(selectedMessage.id)}
-                            className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all border border-transparent hover:border-red-100"
+                            className="p-2 text-[#b5b6ba] hover:text-red-500 transition-all"
                         >
                             <Trash2 size={20} />
-                        </button>
-                        <button 
-                            onClick={() => setSelectedMessage(null)}
-                            className="p-3 text-slate-400 hover:text-slate-900 hover:bg-white rounded-2xl transition-all border border-transparent hover:border-slate-200"
-                        >
-                            <X size={20} />
                         </button>
                     </div>
                 </div>
 
-                {/* Content */}
+                {/* Discussion Area */}
                 <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                    {/* User Inquiry */}
                     <div className="space-y-4">
-                        <div className="inline-flex px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-bold uppercase tracking-tight">Transmission Subject</div>
-                        <h2 className="text-2xl font-display font-bold text-slate-900 italic">{selectedMessage.subject}</h2>
-                        <div className="bg-slate-50 border border-slate-100 p-8 rounded-[2rem] text-sm text-slate-700 leading-relaxed shadow-inner">
-                            {selectedMessage.message}
+                        <div className="flex items-center gap-2">
+                            <div className="h-px flex-1 bg-[#e4e5e7]"></div>
+                            <span className="text-[10px] font-bold text-[#b5b6ba] uppercase tracking-widest px-4">Customer Inquiry</span>
+                            <div className="h-px flex-1 bg-[#e4e5e7]"></div>
+                        </div>
+                        <div className="bg-white border border-[#e4e5e7] p-8 rounded shadow-sm">
+                            <h2 className="text-xl font-bold text-[#404145] mb-4">{selectedMessage.subject}</h2>
+                            <p className="text-[#62646a] text-[14px] leading-relaxed">
+                                {selectedMessage.message}
+                            </p>
+                            <div className="mt-6 text-[11px] text-[#b5b6ba] font-bold flex items-center gap-2">
+                                <Clock size={14} /> Received on {new Date(selectedMessage.created_at).toLocaleString()}
+                            </div>
                         </div>
                     </div>
 
+                    {/* Admin Response */}
                     {selectedMessage.reply && (
                         <div className="space-y-4">
                             <div className="flex items-center gap-2">
-                                <div className="h-px flex-1 bg-slate-100"></div>
-                                <span className="text-[10px] font-bold text-primary-500 uppercase tracking-[0.3em] px-4">Admin Response Sent</span>
-                                <div className="h-px flex-1 bg-slate-100"></div>
+                                <div className="h-px flex-1 bg-[#e4e5e7]"></div>
+                                <span className="text-[10px] font-bold text-[#1dbf73] uppercase tracking-widest px-4">Your Official Response</span>
+                                <div className="h-px flex-1 bg-[#e4e5e7]"></div>
                             </div>
-                            <div className="bg-primary-50/30 border border-primary-100/50 p-8 rounded-[2rem] text-sm text-slate-700 leading-relaxed relative overflow-hidden shadow-sm">
-                                <div className="absolute top-0 right-0 p-4 opacity-5">
-                                    <CheckCircle2 size={64} className="text-primary-600" />
+                            <div className="bg-[#1dbf73] text-white p-8 rounded shadow-md relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-10">
+                                    <MailOpen size={64} />
                                 </div>
-                                {selectedMessage.reply}
-                                <div className="mt-4 text-[10px] font-bold text-primary-400 italic">
-                                    Broadcasted at {new Date(selectedMessage.replied_at).toLocaleString()}
+                                <p className="text-[14px] leading-relaxed relative z-10 font-medium">
+                                    {selectedMessage.reply}
+                                </p>
+                                <div className="mt-6 text-[11px] font-bold text-white/70 flex items-center gap-2">
+                                    <CheckCircle2 size={14} /> Dispatched on {new Date(selectedMessage.replied_at).toLocaleString()}
                                 </div>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Reply Form */}
-                <div className="p-8 border-t border-slate-100 bg-slate-50/50">
+                {/* Reply Composer */}
+                <div className="p-8 bg-white border-t border-[#e4e5e7]">
                     <form onSubmit={handleSendReply} className="space-y-4">
+                        <div className="text-[13px] font-bold text-[#404145] mb-1">Draft Response</div>
                         <textarea 
-                            rows={3}
+                            rows={4}
                             value={replyText}
                             onChange={(e) => setReplyText(e.target.value)}
-                            placeholder="Draft an encrypted response to this signal..."
-                            className="w-full bg-white border border-slate-200 rounded-[2rem] px-6 py-5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all placeholder:text-slate-300 resize-none shadow-sm"
+                            placeholder="Type your professional response here..."
+                            className="w-full bg-[#f7f7f7] border border-[#e4e5e7] rounded p-4 text-[14px] focus:outline-none focus:border-[#1dbf73] transition-all resize-none"
                         ></textarea>
                         <div className="flex justify-end">
                             <button 
                                 type="submit"
                                 disabled={isReplying || !replyText.trim()}
-                                className="px-10 py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 flex items-center gap-3 group disabled:opacity-50"
+                                className="px-8 py-3 bg-[#1dbf73] text-white font-bold rounded hover:bg-[#19a463] transition-all flex items-center gap-2 shadow-lg shadow-[#1dbf73]/10 disabled:opacity-50"
                             >
                                 {isReplying ? (
                                     <Loader2 size={18} className="animate-spin" />
                                 ) : (
                                     <>
-                                        Broadcast Response
-                                        <Reply size={18} className="group-hover:translate-x-1 transition-transform" />
+                                        <Send size={18} />
+                                        Send Official Response
                                     </>
                                 )}
                             </button>
@@ -240,11 +265,9 @@ export function AdminMessages() {
             </>
         ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-12 text-center opacity-40">
-                <div className="w-24 h-24 bg-slate-50 rounded-[2rem] flex items-center justify-center text-slate-200 mb-6 border border-slate-100 border-dashed">
-                    <Inbox size={48} />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 italic mb-2">No Signal Selected</h3>
-                <p className="text-xs text-slate-500 font-medium max-w-xs">Select a transmission from the terminal on the left to review content and issue responses.</p>
+                <Inbox size={64} className="text-[#b5b6ba] mb-4" />
+                <h3 className="text-xl font-bold text-[#404145]">No Inquiry Selected</h3>
+                <p className="text-sm text-[#62646a] mt-2">Select a customer inquiry from the list to manage the communication.</p>
             </div>
         )}
       </div>
