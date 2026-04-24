@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Download, Search, ShoppingBag, ExternalLink } from "lucide-react";
 import { supabase } from "../../lib/supabase";
+import { Link } from "react-router-dom";
 
 export function UserOrders() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -116,11 +117,13 @@ export function UserOrders() {
                                     : 'bg-amber-50 text-amber-600 border-amber-100'
                                 }`}>
                                     {order.status}
-                                </div>
-                                <button className="flex items-center gap-2 text-[10px] font-bold text-primary-600 uppercase tracking-widest hover:text-primary-500 transition-colors group/btn">
+                                <Link 
+                                    to={`/order/${order.id}`}
+                                    className="flex items-center gap-2 text-[10px] font-bold text-primary-600 uppercase tracking-widest hover:text-primary-500 transition-colors group/btn"
+                                >
                                     View Details
                                     <ExternalLink size={12} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
-                                </button>
+                                </Link>
                             </div>
                         </div>
                     </div>
