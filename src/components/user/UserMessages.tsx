@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   Send, 
-  MessageSquare, 
-  Clock, 
-  CheckCircle2, 
-  HelpCircle, 
-  Loader2,
   User,
-  Mail,
-  ArrowRight,
-  MessageCircle
+  ShieldCheck,
+  CheckCheck,
+  Loader2,
+  Phone,
+  Video,
+  MoreVertical,
+  Paperclip,
+  Smile
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase";
 
 export function UserMessages() {
@@ -19,199 +19,177 @@ export function UserMessages() {
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-
-  const [formData, setFormData] = useState({
-    subject: "",
-    message: ""
-  });
+  const [newMessage, setNewMessage] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchMessages();
+    // Set up a simple polling for real-time feel since we might not have WS set up
+    const interval = setInterval(fetchMessages, 5000);
+    return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   async function fetchMessages() {
     try {
-        setLoading(true);
         const { data, error } = await supabase
             .from('messages')
             .select('*')
             .eq('username', username)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: true });
         
         if (error) throw error;
         setMessages(data || []);
+        setLoading(false);
     } catch (err: any) {
         console.error("Fetch Messages Error:", err.message);
-    } finally {
-        setLoading(false);
     }
   }
 
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault();
-    if (!formData.message.trim()) return;
+    if (!newMessage.trim()) return;
 
     setIsSending(true);
     try {
         const { error } = await supabase.from('messages').insert({
             username: username,
-            subject: formData.subject || "General Inquiry",
-            message: formData.message,
+            subject: "Direct Chat",
+            message: newMessage,
             status: 'unread'
         });
 
         if (error) throw error;
 
-        setShowSuccess(true);
-        setFormData({ subject: "", message: "" });
+        setNewMessage("");
         fetchMessages();
-        setTimeout(() => setShowSuccess(false), 5000);
     } catch (err: any) {
-        alert("Submission Error: " + err.message);
+        alert("Transmission Error: " + err.message);
     } finally {
         setIsSending(false);
     }
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-      {/* Support Composer */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white border border-[#e4e5e7] rounded-sm p-8 shadow-sm"
-      >
-        <div className="flex items-center gap-4 mb-8">
-            <div className="p-3 bg-[#1dbf73]/10 text-[#1dbf73] rounded-full">
-                <MessageCircle size={24} />
-            </div>
-            <div>
-                <h3 className="text-xl font-bold text-[#404145]">Support Center</h3>
-                <p className="text-sm text-[#62646a] font-medium">Need help? Send us an inquiry and our team will get back to you.</p>
-            </div>
-        </div>
+    <div className="h-[calc(100vh-140px)] bg-[#efeae2] border border-slate-200 shadow-2xl rounded-3xl overflow-hidden flex flex-col font-sans relative z-10">
+      
+      {/* WhatsApp Style Header */}
+      <div className="bg-[#00a884] text-white px-6 py-4 flex items-center justify-between shrink-0 shadow-md relative z-20">
+          <div className="flex items-center gap-4">
+              <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30">
+                      <ShieldCheck size={24} className="text-white" />
+                  </div>
+                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-[#00a884] rounded-full"></div>
+              </div>
+              <div>
+                  <h3 className="text-[16px] font-bold tracking-wide">AccountStore Support</h3>
+                  <p className="text-[12px] text-white/80 font-medium flex items-center gap-1">
+                      typically replies instantly
+                  </p>
+              </div>
+          </div>
+          <div className="flex items-center gap-6 text-white/90">
+              <Phone size={20} className="cursor-pointer hover:text-white transition-colors" />
+              <Video size={22} className="cursor-pointer hover:text-white transition-colors" />
+              <MoreVertical size={20} className="cursor-pointer hover:text-white transition-colors" />
+          </div>
+      </div>
 
-        <form onSubmit={handleSendMessage} className="space-y-6">
-            <div className="space-y-2">
-                <label className="text-[13px] font-bold text-[#404145]">Inquiry Subject</label>
-                <input 
-                    type="text"
-                    value={formData.subject}
-                    onChange={(e) => setFormData({...formData, subject: e.target.value})}
-                    placeholder="What can we help you with?"
-                    className="w-full bg-[#f7f7f7] border border-[#e4e5e7] rounded px-4 py-3 text-[14px] font-medium text-[#404145] focus:outline-none focus:border-[#1dbf73] transition-all"
-                />
-            </div>
-
-            <div className="space-y-2">
-                <label className="text-[13px] font-bold text-[#404145]">Your Message</label>
-                <textarea 
-                    required
-                    rows={6}
-                    value={formData.message}
-                    onChange={(e) => setFormData({...formData, message: e.target.value})}
-                    placeholder="Describe your issue in detail..."
-                    className="w-full bg-[#f7f7f7] border border-[#e4e5e7] rounded px-4 py-4 text-[14px] font-medium text-[#404145] focus:outline-none focus:border-[#1dbf73] transition-all resize-none"
-                ></textarea>
-            </div>
-
-            <button 
-                type="submit"
-                disabled={isSending}
-                className="w-full py-4 bg-[#404145] text-white font-bold rounded hover:bg-[#222325] transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-[#404145]/10"
-            >
-                {isSending ? (
-                    <Loader2 size={20} className="animate-spin" />
-                ) : (
-                    <>
-                        Send Inquiry
-                        <Send size={18} />
-                    </>
-                )}
-            </button>
-        </form>
-
-        <AnimatePresence>
-            {showSuccess && (
-                <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="mt-6 p-4 bg-[#1dbf73]/10 border border-[#1dbf73]/20 rounded flex items-center gap-3 text-[#1dbf73]"
-                >
-                    <CheckCircle2 size={18} />
-                    <span className="text-[13px] font-bold">Your inquiry has been sent to our administrators.</span>
-                </motion.div>
-            )}
-        </AnimatePresence>
-      </motion.div>
-
-      {/* Inquiry History */}
-      <div className="space-y-6">
-          <div className="flex items-center justify-between px-2">
-              <h3 className="text-[14px] font-bold text-[#404145] uppercase tracking-wider flex items-center gap-2">
-                  <Mail size={16} className="text-[#1dbf73]" />
-                  Inquiry History
-              </h3>
-              <span className="text-[11px] font-bold text-[#62646a] bg-[#efeff0] px-2 py-0.5 rounded">{messages.length} Tickets</span>
+      {/* Chat Area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-[#efeae2] relative">
+          {/* WhatsApp Background Pattern (Subtle) */}
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'url("https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png")', backgroundSize: '400px' }}></div>
+          
+          <div className="flex justify-center mb-8 relative z-10">
+              <div className="bg-[#ffeecd] text-[#544326] text-[11px] font-bold px-4 py-1.5 rounded-lg shadow-sm border border-[#f5dfb5]">
+                  Messages are secured with end-to-end encryption. No one outside of this chat can read them.
+              </div>
           </div>
 
-          <div className="space-y-4 overflow-y-auto max-h-[650px] pr-2 custom-scrollbar">
-              {loading ? (
-                  <div className="flex flex-col items-center justify-center py-20 bg-white border border-[#e4e5e7] rounded-sm">
-                      <Loader2 className="animate-spin text-[#1dbf73]" />
-                  </div>
-              ) : messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 bg-white border border-[#e4e5e7] border-dashed rounded-sm">
-                      <HelpCircle size={32} className="text-[#e4e5e7] mb-2" />
-                      <p className="text-sm font-bold text-[#b5b6ba]">No inquiries found in your history.</p>
-                  </div>
-              ) : messages.map((msg) => (
-                  <motion.div 
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white border border-[#e4e5e7] rounded-sm p-6 shadow-sm hover:shadow-md transition-all group"
-                  >
-                      <div className="flex justify-between items-start mb-4">
-                          <div>
-                              <div className="text-[14px] font-bold text-[#404145] group-hover:text-[#1dbf73] transition-colors">{msg.subject}</div>
-                              <div className="text-[11px] text-[#b5b6ba] font-bold mt-1 flex items-center gap-2">
-                                  <Clock size={12} />
-                                  {new Date(msg.created_at).toLocaleString()}
-                              </div>
-                          </div>
-                          <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tighter ${
-                              msg.status === 'replied' ? 'bg-[#1dbf73]/10 text-[#1dbf73]' : 'bg-[#efeff0] text-[#62646a]'
-                          }`}>
-                              {msg.status}
-                          </div>
-                      </div>
-                      
-                      <div className="text-[13px] text-[#62646a] leading-relaxed mb-4 italic">
-                          "{msg.message}"
-                      </div>
-
-                      {msg.reply && (
-                          <div className="mt-4 pt-4 border-t border-[#e4e5e7] flex gap-4 items-start">
-                              <div className="w-8 h-8 rounded-full bg-[#1dbf73] flex items-center justify-center shrink-0">
-                                  <User size={14} className="text-white" />
-                              </div>
-                              <div className="flex-1">
-                                  <div className="text-[11px] font-bold text-[#1dbf73] uppercase tracking-wider mb-1">Official Response</div>
-                                  <p className="text-[13px] text-[#404145] font-medium leading-relaxed bg-[#f7f7f7] p-4 rounded">
-                                      {msg.reply}
-                                  </p>
-                                  <div className="text-[10px] text-[#b5b6ba] font-bold mt-2">
-                                      Responded on {new Date(msg.replied_at).toLocaleString()}
+          {loading && messages.length === 0 ? (
+              <div className="flex justify-center items-center h-full">
+                  <Loader2 className="animate-spin text-[#00a884] w-8 h-8" />
+              </div>
+          ) : (
+              messages.map((msg, idx) => {
+                  const showUserMsg = msg.message !== '[ADMIN_INITIATED]';
+                  const showAdminMsg = !!msg.reply;
+                  
+                  return (
+                      <React.Fragment key={msg.id}>
+                          {/* User Bubble */}
+                          {showUserMsg && (
+                              <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex justify-end relative z-10"
+                              >
+                                  <div className="max-w-[75%] bg-[#d9fdd3] text-[#111b21] p-3 rounded-2xl rounded-tr-sm shadow-sm relative group">
+                                      <p className="text-[14px] leading-relaxed pr-12 whitespace-pre-wrap">{msg.message}</p>
+                                      <div className="absolute bottom-1.5 right-2 flex items-center gap-1 text-[#667781]">
+                                          <span className="text-[10px]">{new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                          <CheckCheck size={14} className={msg.status === 'replied' ? "text-[#53bdeb]" : ""} />
+                                      </div>
                                   </div>
-                              </div>
-                          </div>
-                      )}
-                  </motion.div>
-              ))}
+                              </motion.div>
+                          )}
+
+                          {/* Admin Reply Bubble */}
+                          {showAdminMsg && (
+                              <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex justify-start relative z-10"
+                              >
+                                  <div className="max-w-[75%] bg-white text-[#111b21] p-3 rounded-2xl rounded-tl-sm shadow-sm relative group">
+                                      <p className="text-[14px] leading-relaxed pr-12 whitespace-pre-wrap">{msg.reply}</p>
+                                      <div className="absolute bottom-1.5 right-2 flex items-center gap-1 text-[#667781]">
+                                          <span className="text-[10px]">{new Date(msg.replied_at || msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                      </div>
+                                  </div>
+                              </motion.div>
+                          )}
+                      </React.Fragment>
+                  );
+              })
+          )}
+          <div ref={chatEndRef} />
+      </div>
+
+      {/* WhatsApp Style Input Area */}
+      <div className="bg-[#f0f2f5] p-3 flex items-end gap-3 shrink-0 relative z-20">
+          <div className="flex gap-4 items-center px-2 pb-3 text-[#54656f]">
+              <Smile size={24} className="cursor-pointer hover:text-[#00a884] transition-colors" />
+              <Paperclip size={22} className="cursor-pointer hover:text-[#00a884] transition-colors" />
           </div>
+          
+          <form onSubmit={handleSendMessage} className="flex-1 flex gap-3 relative">
+              <textarea 
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage(e);
+                      }
+                  }}
+                  placeholder="Type a message"
+                  className="w-full bg-white border-none rounded-xl px-4 py-3 text-[15px] text-[#111b21] focus:outline-none shadow-sm resize-none"
+                  rows={1}
+                  style={{ minHeight: '44px', maxHeight: '120px' }}
+              />
+              <button 
+                  type="submit"
+                  disabled={isSending || !newMessage.trim()}
+                  className="w-11 h-11 shrink-0 bg-[#00a884] text-white rounded-full flex items-center justify-center hover:bg-[#008f6f] transition-all disabled:opacity-50 shadow-md"
+              >
+                  {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="ml-1" />}
+              </button>
+          </form>
       </div>
     </div>
   );
