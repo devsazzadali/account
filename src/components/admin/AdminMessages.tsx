@@ -5,13 +5,14 @@ import {
   Send, 
   CheckCheck, 
   Loader2,
-  Phone,
-  Video,
   MoreVertical,
   Paperclip,
   Smile,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  MessageSquare,
+  RefreshCw,
+  Clock
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase";

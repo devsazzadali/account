@@ -5,8 +5,7 @@ import {
   ShieldCheck,
   CheckCheck,
   Loader2,
-  Phone,
-  Video,
+  Search,
   MoreVertical,
   Paperclip,
   Smile
@@ -93,8 +92,7 @@ export function UserMessages() {
               </div>
           </div>
           <div className="flex items-center gap-6 text-white/90">
-              <Phone size={20} className="cursor-pointer hover:text-white transition-colors" />
-              <Video size={22} className="cursor-pointer hover:text-white transition-colors" />
+              <Search size={20} className="cursor-pointer hover:text-white transition-colors" />
               <MoreVertical size={20} className="cursor-pointer hover:text-white transition-colors" />
           </div>
       </div>
