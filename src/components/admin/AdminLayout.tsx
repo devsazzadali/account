@@ -31,6 +31,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
     { id: "dashboard", icon: LayoutDashboard, label: "Home" },
     { id: "orders", icon: ShoppingCart, label: "Orders" },
     { id: "products", icon: Package, label: "Products" },
+    { id: "messages", icon: MessageSquare, label: "Signals" },
     { id: "customers", icon: Users, label: "Customers" },
     { id: "settings", icon: Settings, label: "Settings" },
   ];

@@ -28,6 +28,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabase";
 import { UserOrders } from "../components/user/UserOrders";
 import { UserSettings } from "../components/user/UserSettings";
+import { UserMessages } from "../components/user/UserMessages";
 
 export function UserDashboardPage() {
   const userRole = localStorage.getItem("userRole");
@@ -174,6 +175,7 @@ export function UserDashboardPage() {
         <div className="flex flex-wrap items-center gap-2 mb-10 bg-white/50 backdrop-blur-sm p-2 rounded-2xl border border-slate-200 w-fit mx-auto md:mx-0 shadow-sm">
             <TabButton active={activeTab === "overview"} onClick={() => setActiveTab("overview")} icon={<LayoutDashboard size={18} />} label="Overview" />
             <TabButton active={activeTab === "orders"} onClick={() => setActiveTab("orders")} icon={<ShoppingBag size={18} />} label="My Orders" />
+            <TabButton active={activeTab === "messages"} onClick={() => setActiveTab("messages")} icon={<MessageSquare size={18} />} label="Support Signals" />
             <TabButton active={activeTab === "settings"} onClick={() => setActiveTab("settings")} icon={<Settings size={18} />} label="Settings" />
             <div className="w-px h-6 bg-slate-200 mx-2 hidden md:block"></div>
             <button 
@@ -205,8 +207,8 @@ export function UserDashboardPage() {
                             </DashboardSection>
 
                             <DashboardSection title="Command Support" icon={<Ticket className="text-blue-600" />}>
-                                <DashboardTabLink onClick={() => setActiveTab("overview")} icon={<PlusCircle size={18} />} label="Initialize Support Ticket" />
-                                <DashboardTabLink onClick={() => setActiveTab("overview")} icon={<MessageSquare size={18} />} label="Encrypted Messages" count={0} />
+                                <DashboardTabLink onClick={() => setActiveTab("messages")} icon={<PlusCircle size={18} />} label="Initialize Support Signal" />
+                                <DashboardTabLink onClick={() => setActiveTab("messages")} icon={<MessageSquare size={18} />} label="Signal History" highlight />
                                 <DashboardTabLink onClick={() => setActiveTab("overview")} icon={<HelpCircle size={18} />} label="Platform Resource Hub" />
                             </DashboardSection>
                         </div>
@@ -269,6 +271,7 @@ export function UserDashboardPage() {
                 )}
 
                 {activeTab === "orders" && <UserOrders />}
+                {activeTab === "messages" && <UserMessages />}
                 {activeTab === "settings" && <UserSettings />}
             </motion.div>
         </AnimatePresence>
