@@ -28,13 +28,45 @@ export function AdminMessages() {
 
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(fetchMessages, 5000);
-    return () => clearInterval(interval);
+    
+    // Set up Realtime listener
+    const channel = supabase
+      .channel('messages_changes')
+      .on('postgres_changes', { event: '*', table: 'messages' }, (payload) => {
+        console.log('Realtime update:', payload);
+        fetchMessages();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, selectedUser]);
+
+  // Mark as read when selecting a user
+  useEffect(() => {
+    if (selectedUser) {
+      markMessagesAsRead(selectedUser);
+    }
+  }, [selectedUser]);
+
+  async function markMessagesAsRead(username: string) {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ status: 'replied' }) // Using 'replied' as the read status in this system
+        .eq('username', username)
+        .eq('status', 'unread');
+      
+      if (error) throw error;
+    } catch (e) {
+      console.error("Error marking as read:", e);
+    }
+  }
 
   async function fetchMessages() {
     try {

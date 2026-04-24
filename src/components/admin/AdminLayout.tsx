@@ -34,6 +34,26 @@ const menuItems = [
 export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutProps) {
   const username = localStorage.getItem("username") || "Admin";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 10000); // Poll every 10s for header badge
+    return () => clearInterval(interval);
+  }, []);
+
+  async function fetchUnreadCount() {
+    try {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'unread');
+      
+      if (!error) setUnreadCount(count || 0);
+    } catch (e) {
+      console.error("Error fetching unread count:", e);
+    }
+  }
 
   function handleLogout() {
     localStorage.clear();
@@ -79,9 +99,11 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             {/* Bell */}
             <button className="relative text-white/70 hover:text-white transition-colors p-1">
               <Bell size={20} />
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#e4393c] rounded-full text-[9px] font-bold text-white flex items-center justify-center border border-[#1a3a6e]">
-                3
-              </span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#e4393c] rounded-full text-[9px] font-bold text-white flex items-center justify-center border border-[#1a3a6e]">
+                  {unreadCount}
+                </span>
+              )}
             </button>
 
             {/* Messages */}
