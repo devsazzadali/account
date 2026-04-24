@@ -165,14 +165,28 @@ export function ProductDetailsPage() {
                     >
                         {activeTab === "description" && (
                             <div className="space-y-6">
-                                <p className="text-slate-700 text-lg font-medium">{product.description || "Detailed digital asset specification is currently being synchronized."}</p>
+                                <p className="text-slate-700 text-lg font-medium whitespace-pre-wrap">
+                                    {product.description ? product.description.split('--- Properties ---')[0].trim() : "Detailed digital asset specification is currently being synchronized."}
+                                </p>
+                                
+                                {/* Dynamic Z2U Properties */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {["Full Access", "Region Global", "Email Changeable", "Competitive Ready"].map((f, i) => (
-                                        <div key={i} className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm">
-                                            <BadgeCheck size={18} className="text-primary-600" />
-                                            <span className="text-slate-900 text-xs font-bold">{f}</span>
-                                        </div>
-                                    ))}
+                                    {product.description?.includes('--- Properties ---') ? (
+                                        product.description.split('--- Properties ---')[1].trim().split('\n').map((prop, i) => (
+                                            <div key={i} className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm">
+                                                <BadgeCheck size={18} className="text-primary-600 shrink-0" />
+                                                <span className="text-slate-900 text-xs font-bold">{prop.trim()}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        /* Fallback for legacy products */
+                                        ["Full Access Guaranteed", "Global Region Unlocked", "Instant Transfer", "Verified Clean Record"].map((f, i) => (
+                                            <div key={i} className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm">
+                                                <BadgeCheck size={18} className="text-primary-600 shrink-0" />
+                                                <span className="text-slate-900 text-xs font-bold">{f}</span>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         )}

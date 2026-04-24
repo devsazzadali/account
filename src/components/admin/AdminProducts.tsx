@@ -18,7 +18,11 @@ import {
   Layers,
   ArrowRight,
   Info,
-  AlertCircle
+  AlertCircle,
+  Globe,
+  MonitorSmartphone,
+  ShieldCheck,
+  AlignLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
@@ -31,13 +35,18 @@ export function AdminProducts() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
+  // Expanded Z2U-Style Form State
   const [formData, setFormData] = useState({
     title: "",
     price: "",
     image: "",
     stock: "10",
-    category: "Accounts",
-    description: ""
+    category: "Game Accounts",
+    description: "",
+    deliveryMethod: "Instant Delivery",
+    platform: "Global PC",
+    region: "Worldwide",
+    fullAccess: true
   });
 
   useEffect(() => {
@@ -73,12 +82,19 @@ export function AdminProducts() {
             price: product.price.toString(),
             image: product.image,
             stock: product.stock.toString(),
-            category: product.category,
-            description: product.description || ""
+            category: product.category || "Game Accounts",
+            description: product.description || "",
+            deliveryMethod: "Instant Delivery", // Default fallbacks for older products
+            platform: "Global PC",
+            region: "Worldwide",
+            fullAccess: true
         });
     } else {
         setEditingId(null);
-        setFormData({ title: "", price: "", image: "", stock: "10", category: "Accounts", description: "" });
+        setFormData({ 
+            title: "", price: "", image: "", stock: "10", category: "Game Accounts", description: "",
+            deliveryMethod: "Instant Delivery", platform: "Global PC", region: "Worldwide", fullAccess: true
+        });
     }
     setShowDrawer(true);
   };
@@ -87,13 +103,19 @@ export function AdminProducts() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+        // Compile Z2U metadata into description if not already present
+        let finalDescription = formData.description;
+        if (!editingId && finalDescription.trim() !== "") {
+             finalDescription = `${formData.description}\n\n--- Properties ---\nPlatform: ${formData.platform}\nRegion: ${formData.region}\nDelivery: ${formData.deliveryMethod}\nFull Access: ${formData.fullAccess ? 'Yes' : 'No'}`;
+        }
+
         const payload = {
             title: formData.title,
             price: parseFloat(formData.price),
             image: formData.image || "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=2070&auto=format&fit=crop",
             stock: parseInt(formData.stock),
             category: formData.category,
-            description: formData.description
+            description: finalDescription
         };
 
         if (editingId) {
@@ -247,76 +269,100 @@ export function AdminProducts() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={() => setShowDrawer(false)}
-                    className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100]"
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100]"
                 />
                 <motion.div 
                     initial={{ x: "100%" }}
                     animate={{ x: 0 }}
                     exit={{ x: "100%" }}
-                    transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                    className="fixed top-0 right-0 h-full w-full max-w-xl bg-white shadow-2xl z-[101] flex flex-col"
+                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                    className="fixed top-0 right-0 h-full w-full max-w-2xl bg-slate-50 shadow-2xl z-[101] flex flex-col overflow-hidden"
                 >
                     {/* Drawer Header */}
-                    <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div className="px-8 py-6 border-b border-slate-200 bg-white flex items-center justify-between z-10 shadow-sm relative">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-600 to-blue-600"></div>
                         <div>
-                            <h3 className="text-xl font-bold text-slate-900">{editingId ? "Update Asset" : "New Asset Deployment"}</h3>
+                            <h3 className="text-2xl font-display font-bold text-slate-900 italic">{editingId ? "Modify Protocol" : "Deploy New Asset"}</h3>
                             <p className="text-xs text-slate-500 font-medium mt-1">
-                                {editingId ? "Modify parameters for this digital offering." : "Configure parameters for a new digital offering."}
+                                Configure market specifications and distribution mechanics.
                             </p>
                         </div>
                         <button 
                             onClick={() => setShowDrawer(false)}
-                            className="p-2 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-all text-slate-400 hover:text-slate-900"
+                            className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400 hover:text-slate-900"
                         >
                             <X size={20} />
                         </button>
                     </div>
 
-                    {/* Drawer Content */}
-                    <div className="flex-1 overflow-y-auto px-8 py-8 space-y-8 custom-scrollbar">
-                        {/* Image Preview / Upload Area */}
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Asset Visualization</label>
-                            <div className="relative group">
-                                {formData.image ? (
-                                    <div className="w-full h-56 rounded-3xl overflow-hidden border border-slate-200 relative shadow-sm">
-                                        <img src={formData.image} className="w-full h-full object-cover" alt="Preview" />
-                                        <button 
-                                            onClick={() => setFormData({...formData, image: ""})}
-                                            className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur-sm rounded-xl text-red-500 hover:text-red-600 shadow-lg"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="w-full h-56 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-3 bg-slate-50 group-hover:bg-slate-100/50 group-hover:border-primary-500/50 transition-all">
-                                        <div className="p-4 bg-white rounded-2xl shadow-sm text-slate-300 group-hover:text-primary-500 transition-colors">
-                                            <ImageIcon size={32} />
+                    {/* Drawer Content - Z2U Style Segments */}
+                    <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar relative">
+                        
+                        {/* Section 1: Visual Identity */}
+                        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+                            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6">
+                                <ImageIcon size={18} className="text-primary-600" />
+                                Visual Identity
+                            </h4>
+                            <div className="flex flex-col md:flex-row gap-6">
+                                <div className="w-full md:w-1/3 aspect-square rounded-3xl overflow-hidden border-2 border-dashed border-slate-200 relative group bg-slate-50 flex items-center justify-center">
+                                    {formData.image ? (
+                                        <>
+                                            <img src={formData.image} className="w-full h-full object-cover" alt="Preview" />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <button 
+                                                    onClick={() => setFormData({...formData, image: ""})}
+                                                    className="p-3 bg-red-500 text-white rounded-xl shadow-lg hover:bg-red-600 transition-colors"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="text-center p-4">
+                                            <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-3 text-slate-300">
+                                                <Upload size={20} />
+                                            </div>
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Awaiting Media</span>
                                         </div>
-                                        <div className="text-center">
-                                            <p className="text-sm font-bold text-slate-900">Provide Image Reference</p>
-                                            <p className="text-xs text-slate-400 mt-1">Paste a valid URL below to visualize the asset.</p>
-                                        </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
+                                <div className="flex-1 flex flex-col justify-center">
+                                    <FormField label="Direct Image URL" icon={<Globe size={16} />}>
+                                        <input 
+                                            type="text" 
+                                            value={formData.image}
+                                            onChange={(e) => setFormData({...formData, image: e.target.value})}
+                                            placeholder="https://example.com/asset-cover.jpg"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all"
+                                        />
+                                    </FormField>
+                                    <p className="text-xs text-slate-400 mt-3 font-medium leading-relaxed">
+                                        For premium marketplace display, use a 16:9 ratio image. High contrast artwork performs 43% better in conversions.
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Form Fields */}
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 gap-6">
-                                <FormField label="Asset Title" icon={<Package size={16} />}>
+                        {/* Section 2: Core Specifications */}
+                        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+                            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6">
+                                <AlignLeft size={18} className="text-primary-600" />
+                                Core Specifications
+                            </h4>
+                            <div className="grid grid-cols-1 gap-5">
+                                <FormField label="Market Designation (Title)" icon={<Package size={16} />}>
                                     <input 
                                         required
                                         type="text" 
                                         value={formData.title}
                                         onChange={(e) => setFormData({...formData, title: e.target.value})}
-                                        placeholder="e.g. Netflix Premium - UHD 4K"
+                                        placeholder="e.g. Valorant Immortal Smurf | 50+ Skins"
                                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all"
                                     />
                                 </FormField>
 
-                                <div className="grid grid-cols-2 gap-6">
+                                <div className="grid grid-cols-2 gap-5">
                                     <FormField label="Valuation (USD)" icon={<DollarSign size={16} />}>
                                         <input 
                                             required
@@ -328,76 +374,134 @@ export function AdminProducts() {
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all"
                                         />
                                     </FormField>
-                                    <FormField label="Inventory Level" icon={<Layers size={16} />}>
-                                        <input 
-                                            type="number" 
-                                            value={formData.stock}
-                                            onChange={(e) => setFormData({...formData, stock: e.target.value})}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all"
-                                        />
+                                    <FormField label="Category Type" icon={<Filter size={16} />}>
+                                        <select 
+                                            value={formData.category}
+                                            onChange={(e) => setFormData({...formData, category: e.target.value})}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all appearance-none"
+                                        >
+                                            <option>Game Accounts</option>
+                                            <option>Software Keys</option>
+                                            <option>In-Game Currency</option>
+                                            <option>Boosting Service</option>
+                                        </select>
                                     </FormField>
                                 </div>
+                            </div>
+                        </div>
 
-                                <FormField label="Asset Category" icon={<Filter size={16} />}>
-                                    <div className="flex flex-wrap gap-2">
-                                        {["Accounts", "Software", "Game", "Premium"].map((cat) => (
-                                            <button
-                                                key={cat}
+                        {/* Section 3: Premium Asset Properties (Z2U Style) */}
+                        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden">
+                            <div className="absolute right-0 top-0 w-32 h-32 bg-primary-500/5 rounded-bl-full pointer-events-none"></div>
+                            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6 relative z-10">
+                                <ShieldCheck size={18} className="text-primary-600" />
+                                Asset Properties & Delivery
+                            </h4>
+                            <div className="grid grid-cols-2 gap-5 relative z-10">
+                                <FormField label="Delivery Protocol" icon={<Zap size={16} />}>
+                                    <div className="flex gap-2 p-1 bg-slate-50 rounded-xl border border-slate-200">
+                                        {["Instant Delivery", "Manual Escrow"].map(method => (
+                                            <button 
+                                                key={method}
                                                 type="button"
-                                                onClick={() => setFormData({...formData, category: cat})}
-                                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                                                    formData.category === cat 
-                                                    ? "bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/10" 
-                                                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                                                onClick={() => setFormData({...formData, deliveryMethod: method})}
+                                                className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${
+                                                    formData.deliveryMethod === method ? "bg-white shadow-sm text-primary-600 border border-slate-100" : "text-slate-500 hover:text-slate-900"
                                                 }`}
                                             >
-                                                {cat === "Accounts" ? "Streaming" : cat === "Game" ? "Gaming" : cat === "Premium" ? "Exclusive" : cat}
+                                                {method.split(' ')[0]}
                                             </button>
                                         ))}
                                     </div>
                                 </FormField>
-
-                                <FormField label="Image URL Source" icon={<ImageIcon size={16} />}>
+                                <FormField label="Initial Inventory" icon={<Layers size={16} />}>
                                     <input 
-                                        type="text" 
-                                        value={formData.image}
-                                        onChange={(e) => setFormData({...formData, image: e.target.value})}
-                                        placeholder="https://images.unsplash.com/..."
+                                        type="number" 
+                                        value={formData.stock}
+                                        onChange={(e) => setFormData({...formData, stock: e.target.value})}
                                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all"
                                     />
                                 </FormField>
 
-                                <FormField label="Detailed Description" icon={<MoreVertical size={16} />}>
-                                    <textarea 
-                                        rows={4}
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                        placeholder="Describe the technical details, duration, and warranty of this asset..."
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all resize-none"
-                                    ></textarea>
+                                <FormField label="Platform" icon={<MonitorSmartphone size={16} />}>
+                                    <select 
+                                        value={formData.platform}
+                                        onChange={(e) => setFormData({...formData, platform: e.target.value})}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all appearance-none"
+                                    >
+                                        <option>Global PC</option>
+                                        <option>PlayStation Network</option>
+                                        <option>Xbox Live</option>
+                                        <option>Mobile (iOS/Android)</option>
+                                    </select>
                                 </FormField>
+
+                                <FormField label="Server Region" icon={<Globe size={16} />}>
+                                    <select 
+                                        value={formData.region}
+                                        onChange={(e) => setFormData({...formData, region: e.target.value})}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all appearance-none"
+                                    >
+                                        <option>Worldwide</option>
+                                        <option>North America (NA)</option>
+                                        <option>Europe (EU)</option>
+                                        <option>Asia (AS)</option>
+                                    </select>
+                                </FormField>
+                                
+                                <div className="col-span-2 pt-2">
+                                    <label className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:border-primary-200 transition-all group">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={formData.fullAccess}
+                                            onChange={(e) => setFormData({...formData, fullAccess: e.target.checked})}
+                                            className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                                        />
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-900 group-hover:text-primary-600 transition-colors">Provide Full Original Email Access</div>
+                                            <div className="text-xs text-slate-500 mt-0.5">Increases market trust and average sale price.</div>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
-                        </form>
+                        </div>
+
+                        {/* Section 4: Details */}
+                        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+                            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6">
+                                <AlignLeft size={18} className="text-primary-600" />
+                                Comprehensive Description
+                            </h4>
+                            <FormField label="Asset Specifics" icon={<MoreVertical size={16} />}>
+                                <textarea 
+                                    rows={5}
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                    placeholder="Provide detailed logs of skins, currency, account age, or software limitations..."
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all resize-none"
+                                ></textarea>
+                            </FormField>
+                        </div>
                     </div>
 
                     {/* Drawer Footer */}
-                    <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex gap-4">
+                    <div className="p-6 border-t border-slate-200 bg-white flex gap-4 z-10 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
                         <button 
                             onClick={() => setShowDrawer(false)}
-                            className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-white hover:border-slate-300 transition-all text-sm"
+                            className="flex-1 py-4 bg-slate-50 border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-100 transition-all text-sm uppercase tracking-widest"
                         >
-                            Cancel
+                            Abort
                         </button>
                         <button 
                             onClick={handleSubmit}
                             disabled={isSubmitting}
-                            className="flex-[2] py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all text-sm shadow-xl shadow-slate-900/20 flex items-center justify-center gap-3 disabled:opacity-50"
+                            className="flex-[2] py-4 bg-gradient-to-r from-primary-600 to-blue-600 text-white font-bold rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all text-sm shadow-xl shadow-primary-500/20 flex items-center justify-center gap-3 disabled:opacity-50 uppercase tracking-widest"
                         >
                             {isSubmitting ? (
                                 <Loader2 size={20} className="animate-spin" />
                             ) : (
                                 <>
-                                    {editingId ? "Update Asset" : "Confirm Deployment"}
+                                    {editingId ? "Update Registry" : "Authorize Deployment"}
                                     <ArrowRight size={18} />
                                 </>
                             )}
