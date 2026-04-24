@@ -77,7 +77,7 @@ export function CheckoutPage() {
                 customer_email: email,
                 quantity: initialQuantity,
                 total_price: total,
-                status: 'Paid'
+                status: 'Awaiting Verification'
             })
             .select()
             .single();
