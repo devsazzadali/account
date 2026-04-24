@@ -1,18 +1,63 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { User, Lock, Mail, Shield, Zap, ArrowRight, CheckCircle2, Globe, Github } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { User, Lock, Mail, Shield, Zap, ArrowRight, CheckCircle2, Globe, Github, Facebook, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "../lib/supabase";
 
 export function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSocialLogin = async (provider: 'google' | 'github' | 'facebook') => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin + '/dashboard'
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      alert("Social Registration Error: " + err.message);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle signup logic
-    console.log("Signup:", email, password);
-    window.location.href = "/dashboard";
+    if (password !== confirmPassword) {
+        alert("Passwords do not match");
+        return;
+    }
+
+    setLoading(true);
+    try {
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    user_name: email.split('@')[0],
+                    full_name: email.split('@')[0],
+                }
+            }
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+            alert("Account created! Please check your email for verification if required.");
+            localStorage.setItem("userRole", "user");
+            localStorage.setItem("username", email.split('@')[0]);
+            navigate("/dashboard");
+        }
+    } catch (err: any) {
+        alert("Registration Error: " + err.message);
+    } finally {
+        setLoading(false);
+    }
   };
 
   return (
@@ -160,10 +205,17 @@ export function SignupPage() {
 
                 <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary-500/20 transition-all duration-300 flex items-center justify-center gap-2 group transform hover:-translate-y-0.5"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary-500/20 transition-all duration-300 flex items-center justify-center gap-2 group transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none"
                 >
-                    Create Account
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    {loading ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                        <>
+                            Create Account
+                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                        </>
+                    )}
                 </button>
 
                 <div className="relative py-4">
@@ -175,16 +227,31 @@ export function SignupPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    {[
-                        { icon: Globe, label: "Google", color: "hover:bg-red-50 hover:text-red-600 border-slate-100" },
-                        { icon: Github, label: "Github", color: "hover:bg-slate-50 hover:text-slate-900 border-slate-100" }
-                    ].map((item, i) => (
-                        <button key={i} type="button" className={`flex items-center justify-center gap-3 py-3 rounded-xl border bg-white shadow-sm transition-all duration-300 ${item.color}`}>
-                            <item.icon className="w-4 h-4" />
-                            <span className="text-[10px] font-bold uppercase tracking-widest">{item.label}</span>
-                        </button>
-                    ))}
+                <div className="grid grid-cols-3 gap-4">
+                    <button 
+                        type="button" 
+                        onClick={() => handleSocialLogin('google')}
+                        className="flex flex-col items-center justify-center py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-red-50 hover:text-red-600"
+                    >
+                        <Globe className="w-4 h-4 mb-1" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Google</span>
+                    </button>
+                    <button 
+                        type="button" 
+                        onClick={() => handleSocialLogin('github')}
+                        className="flex flex-col items-center justify-center py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-slate-50 hover:text-slate-900"
+                    >
+                        <Github className="w-4 h-4 mb-1" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Github</span>
+                    </button>
+                    <button 
+                        type="button" 
+                        onClick={() => handleSocialLogin('facebook')}
+                        className="flex flex-col items-center justify-center py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-blue-50 hover:text-blue-600"
+                    >
+                        <Facebook className="w-4 h-4 mb-1" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Facebook</span>
+                    </button>
                 </div>
             </form>
 

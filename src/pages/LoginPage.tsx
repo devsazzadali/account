@@ -1,23 +1,68 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { User, Lock, ArrowRight, Zap, Crown, CheckCircle2, Github, Mail, Globe } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { User, Lock, ArrowRight, Zap, Crown, CheckCircle2, Github, Mail, Globe, Facebook, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "../lib/supabase";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSocialLogin = async (provider: 'google' | 'github' | 'facebook') => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin + '/dashboard'
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      alert("Social Authentication Error: " + err.message);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    if (email === "admin" && password === "admin123") {
-        localStorage.setItem("userRole", "admin");
-        localStorage.setItem("username", "Admin");
-        window.location.href = "/dashboard";
-    } else {
-        localStorage.setItem("userRole", "customer");
-        localStorage.setItem("username", email || "Customer");
-        window.location.href = "/dashboard";
+    try {
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (authError) throw authError;
+
+        if (authData.user) {
+            // Check role from profiles
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('role, username')
+                .eq('id', authData.user.id)
+                .single();
+
+            if (profile) {
+                localStorage.setItem("userRole", profile.role);
+                localStorage.setItem("username", profile.username || "User");
+                
+                if (profile.role === 'admin') {
+                    navigate("/admin");
+                } else {
+                    navigate("/dashboard");
+                }
+            } else {
+                // Fallback if profile trigger hasn't finished
+                localStorage.setItem("userRole", "user");
+                navigate("/dashboard");
+            }
+        }
+    } catch (err: any) {
+        alert("Access Denied: " + err.message);
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -149,10 +194,17 @@ export function LoginPage() {
 
                 <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary-500/20 transition-all duration-300 flex items-center justify-center gap-2 group transform hover:-translate-y-0.5"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary-500/20 transition-all duration-300 flex items-center justify-center gap-2 group transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none"
                 >
-                    Sign In
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    {loading ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                        <>
+                            Sign In
+                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                        </>
+                    )}
                 </button>
 
                 <div className="relative py-4">
@@ -165,16 +217,30 @@ export function LoginPage() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
-                    {[
-                        { icon: Globe, label: "Google", color: "hover:bg-red-50 hover:text-red-600 border-slate-100" },
-                        { icon: Github, label: "Github", color: "hover:bg-slate-50 hover:text-slate-900 border-slate-100" },
-                        { icon: Mail, label: "Discord", color: "hover:bg-indigo-50 hover:text-indigo-600 border-slate-100" }
-                    ].map((item, i) => (
-                        <button key={i} type="button" className={`flex flex-col items-center justify-center py-3 rounded-xl border bg-white shadow-sm transition-all duration-300 ${item.color}`}>
-                            <item.icon className="w-5 h-5 mb-1" />
-                            <span className="text-[10px] font-bold uppercase tracking-widest">{item.label}</span>
-                        </button>
-                    ))}
+                    <button 
+                        type="button" 
+                        onClick={() => handleSocialLogin('google')}
+                        className="flex flex-col items-center justify-center py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-red-50 hover:text-red-600"
+                    >
+                        <Globe className="w-5 h-5 mb-1" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Google</span>
+                    </button>
+                    <button 
+                        type="button" 
+                        onClick={() => handleSocialLogin('github')}
+                        className="flex flex-col items-center justify-center py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-slate-50 hover:text-slate-900"
+                    >
+                        <Github className="w-5 h-5 mb-1" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Github</span>
+                    </button>
+                    <button 
+                        type="button" 
+                        onClick={() => handleSocialLogin('facebook')}
+                        className="flex flex-col items-center justify-center py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-blue-50 hover:text-blue-600"
+                    >
+                        <Facebook className="w-5 h-5 mb-1" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Facebook</span>
+                    </button>
                 </div>
             </form>
 
