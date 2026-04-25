@@ -8,9 +8,18 @@ import {
   Search,
   MoreVertical,
   Paperclip,
-  Smile
+  Smile,
+  MessageSquare,
+  Clock,
+  ChevronRight,
+  ThumbsUp,
+  ThumbsDown,
+  Info,
+  LifeBuoy,
+  Zap,
+  ArrowRight
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
 
 export function UserMessages() {
@@ -23,7 +32,6 @@ export function UserMessages() {
 
   useEffect(() => {
     fetchMessages();
-    // Set up a simple polling for real-time feel since we might not have WS set up
     const interval = setInterval(fetchMessages, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -44,20 +52,21 @@ export function UserMessages() {
         setMessages(data || []);
         setLoading(false);
     } catch (err: any) {
-        console.error("Fetch Messages Error:", err.message);
+        console.error("Fetch Error:", err.message);
     }
   }
 
-  async function handleSendMessage(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
+  async function handleSendMessage(e?: React.FormEvent, text?: string) {
+    if (e) e.preventDefault();
+    const messageToSubmit = text || newMessage;
+    if (!messageToSubmit.trim()) return;
 
     setIsSending(true);
     try {
         const { error } = await supabase.from('messages').insert({
             username: username,
-            subject: "Direct Chat",
-            message: newMessage,
+            subject: "Support Thread",
+            message: messageToSubmit,
             status: 'unread'
         });
 
@@ -66,51 +75,82 @@ export function UserMessages() {
         setNewMessage("");
         fetchMessages();
     } catch (err: any) {
-        alert("Transmission Error: " + err.message);
+        alert("Transmission Node Error: " + err.message);
     } finally {
         setIsSending(false);
     }
   }
 
+  const suggestedQuestions = [
+    "How to check my account details?",
+    "Is my account warranty covered?",
+    "How to upgrade to Premium Tier?"
+  ];
+
   return (
-    <div className="h-[calc(100vh-140px)] bg-[#efeae2] border border-slate-200 shadow-2xl rounded-3xl overflow-hidden flex flex-col font-sans relative z-10">
+    <div className="h-[calc(100vh-140px)] bg-slate-50 border border-slate-200 shadow-2xl rounded-[2.5rem] overflow-hidden flex flex-col font-sans relative z-10 border-b-8 border-b-primary-600">
       
-      {/* WhatsApp Style Header */}
-      <div className="bg-[#00a884] text-white px-6 py-4 flex items-center justify-between shrink-0 shadow-md relative z-20">
-          <div className="flex items-center gap-4">
+      {/* Premium Support Header */}
+      <div className="bg-white border-b border-slate-100 px-8 py-6 flex items-center justify-between shrink-0 z-20">
+          <div className="flex items-center gap-5">
               <div className="relative">
-                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30">
-                      <ShieldCheck size={24} className="text-white" />
+                  <div className="w-14 h-14 rounded-2xl bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-600/20">
+                      <LifeBuoy size={28} className="text-white" />
                   </div>
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-[#00a884] rounded-full"></div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-4 border-white rounded-full"></div>
               </div>
               <div>
-                  <h3 className="text-[16px] font-bold tracking-wide">AccountStore Support</h3>
-                  <p className="text-[12px] text-white/80 font-medium flex items-center gap-1">
-                      typically replies instantly
+                  <h3 className="text-[17px] font-black text-slate-900 tracking-tight">Technical Support Matrix</h3>
+                  <p className="text-[12px] text-emerald-600 font-bold flex items-center gap-1.5 uppercase tracking-widest">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Engineers Online
                   </p>
               </div>
           </div>
-          <div className="flex items-center gap-6 text-white/90">
-              <Search size={20} className="cursor-pointer hover:text-white transition-colors" />
-              <MoreVertical size={20} className="cursor-pointer hover:text-white transition-colors" />
+          <div className="hidden md:flex items-center gap-3">
+              <button className="p-3 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all">
+                  <Search size={20} />
+              </button>
+              <button className="p-3 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all">
+                  <MoreVertical size={20} />
+              </button>
           </div>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-[#efeae2] relative">
-          {/* WhatsApp Background Pattern (Subtle) */}
-          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'url("https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png")', backgroundSize: '400px' }}></div>
+      <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar bg-white/50 relative">
           
-          <div className="flex justify-center mb-8 relative z-10">
-              <div className="bg-[#ffeecd] text-[#544326] text-[11px] font-bold px-4 py-1.5 rounded-lg shadow-sm border border-[#f5dfb5]">
-                  Messages are secured with end-to-end encryption. No one outside of this chat can read them.
+          <div className="flex justify-center mb-12">
+              <div className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] px-6 py-2 rounded-full shadow-xl shadow-slate-900/10 border border-white/10">
+                  Secure Communication Protocol Initialized
               </div>
           </div>
 
           {loading && messages.length === 0 ? (
-              <div className="flex justify-center items-center h-full">
-                  <Loader2 className="animate-spin text-[#00a884] w-8 h-8" />
+              <div className="flex flex-col justify-center items-center h-64 text-center">
+                  <Loader2 className="animate-spin text-primary-600 w-10 h-10 mb-4" />
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Synchronizing Identity Node...</p>
+              </div>
+          ) : messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                 <div className="w-20 h-20 bg-primary-50 rounded-[2rem] flex items-center justify-center text-primary-600 mb-6 border border-primary-100">
+                    <MessageSquare size={36} />
+                 </div>
+                 <h4 className="text-xl font-black text-slate-900 mb-2 tracking-tight">Ready to Assist</h4>
+                 <p className="text-slate-500 max-w-xs mb-8 text-[14px] font-medium leading-relaxed">Send a message to our support engineers. We typically respond within minutes.</p>
+                 
+                 <div className="grid grid-cols-1 gap-2 w-full max-w-xs">
+                    {suggestedQuestions.map(q => (
+                       <button 
+                        key={q}
+                        onClick={() => handleSendMessage(undefined, q)}
+                        className="p-4 bg-white border border-slate-200 rounded-2xl text-[13px] font-bold text-slate-700 hover:border-primary-600 hover:text-primary-600 transition-all text-left flex items-center justify-between group"
+                       >
+                          {q}
+                          <ArrowRight size={16} className="text-slate-300 group-hover:text-primary-600 group-hover:translate-x-1 transition-all" />
+                       </button>
+                    ))}
+                 </div>
               </div>
           ) : (
               messages.map((msg, idx) => {
@@ -118,54 +158,66 @@ export function UserMessages() {
                   const showAdminMsg = !!msg.reply;
                   
                   return (
-                      <React.Fragment key={msg.id}>
-                          {/* User Bubble */}
+                      <div key={msg.id} className="space-y-8">
+                          {/* User Message Block */}
                           {showUserMsg && (
                               <motion.div 
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex justify-end relative z-10"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="flex flex-col items-end"
                               >
-                                  <div className="max-w-[75%] bg-[#d9fdd3] text-[#111b21] p-3 rounded-2xl rounded-tr-sm shadow-sm relative group">
-                                      <p className="text-[14px] leading-relaxed pr-12 whitespace-pre-wrap">{msg.message}</p>
-                                      <div className="absolute bottom-1.5 right-2 flex items-center gap-1 text-[#667781]">
-                                          <span className="text-[10px]">{new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                          <CheckCheck size={14} className={msg.status === 'replied' ? "text-[#53bdeb]" : ""} />
+                                  <div className="max-w-[85%] md:max-w-[70%]">
+                                      <div className="bg-slate-900 text-white p-5 rounded-[1.8rem] rounded-tr-sm shadow-xl shadow-slate-900/10">
+                                          <p className="text-[14px] font-medium leading-relaxed whitespace-pre-wrap">{msg.message}</p>
+                                      </div>
+                                      <div className="mt-2 flex items-center justify-end gap-2 text-slate-400">
+                                          <span className="text-[10px] font-bold uppercase tracking-widest">{new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                          <CheckCheck size={14} className={msg.status === 'replied' ? "text-primary-600" : ""} />
                                       </div>
                                   </div>
                               </motion.div>
                           )}
 
-                          {/* Admin Reply Bubble */}
+                          {/* Agent Reply Block */}
                           {showAdminMsg && (
                               <motion.div 
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex justify-start relative z-10"
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="flex gap-4 items-start"
                               >
-                                  <div className="max-w-[75%] bg-white text-[#111b21] p-3 rounded-2xl rounded-tl-sm shadow-sm relative group">
-                                      <p className="text-[14px] leading-relaxed pr-12 whitespace-pre-wrap">{msg.reply}</p>
-                                      <div className="absolute bottom-1.5 right-2 flex items-center gap-1 text-[#667781]">
-                                          <span className="text-[10px]">{new Date(msg.replied_at || msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                  <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center text-white shadow-lg shrink-0 mt-1">
+                                      <LifeBuoy size={20} />
+                                  </div>
+                                  <div className="max-w-[85%] md:max-w-[70%]">
+                                      <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Support Engineer</div>
+                                      <div className="bg-white border border-slate-200 text-slate-700 p-5 rounded-[1.8rem] rounded-tl-sm shadow-sm">
+                                          <p className="text-[14px] font-medium leading-relaxed whitespace-pre-wrap">{msg.reply}</p>
+                                          
+                                          {/* Feedback interaction */}
+                                          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                                             <span className="text-[11px] font-bold text-slate-400 italic">Was this helpful?</span>
+                                             <div className="flex gap-2">
+                                                <button className="p-2 hover:bg-emerald-50 text-slate-300 hover:text-emerald-600 rounded-lg transition-all"><ThumbsUp size={14} /></button>
+                                                <button className="p-2 hover:bg-red-50 text-slate-300 hover:text-red-600 rounded-lg transition-all"><ThumbsDown size={14} /></button>
+                                             </div>
+                                          </div>
+                                      </div>
+                                      <div className="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                                          {new Date(msg.replied_at || msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                       </div>
                                   </div>
                               </motion.div>
                           )}
-                      </React.Fragment>
+                      </div>
                   );
               })
           )}
           <div ref={chatEndRef} />
       </div>
 
-      {/* WhatsApp Style Input Area */}
-      <div className="bg-[#f0f2f5] p-3 flex items-end gap-3 shrink-0 relative z-20">
-          <div className="flex gap-4 items-center px-2 pb-3 text-[#54656f]">
-              <Smile size={24} className="cursor-pointer hover:text-[#00a884] transition-colors" />
-              <Paperclip size={22} className="cursor-pointer hover:text-[#00a884] transition-colors" />
-          </div>
-          
-          <form onSubmit={handleSendMessage} className="flex-1 flex gap-3 relative">
+      {/* Premium Input Area */}
+      <div className="bg-white p-6 border-t border-slate-100 z-20">
+          <form onSubmit={handleSendMessage} className="relative group">
               <textarea 
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
@@ -175,20 +227,49 @@ export function UserMessages() {
                           handleSendMessage(e);
                       }
                   }}
-                  placeholder="Type a message"
-                  className="w-full bg-white border-none rounded-xl px-4 py-3 text-[15px] text-[#111b21] focus:outline-none shadow-sm resize-none"
-                  rows={1}
-                  style={{ minHeight: '44px', maxHeight: '120px' }}
+                  placeholder="Describe your inquiry..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-3xl pl-6 pr-24 py-5 text-[15px] text-slate-900 focus:outline-none focus:border-primary-600 focus:bg-white focus:ring-4 focus:ring-primary-600/5 transition-all resize-none min-h-[80px]"
+                  rows={2}
               />
-              <button 
-                  type="submit"
-                  disabled={isSending || !newMessage.trim()}
-                  className="w-11 h-11 shrink-0 bg-[#00a884] text-white rounded-full flex items-center justify-center hover:bg-[#008f6f] transition-all disabled:opacity-50 shadow-md"
-              >
-                  {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="ml-1" />}
-              </button>
+              <div className="absolute right-3 bottom-3 flex items-center gap-2">
+                  <button type="button" className="p-2.5 text-slate-400 hover:text-slate-900 transition-colors">
+                     <Paperclip size={20} />
+                  </button>
+                  <button 
+                      type="submit"
+                      disabled={isSending || !newMessage.trim()}
+                      className="w-12 h-12 bg-primary-600 text-white rounded-2xl flex items-center justify-center hover:bg-primary-700 transition-all disabled:opacity-50 shadow-lg shadow-primary-600/20 active:scale-95"
+                  >
+                      {isSending ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className="ml-0.5" />}
+                  </button>
+              </div>
           </form>
+          
+          <div className="mt-4 flex items-center justify-between text-[11px] text-slate-400 font-bold uppercase tracking-widest px-2">
+             <div className="flex items-center gap-2">
+                <Zap size={12} className="text-amber-500" />
+                Priority Support Node
+             </div>
+             <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1"><Clock size={12} /> Live</span>
+                <span className="flex items-center gap-1 italic opacity-60">Shift + Enter for new line</span>
+             </div>
+          </div>
       </div>
+
+      {/* Floating Action Hint */}
+      <AnimatePresence>
+        {messages.length > 0 && !isSending && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="absolute bottom-32 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-900 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 z-30"
+          >
+             <Info size={12} className="text-primary-500" />
+             Average response time: 2 mins
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

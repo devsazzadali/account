@@ -1,385 +1,262 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { 
-  ShoppingBag, 
-  MessageSquare, 
-  CreditCard, 
-  PlusCircle, 
-  List, 
-  Settings, 
-  Clock, 
-  CheckCircle, 
-  Bell, 
-  Ticket, 
-  Activity, 
-  User as UserIcon,
-  HelpCircle,
-  Loader2,
-  Zap,
-  ShieldCheck,
-  Shield,
-  LayoutDashboard,
-  LogOut,
-  ChevronRight,
-  Phone,
-  Gavel
+  Package, Clock, CheckCircle2, ChevronRight, MessageSquare, 
+  Settings, ShoppingBag, Loader2, AlertCircle, ShieldAlert,
+  Mail, ExternalLink, ArrowRight, ShieldCheck, Crown
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabase";
-import { UserOrders } from "../components/user/UserOrders";
-import { UserSettings } from "../components/user/UserSettings";
-import { UserMessages } from "../components/user/UserMessages";
+import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function UserDashboardPage() {
-  const userRole = localStorage.getItem("userRole");
-  const username = localStorage.getItem("username") || "User";
-  const isAdmin = userRole === "admin";
-
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [stats, setStats] = useState({
-    assetValue: 0,
-    totalOrders: 0,
-    activeOrders: 0,
-    completedOrders: 0
-  });
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState("orders");
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchUserData();
+    checkUser();
   }, []);
 
-  async function fetchUserData() {
-    try {
-        setLoading(true);
-        // In a real app, we would filter by user_id or email
-        const { data: orders, error } = await supabase
-            .from('orders')
-            .select('*, products(title, image)')
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        if (orders) {
-            const totalValue = orders.reduce((acc, o) => acc + Number(o.total_price), 0);
-            const active = orders.filter(o => o.status !== 'Delivered' && o.status !== 'Completed').length;
-            const completed = orders.filter(o => o.status === 'Delivered' || o.status === 'Completed').length;
-
-            setStats({
-                assetValue: totalValue,
-                totalOrders: orders.length,
-                activeOrders: active,
-                completedOrders: completed
-            });
-            setRecentActivity(orders.slice(0, 3));
-        }
-    } catch (err: any) {
-        console.error("Dashboard Error:", err.message);
-    } finally {
-        setLoading(false);
+  async function checkUser() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate("/login");
+      return;
     }
+    setUser(session.user);
+    
+    // Fetch profile and orders
+    const [profileRes, ordersRes] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+      supabase.from('orders').select('*, products(*)').eq('username', session.user.user_metadata.username || session.user.email.split('@')[0]).order('created_at', { ascending: false })
+    ]);
+
+    setProfile(profileRes.data);
+    setOrders(ordersRes.data || []);
+    setLoading(false);
   }
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("username");
-    window.location.href = "/login";
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20 relative overflow-hidden">
-      {/* Background Glows */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/5 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/5 blur-[100px] rounded-full pointer-events-none"></div>
-
-      {/* Main Container */}
-      <div className="container mx-auto px-4 max-w-7xl pt-12 relative z-10">
-        
-        {/* User Hero Section */}
-        <div className="mb-12">
-            <motion.div 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col md:flex-row items-center gap-8 bg-white/50 backdrop-blur-md p-8 rounded-[3rem] border border-white shadow-xl shadow-slate-200/50"
-            >
-                <div className="relative group">
-                    <div className="w-24 h-24 md:w-32 md:h-32 rounded-[2.5rem] bg-gradient-to-br from-primary-500 to-blue-500 p-[2px] shadow-2xl shadow-primary-500/10 group-hover:rotate-3 transition-transform duration-500">
-                        <div className="w-full h-full rounded-[2.4rem] bg-white flex items-center justify-center overflow-hidden border border-slate-100">
-                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="User" className="w-full h-full object-cover" />
-                        </div>
-                    </div>
-                    <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-xl bg-primary-600 border-4 border-white flex items-center justify-center shadow-lg">
-                        <Zap className="w-5 h-5 text-white fill-current" />
-                    </div>
-                </div>
-
-                <div className="text-center md:text-left flex-1">
-                    <div className="flex flex-col sm:flex-row items-center md:items-start gap-4 mb-3">
-                        <h1 className="text-4xl font-display font-bold tracking-tight text-slate-900 italic">Hello, {username}</h1>
-                        <span className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border bg-blue-50 text-blue-600 border-blue-100`}>
-                            Premium Member
-                        </span>
-                    </div>
-                    <p className="text-slate-500 text-sm max-w-lg mb-6 leading-relaxed">
-                        Manage your acquisitions, track deliveries, and configure your identity in our high-tier digital marketplace.
-                    </p>
-
-                    <div className="flex flex-wrap justify-center md:justify-start gap-8 md:gap-12">
-                        <div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Asset Value</div>
-                            <div className="text-2xl font-display font-bold text-slate-900">
-                                {loading ? "---" : `$${stats.assetValue.toLocaleString()}`}
-                            </div>
-                        </div>
-                        <div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Orders</div>
-                            <div className="text-2xl font-display font-bold text-slate-900">{loading ? "---" : stats.totalOrders}</div>
-                        </div>
-                        <div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Protection Status</div>
-                            <div className="text-2xl font-display font-bold text-primary-600 flex items-center gap-2">
-                                <ShieldCheck size={24} />
-                                Active
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                {isAdmin && (
-                    <div className="flex flex-col gap-3">
-                        <Link to="/admin" className="px-6 py-3 bg-slate-900 text-white font-bold rounded-2xl flex items-center gap-3 shadow-xl hover:bg-slate-800 transition-all text-sm">
-                            <Activity size={18} />
-                            Admin Console
-                        </Link>
-                    </div>
-                )}
-            </motion.div>
-        </div>
-
-        {/* Dashboard Navigation */}
-        <div className="flex flex-wrap items-center gap-2 mb-10 bg-white/50 backdrop-blur-sm p-2 rounded-2xl border border-slate-200 w-fit mx-auto md:mx-0 shadow-sm">
-            <TabButton active={activeTab === "overview"} onClick={() => setActiveTab("overview")} icon={<LayoutDashboard size={18} />} label="Overview" />
-            <TabButton active={activeTab === "orders"} onClick={() => setActiveTab("orders")} icon={<ShoppingBag size={18} />} label="My Orders" />
-            <TabButton active={activeTab === "messages"} onClick={() => setActiveTab("messages")} icon={<MessageSquare size={18} />} label="Support Signals" />
-            <TabButton active={activeTab === "settings"} onClick={() => setActiveTab("settings")} icon={<Settings size={18} />} label="Settings" />
-            <div className="w-px h-6 bg-slate-200 mx-2 hidden md:block"></div>
-            <button 
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
-            >
-                <LogOut size={18} />
-                Sign Out
-            </button>
-        </div>
-
-        {/* Tab Content */}
-        <AnimatePresence mode="wait">
-            <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-            >
-                {activeTab === "overview" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Section: Quick Actions */}
-                        <div className="lg:col-span-1 space-y-6">
-                            <DashboardSection title="Order Nexus" icon={<ShoppingBag className="text-primary-600" />}>
-                                <DashboardTabLink onClick={() => setActiveTab("orders")} icon={<List size={18} />} label="All Digital Acquisitions" count={stats.totalOrders} />
-                                <DashboardTabLink onClick={() => setActiveTab("orders")} icon={<Clock size={18} />} label="Awaiting Delivery" count={stats.activeOrders} highlight />
-                                <DashboardTabLink onClick={() => setActiveTab("orders")} icon={<CheckCircle size={18} />} label="Verified Completions" count={stats.completedOrders} />
-                            </DashboardSection>
-
-                            <DashboardSection title="Command Support" icon={<Ticket className="text-blue-600" />}>
-                                <DashboardTabLink onClick={() => setActiveTab("messages")} icon={<PlusCircle size={18} />} label="Initialize Support Signal" />
-                                <DashboardTabLink onClick={() => setActiveTab("messages")} icon={<MessageSquare size={18} />} label="Signal History" highlight />
-                                <DashboardTabLink onClick={() => setActiveTab("overview")} icon={<HelpCircle size={18} />} label="Platform Resource Hub" />
-                            </DashboardSection>
-                        </div>
-
-                        {/* Recent Activity Mini-Tab */}
-                        <div className="lg:col-span-2 space-y-6">
-                            <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm h-full">
-                                <div className="flex justify-between items-center mb-8">
-                                    <h3 className="text-xl font-bold text-slate-900 flex items-center gap-3">
-                                        <Activity size={20} className="text-primary-600" />
-                                        Live Transmission Log
-                                    </h3>
-                                    <button 
-                                        onClick={() => setActiveTab("orders")}
-                                        className="text-[10px] font-bold text-primary-600 uppercase tracking-widest hover:text-primary-500"
-                                    >
-                                        View Full Ledger
-                                    </button>
-                                </div>
-                                <div className="space-y-4">
-                                    {loading ? (
-                                        <div className="flex flex-col items-center justify-center py-20 opacity-20">
-                                            <Loader2 className="animate-spin mb-4" />
-                                            <span className="text-[10px] font-bold uppercase tracking-widest">Scanning Ledger...</span>
-                                        </div>
-                                    ) : recentActivity.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center py-20 opacity-20 text-center">
-                                            <ShoppingBag size={48} className="mb-4 mx-auto" />
-                                            <span className="text-[10px] font-bold uppercase tracking-widest">No Transmissions Found</span>
-                                        </div>
-                                    ) : recentActivity.map((item, i) => (
-                                        <div key={i} className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-primary-100 transition-all group shadow-sm hover:shadow-md">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-primary-600 transition-colors overflow-hidden shadow-sm">
-                                                    {item.products?.image ? (
-                                                        <img src={item.products.image} className="w-full h-full object-cover" alt="" />
-                                                    ) : (
-                                                        <ShoppingBag size={20} />
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-bold text-slate-900 truncate max-w-[200px]">{item.products?.title || 'Unknown Asset'}</div>
-                                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                                                        {new Date(item.created_at).toLocaleDateString()} • ID: {item.id.split('-')[0].toUpperCase()}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="text-sm font-bold text-slate-900">${Number(item.total_price).toFixed(2)}</div>
-                                                <div className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${item.status === 'Paid' || item.status === 'Completed' || item.status === 'Delivered' ? 'text-green-600' : 'text-yellow-600'}`}>
-                                                    {item.status}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === "orders" && <UserOrders />}
-                {activeTab === "messages" && <UserMessages />}
-                {activeTab === "settings" && <UserSettings />}
-            </motion.div>
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-}
-
-
-// Helper Components
-
-function TabButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
+  if (loading) {
     return (
-        <button 
-            onClick={onClick}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                active 
-                ? "bg-slate-900 text-white shadow-lg shadow-slate-900/10" 
-                : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-            }`}
-        >
-            {icon}
-            {label}
-        </button>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-primary-600" />
+      </div>
     );
-}
+  }
 
-function DashboardSection({ title, icon, children }: { title: string, icon: React.ReactNode, children: React.ReactNode }) {
-  return (
-    <div className="bg-white border-slate-200 border rounded-[2rem] overflow-hidden group hover:border-primary-200 transition-all shadow-sm">
-      <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-4 bg-slate-50/50">
-        <div className="p-2 bg-white rounded-xl group-hover:scale-110 transition-transform duration-500 shadow-sm border border-slate-100">
-            {icon}
-        </div>
-        <span className="text-base font-bold text-slate-900 tracking-tight">{title}</span>
-      </div>
-      <div className="p-3">
-        <ul className="flex flex-col gap-1">
-          {children}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-function DashboardTabLink({ onClick, icon, label, count, highlight }: { onClick: () => void, icon: React.ReactNode, label: string, count?: number, highlight?: boolean }) {
+  // Security Check: Email Confirmation
+  if (user && !user.email_confirmed_at) {
     return (
-      <li>
-        <button onClick={onClick} className={`w-full flex items-center justify-between p-4 rounded-xl transition-all duration-300 group/link ${
-          highlight ? "bg-primary-50 border border-primary-100" : "hover:bg-slate-50"
-        }`}>
-          <div className="flex items-center gap-4">
-              <div className={`text-slate-400 group-hover/link:text-primary-600 transition-colors`}>
-                  {icon}
-              </div>
-              <span className={`text-xs font-bold transition-colors ${highlight ? "text-primary-600" : "text-slate-600 group-hover/link:text-slate-900"}`}>
-                  {label}
-              </span>
+      <div className="min-h-[calc(100vh-80px)] bg-slate-50 flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }} 
+          animate={{ opacity: 1, scale: 1 }} 
+          className="max-w-md w-full bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden"
+        >
+          <div className="p-10 text-center">
+             <div className="w-20 h-20 bg-amber-50 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-amber-100">
+                <Mail className="w-10 h-10 text-amber-600" />
+             </div>
+             <h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Identity Verification Required</h2>
+             <p className="text-slate-500 font-medium leading-relaxed mb-8">
+                Your account is currently restricted. Please check your inbox at <span className="text-slate-900 font-bold">{user.email}</span> and click the confirmation link to unlock your operational hub.
+             </p>
+             <div className="space-y-3">
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-900/20"
+                >
+                   Check Status <ArrowRight size={16} />
+                </button>
+                <button 
+                  onClick={() => supabase.auth.resend({ type: 'signup', email: user.email })}
+                  className="w-full py-4 bg-slate-50 text-slate-600 rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-slate-100 transition-all"
+                >
+                   Resend Verification Protocol
+                </button>
+             </div>
+             <p className="mt-8 text-[11px] text-slate-400 font-medium">
+                Need help? Contact <a href="mailto:support@accountstore.com" className="text-primary-600 hover:underline">Support Core</a>
+             </p>
           </div>
-          {count !== undefined && (
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500 group-hover/link:bg-primary-100 group-hover/link:text-primary-600 transition-all`}>
-                  {count}
-              </span>
-          )}
-        </button>
-      </li>
+        </motion.div>
+      </div>
     );
-}
+  }
 
-function DashboardLink({ to, icon, label, count, color, highlight }: { to: string, icon: React.ReactNode, label: string, count?: number, color?: string, highlight?: boolean }) {
   return (
-    <li>
-      <Link to={to} className={`flex items-center justify-between p-4 rounded-xl transition-all duration-300 group/link ${
-        highlight ? "bg-primary-50 border border-primary-100" : "hover:bg-slate-50"
-      }`}>
-        <div className="flex items-center gap-4">
-            <div className={`text-slate-400 group-hover/link:text-primary-600 transition-colors ${color}`}>
-                {icon}
-            </div>
-            <span className={`text-xs font-bold transition-colors ${highlight ? "text-primary-600" : "text-slate-600 group-hover/link:text-slate-900"}`}>
-                {label}
-            </span>
+    <div className="min-h-screen bg-slate-50 font-sans pb-20 md:pb-0">
+      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+        
+        {/* Dashboard Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+           <div>
+              <div className="flex items-center gap-3 mb-2">
+                 <h1 className="text-3xl font-black text-slate-900 tracking-tight">Operational Hub</h1>
+                 {profile?.is_premium && (
+                    <span className="px-3 py-1 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-amber-500/20 flex items-center gap-1">
+                       <Crown size={12} /> Premium Tier
+                    </span>
+                 )}
+              </div>
+              <p className="text-slate-500 font-medium">Welcome back, <span className="text-slate-900 font-bold">{profile?.username}</span>. System is optimized and ready.</p>
+           </div>
+           <div className="flex items-center gap-3">
+              <div className="px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl text-xs font-bold flex items-center gap-2">
+                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                 Network Connected
+              </div>
+           </div>
         </div>
-        {count !== undefined && (
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500 group-hover/link:bg-primary-100 group-hover/link:text-primary-600 transition-all`}>
-                {count}
-            </span>
-        )}
-      </Link>
-    </li>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+           <StatBox label="Total Procurements" value={orders.length} icon={<Package size={20} />} color="text-slate-900" />
+           <StatBox label="Active Sessions" value={orders.filter(o => o.status !== 'Completed').length} icon={<Clock size={20} />} color="text-primary-600" />
+           <StatBox label="Finalized Orders" value={orders.filter(o => o.status === 'Completed').length} icon={<CheckCircle2 size={20} />} color="text-emerald-600" />
+           <StatBox label="Loyalty Tier" value={profile?.is_premium ? "Elite" : "Standard"} icon={<Crown size={20} />} color="text-amber-600" />
+        </div>
+
+        {/* Content Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+           
+           {/* Left: Orders Feed */}
+           <div className="lg:col-span-2 space-y-6">
+              <div className="flex items-center justify-between mb-2">
+                 <h3 className="text-xl font-black text-slate-900 tracking-tight">Order Manifest</h3>
+                 <div className="flex gap-2">
+                    <TabButton active={activeTab === 'orders'} onClick={() => setActiveTab('orders')}>Recent</TabButton>
+                    <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>History</TabButton>
+                 </div>
+              </div>
+
+              {orders.length === 0 ? (
+                 <div className="bg-white border border-slate-200 rounded-[2.5rem] p-16 text-center shadow-sm">
+                    <ShoppingBag size={64} className="mx-auto text-slate-100 mb-6" />
+                    <h4 className="text-xl font-black text-slate-900 mb-2">No Transactions Detected</h4>
+                    <p className="text-slate-500 max-w-xs mx-auto mb-8 font-medium">Your procurement history is empty. Start exploring our premium assets.</p>
+                    <Link to="/" className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 active:scale-95">Browse Market</Link>
+                 </div>
+              ) : (
+                 <div className="space-y-4">
+                    {orders.map((order, idx) => (
+                       <motion.div 
+                          key={order.id} 
+                          initial={{ opacity: 0, y: 20 }} 
+                          animate={{ opacity: 1, y: 0 }} 
+                          transition={{ delay: idx * 0.05 }}
+                          className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:border-primary-600/20 transition-all group"
+                       >
+                          <div className="flex flex-col md:flex-row justify-between gap-6">
+                             <div className="flex gap-5">
+                                <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+                                   <img src={order.products?.image_url} alt="" className="w-full h-full object-cover" />
+                                </div>
+                                <div className="flex-1">
+                                   <div className="text-[11px] font-black text-primary-600 uppercase tracking-widest mb-1">
+                                      #{order.id.split('-')[0].toUpperCase()} • {new Date(order.created_at).toLocaleDateString()}
+                                   </div>
+                                   <h4 className="text-[17px] font-black text-slate-900 mb-1 leading-tight">{order.products?.title}</h4>
+                                   <div className="flex items-center gap-3">
+                                      <span className="text-[13px] font-black text-slate-900">${order.total_price}</span>
+                                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
+                                         order.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                         order.status === 'Cancelled' ? 'bg-red-50 text-red-600 border border-red-100' :
+                                         'bg-amber-50 text-amber-600 border border-amber-100'
+                                      }`}>
+                                         {order.status}
+                                      </span>
+                                   </div>
+                                </div>
+                             </div>
+                             <div className="flex items-center gap-3">
+                                <Link to={`/order/${order.id}`} className="px-6 py-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all flex items-center gap-2">
+                                   Access Asset <ChevronRight size={16} />
+                                </Link>
+                             </div>
+                          </div>
+                       </motion.div>
+                    ))}
+                 </div>
+              )}
+           </div>
+
+           {/* Right: Identity Sidebar */}
+           <div className="space-y-8">
+              <div className="bg-slate-900 rounded-[3rem] p-8 text-white shadow-2xl relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary-600/20 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary-600/30 transition-all duration-700" />
+                 <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-8">
+                       <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden">
+                          <img src={profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.username}`} className="w-full h-full object-cover" alt="" />
+                       </div>
+                       <div>
+                          <h4 className="text-xl font-black tracking-tight">{profile?.full_name || profile?.username}</h4>
+                          <p className="text-[11px] text-white/50 font-bold uppercase tracking-widest">ID: {user?.id.slice(0,8).toUpperCase()}</p>
+                       </div>
+                    </div>
+                    <div className="space-y-5 mb-8">
+                       <ProfileStat icon={<ShieldCheck size={18} />} label="Security Level" value={profile?.role === 'admin' ? "Full Control" : "Standard Node"} />
+                       <ProfileStat icon={<Crown size={18} />} label="Membership" value={profile?.is_premium ? "Premium Tier" : "Basic Tier"} />
+                       <ProfileStat icon={<Mail size={18} />} label="Comm Node" value={user?.email} />
+                    </div>
+                    <button onClick={() => navigate('/settings')} className="w-full py-4 bg-white/10 border border-white/10 rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center justify-center gap-2">
+                       <Settings size={16} /> Security Settings
+                    </button>
+                 </div>
+              </div>
+
+              {/* Support Banner */}
+              <div className="bg-primary-600 rounded-[3rem] p-8 text-white shadow-xl shadow-primary-600/20 relative overflow-hidden group">
+                 <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                 <h4 className="text-xl font-black mb-2 tracking-tight">Need Assistance?</h4>
+                 <p className="text-white/80 text-[13px] font-medium mb-6 leading-relaxed">Our support engineers are available 24/7 to help you with your procurements.</p>
+                 <button className="px-6 py-3 bg-white text-primary-600 rounded-xl text-[12px] font-black uppercase tracking-widest hover:shadow-lg transition-all flex items-center gap-2">
+                    <MessageSquare size={16} /> Open Ticket
+                 </button>
+              </div>
+           </div>
+
+        </div>
+      </div>
+    </div>
   );
 }
 
+function StatBox({ label, value, icon, color }: any) {
+   return (
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+         <div className="text-slate-400 mb-3">{icon}</div>
+         <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</div>
+         <div className={`text-2xl font-black ${color}`}>{value}</div>
+      </div>
+   );
+}
 
-function Crown({ size, className }: { size: number, className?: string }) {
-    return (
-        <svg 
-            width={size} 
-            height={size} 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            className={className}
-        >
-            <path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14" />
-        </svg>
-    );
+function ProfileStat({ icon, label, value }: any) {
+   return (
+      <div className="flex items-center gap-4">
+         <div className="text-white/40">{icon}</div>
+         <div>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30 mb-0.5">{label}</div>
+            <div className="text-[13px] font-bold truncate max-w-[150px]">{value}</div>
+         </div>
+      </div>
+   );
+}
+
+function TabButton({ children, active, onClick }: any) {
+   return (
+      <button 
+         onClick={onClick}
+         className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
+            active ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+         }`}
+      >
+         {children}
+      </button>
+   );
 }
