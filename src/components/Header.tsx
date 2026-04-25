@@ -1,6 +1,7 @@
 import { Search, User, ShoppingCart, Menu, LayoutDashboard, ShoppingBag, Store, Gavel, Ticket, Megaphone, FileText, Tag, Share2, Settings, LogOut, ChevronDown, Bell, MessageSquare, Crown } from "lucide-react";
 import React from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 
 export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   const userRole = localStorage.getItem("userRole");

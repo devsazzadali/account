@@ -32,7 +32,7 @@ export function AdminMessages() {
     // Set up Realtime listener
     const channel = supabase
       .channel('messages_changes')
-      .on('postgres_changes', { event: '*', table: 'messages' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (payload) => {
         console.log('Realtime update:', payload);
         fetchMessages();
       })
@@ -119,7 +119,7 @@ export function AdminMessages() {
 
   // Group messages by user
   const groupedUsers = React.useMemo(() => {
-      const map = new Map();
+      const map = new Map<string, any[]>();
       messages.forEach(msg => {
           if (!map.has(msg.username)) {
               map.set(msg.username, []);

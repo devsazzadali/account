@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown, Info, Upload, AlertCircle } from "lucide-react";
+import { ChevronDown, Info, Upload, AlertCircle, ArrowRight } from "lucide-react";
 
 export function CreateListingPage() {
   return (

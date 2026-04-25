@@ -12,6 +12,7 @@ import {
   Search,
   Menu,
   X,
+  ShieldCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
@@ -72,15 +73,21 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
 
           {/* Logo */}
           <div
-            className="flex items-center gap-2 cursor-pointer shrink-0 mr-2 group"
+            className="flex items-center gap-3 cursor-pointer shrink-0 mr-2 group"
             onClick={() => setActiveTab("dashboard")}
           >
-            <div className="w-8 h-8 bg-primary-50 rounded-xl flex items-center justify-center text-primary-600 font-black text-[16px] leading-none border border-primary-100 group-hover:bg-primary-100 transition-colors">
-              <ShieldCheck size={18} className="text-primary-600" />
+            <div className="bg-primary-600 p-2.5 rounded-xl shadow-lg shadow-primary-900/20">
+              <ShieldCheck className="text-white" size={20} />
             </div>
-            <span className="text-slate-900 font-bold text-[18px] tracking-tight hidden sm:block font-display">
-              Admin <span className="text-slate-400 font-normal text-[13px]">Console</span>
-            </span>
+            <div>
+              <h1 className="text-xl font-display font-black tracking-tight text-slate-900">
+                COMMAND <span className="text-primary-600">CENTER</span>
+              </h1>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">System Online</span>
+              </div>
+            </div>
           </div>
 
           {/* Search */}
