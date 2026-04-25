@@ -274,17 +274,22 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
-  const [credentialFields, setCredentialFields] = useState<Record<string, string>>(() => {
-    try {
-      return typeof order.credentials === 'string' ? JSON.parse(order.credentials) : (order.credentials || {});
-    } catch (e) {
-      return { "Login Account": order.credentials || "" };
     }
   });
+
+  const stepToStatus: Record<string, string> = {
+    "New Order": "Paid",
+    "Preparing": "Preparing",
+    "Delivering": "Delivering",
+    "Waiting for confirmation": "Delivered",
+    "Completed": "Completed",
+    "Evaluate": "Completed"
+  };
 
   const [dmText, setDmText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [dmSent, setDmSent] = useState(false);
+  const dmInputRef = useRef<HTMLInputElement>(null);
 
   const STATUS_STEPS_FLOW = ["New Order", "Preparing", "Delivering", "Waiting for confirmation", "Completed", "Evaluate"];
 
@@ -293,8 +298,8 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
     if (s === "New Order" || s === "Paid" || s === "Awaiting Verification") return 0;
     if (s === "Preparing") return 1;
     if (s === "Delivering") return 2;
-    if (s === "Waiting for confirmation") return 3;
-    if (s === "Completed" || s === "Delivered") return 4;
+    if (s === "Waiting for confirmation" || s === "Delivered") return 3;
+    if (s === "Completed") return 4;
     if (s === "Evaluate") return 5;
     return -1;
   })();
@@ -313,7 +318,11 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
   };
 
   async function handleSendDm() {
-    if (!dmText.trim()) return;
+    if (!dmText.trim()) {
+      dmInputRef.current?.focus();
+      dmInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     setIsSending(true);
     try {
       const targetUsername = order.username || order.customer_email?.split("@")[0] || "User";
@@ -378,7 +387,7 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
               <React.Fragment key={step}>
                 <div 
                   className="flex flex-col items-center flex-1 cursor-pointer group"
-                  onClick={() => onUpdate(order.id, step)}
+                  onClick={() => onUpdate(order.id, stepToStatus[step] || step)}
                 >
                   <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[11px] font-bold transition-all ${
                     i <= currentStepIndex
@@ -402,9 +411,9 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
         {/* Order Info Bar */}
         <div className="px-6 py-3 bg-slate-50/50 border-b border-slate-200 flex flex-wrap items-center gap-4 text-[12px]">
           <span className="font-bold text-slate-900">Order number: <span className="text-primary-600">{order.id}</span></span>
-          {order.status === "Delivering" && (
+          {(order.status === "Delivering" || order.status === "Preparing") && (
             <span className="text-primary-600 font-bold flex items-center gap-1.5 animate-pulse">
-              <AlertCircle size={14} /> Exceeded promised delivery time
+              <AlertCircle size={14} /> Critical timeline active
             </span>
           )}
           <span className="text-slate-400 ml-auto">Order Date: {new Date(order.created_at).toLocaleString()}</span>
@@ -423,16 +432,28 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={handleSendDm} className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-[12px] font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">
+            <button 
+              onClick={handleSendDm} 
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-[12px] font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+            >
               <MessageSquare size={14} /> Chat Now
             </button>
-            <a href={`mailto:${order.customer_email}`} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-[12px] font-bold hover:bg-slate-50 transition-all">
+            <a 
+              href={`mailto:${order.customer_email}`}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-[12px] font-bold hover:bg-slate-50 transition-all active:scale-95"
+            >
               <Mail size={14} /> Contact By Mail
             </a>
-            <button onClick={() => onUpdate(order.id, "Cancelled")} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-red-500 rounded-xl text-[12px] font-bold hover:bg-red-50 transition-all">
+            <button 
+              onClick={() => { if(confirm("Cancel this order?")) onUpdate(order.id, "Cancelled"); }} 
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-red-500 rounded-xl text-[12px] font-bold hover:bg-red-50 transition-all active:scale-95"
+            >
               <XCircle size={14} /> Cancel Order
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-[12px] font-bold hover:bg-slate-50 transition-all">
+            <button 
+              onClick={() => alert("Upload feature coming soon in version 2.0")}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-[12px] font-bold hover:bg-slate-50 transition-all active:scale-95"
+            >
               <Upload size={14} /> Attachments
             </button>
           </div>
