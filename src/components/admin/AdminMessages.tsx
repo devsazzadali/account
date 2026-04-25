@@ -14,7 +14,7 @@ import {
   RefreshCw,
   Clock
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
 export function AdminMessages() {
   const [messages, setMessages] = useState<any[]>([]);
