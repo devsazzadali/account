@@ -8,23 +8,28 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   const [profile, setProfile] = useState<any>(null);
   const [searchValue, setSearchValue] = useState("");
   const [revenue, setRevenue] = useState(0);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get initial session
+    // 1. Initial Session Check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) {
+        setUser(session.user);
+        fetchProfile(session.user.id);
+      }
+      setLoading(false);
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // 2. Auth State Listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      
       if (session?.user) {
         fetchProfile(session.user.id);
-      } else {
+      } else if (event === 'SIGNED_OUT') {
+        // ONLY clear on explicit sign out, not on initial load transients
         setProfile(null);
-        // Clear local storage on sign out
         localStorage.removeItem("userRole");
         localStorage.removeItem("username");
       }
@@ -37,7 +42,6 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
     if (data) {
       setProfile(data);
-      // Sync legacy localStorage for existing components
       localStorage.setItem("userRole", data.role || "user");
       localStorage.setItem("username", data.username || "User");
     }
@@ -123,7 +127,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
             <span className="font-medium text-xs">USD</span>
           </div>
 
-          {user ? (
+          {!loading && user ? (
             <>
                 <div className="hidden md:flex items-center gap-4 text-slate-500">
                     <button className="hover:text-primary-600 transition-colors hover:animate-float">
@@ -156,7 +160,6 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
 
                     {/* Dropdown Menu */}
                     <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 transform origin-top-right translate-y-2 group-hover:translate-y-0 overflow-hidden shadow-2xl">
-                        {/* Header Section */}
                         <div className={`p-5 border-b border-slate-100 ${profile?.is_premium ? 'bg-amber-50/50' : 'bg-slate-50/50'}`}>
                             <div className="flex items-center gap-4">
                                 <div className={`w-12 h-12 rounded-2xl ${profile?.is_premium ? 'bg-gradient-to-br from-amber-400 to-orange-600 shadow-amber-500/20' : 'bg-gradient-to-br from-primary-500 to-blue-600 shadow-primary-500/20'} flex items-center justify-center text-white font-black text-xl shadow-lg border-2 border-white`}>
@@ -173,36 +176,24 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                                     </div>
                                 </div>
                             </div>
-                            {profile?.role === "admin" && (
-                                <div className="mt-4 pt-3 border-t border-slate-200 flex justify-between items-center text-[11px] font-bold">
-                                    <span className="text-slate-400 uppercase tracking-widest">Monthly Revenue</span>
-                                    <span className="text-slate-900">${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                </div>
-                            )}
                         </div>
 
-                        {/* Menu Items */}
                         <div className="p-2 space-y-1 bg-white">
                             <DropdownItem to="/dashboard" icon={<LayoutDashboard size={18} />} label="Operational Hub" />
                             {profile?.role === "admin" ? (
                                 <>
-                                    <DropdownItem to="/seller/orders" icon={<Store size={18} className="text-primary-600" />} label="Store Console" />
+                                    <DropdownItem to="/admin" icon={<Store size={18} className="text-primary-600" />} label="Store Console" />
                                     <DropdownItem to="/admin" icon={<Gavel size={18} className="text-orange-500" />} label="Dispute Matrix" />
                                     <DropdownItem to="/admin" icon={<Ticket size={18} className="text-blue-500" />} label="Service Grid" />
-                                    <div className="h-px bg-slate-100 my-2 mx-2"></div>
-                                    <DropdownItem to="/admin" icon={<Settings size={18} className="text-slate-500" />} label="Core Settings" />
                                 </>
                             ) : (
                                 <>
                                     <DropdownItem to="/dashboard" icon={<ShoppingBag size={18} className="text-primary-600" />} label="Procurement History" />
-                                    <DropdownItem to="/dashboard" icon={<Ticket size={18} className="text-blue-500" />} label="Communication Desk" />
-                                    <div className="h-px bg-slate-100 my-2 mx-2"></div>
-                                    <DropdownItem to="/dashboard" icon={<Settings size={18} className="text-slate-500" />} label="Security Node" />
+                                    <DropdownItem to="/dashboard" icon={<MessageSquare size={18} className="text-blue-500" />} label="Communication Desk" />
                                 </>
                             )}
                         </div>
 
-                        {/* Logout */}
                         <div className="p-3 border-t border-slate-100 bg-slate-50/50">
                             <button 
                                 onClick={handleLogout}
@@ -215,7 +206,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                     </div>
                 </div>
             </>
-          ) : (
+          ) : !loading && (
             <div className="flex items-center gap-2">
                <Link to="/login" className="hidden lg:block text-slate-600 hover:text-primary-600 font-bold text-sm px-4 py-2 transition-colors">
                   Login
@@ -230,22 +221,6 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
           <button className="md:hidden text-slate-600 hover:text-slate-900 transition-colors">
             <Menu className="w-6 h-6" />
           </button>
-        </div>
-      </div>
-      
-      {/* Mobile Search */}
-      <div className="md:hidden px-4 pb-4">
-        <div className="relative w-full">
-            <input 
-                type="text" 
-                placeholder="Search premium accounts..." 
-                value={searchValue}
-                onChange={handleSearchChange}
-                className="w-full bg-slate-100 border border-slate-200 rounded-full pl-5 pr-12 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
-            />
-            <button className="absolute right-1 top-1 h-[calc(100%-8px)] px-4 bg-primary-600 text-white rounded-full flex items-center justify-center">
-                <Search className="w-4 h-4" />
-            </button>
         </div>
       </div>
     </header>

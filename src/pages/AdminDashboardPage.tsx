@@ -15,8 +15,8 @@ import { AdminCategories } from "../components/admin/AdminCategories";
 export function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const userRole = localStorage.getItem("userRole");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,6 +27,14 @@ export function AdminDashboardPage() {
         return;
       }
       setUser(session.user);
+      
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      
+      setProfile(profileData);
       setLoading(false);
     }
     checkAuth();
@@ -35,45 +43,49 @@ export function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-primary-600" />
+        <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-[#1dbf73] mx-auto mb-4" />
+            <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Restoring Admin Protocol...</p>
+        </div>
       </div>
     );
   }
 
-  // Security Check: Role Authorization
-  if (userRole !== "admin" && userRole !== "moderator") {
+  // Security Check: Role Authorization (Fetch from real profile, not localStorage)
+  const isAuthorized = profile?.role === "admin" || profile?.role === "moderator";
+
+  if (!isAuthorized) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-10 bg-white m-10 rounded-3xl border border-slate-200 shadow-xl">
-        <ShieldAlert size={64} className="text-red-500 mb-6" />
-        <h2 className="text-3xl font-black mb-3 tracking-tight">Security Protocol Violation</h2>
-        <p className="text-slate-500 mb-8 max-w-sm mx-auto font-medium">Your current identity node does not have high-level administrative or moderator authorization.</p>
-        <Link to="/" className="px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-95">Return to Sector 7G (Home)</Link>
+      <div className="min-h-screen flex flex-col items-center justify-center text-center p-10 bg-[#f8fafc]">
+        <div className="bg-white p-16 rounded-[3rem] border border-slate-200 shadow-2xl max-w-xl">
+            <ShieldAlert size={80} className="text-red-500 mx-auto mb-8" />
+            <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight italic">Access Forbidden</h2>
+            <p className="text-slate-500 mb-10 font-medium leading-relaxed">
+                Your identity hash does not contain the required administrative clearance to access this sector. This attempt has been logged.
+            </p>
+            <Link to="/" className="inline-flex items-center gap-3 px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 active:scale-95">
+                <ArrowLeft size={18} /> Return to Home
+            </Link>
+        </div>
       </div>
     );
   }
 
-  // Security Check: Email Confirmation (Even for Admins/Mods)
+  // Security Check: Email Confirmation
   if (user && !user.email_confirmed_at) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          className="max-w-md w-full bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md w-full bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden">
           <div className="p-10 text-center">
              <div className="w-20 h-20 bg-amber-50 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-amber-100">
                 <Mail className="w-10 h-10 text-amber-600" />
              </div>
              <h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Privileged Access Pending</h2>
              <p className="text-slate-500 font-medium leading-relaxed mb-8">
-                Your administrative session cannot be initialized until your email <span className="text-slate-900 font-bold">{user.email}</span> is confirmed. 
+                Confirm your email <span className="text-slate-900 font-bold">{user.email}</span> to initialize administrative functions.
              </p>
-             <button 
-                onClick={() => window.location.reload()}
-                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-900/20"
-             >
-                Verify Node Status <ArrowRight size={16} />
+             <button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+                Verify Status <ArrowRight size={16} />
              </button>
           </div>
         </motion.div>
@@ -90,12 +102,12 @@ export function AdminDashboardPage() {
         {activeTab === "orders" && <AdminOrders setActiveTab={setActiveTab} />}
         {activeTab === "messages" && <AdminMessages />}
         {activeTab === "customers" && <AdminCustomers setActiveTab={setActiveTab} />}
-        {activeTab === "settings" && userRole === "admin" && <AdminSettings />}
-        {activeTab === "settings" && userRole !== "admin" && (
+        {activeTab === "settings" && profile?.role === "admin" && <AdminSettings />}
+        {activeTab === "settings" && profile?.role !== "admin" && (
            <div className="flex flex-col items-center justify-center py-32 text-center">
-              <ShieldAlert size={48} className="text-amber-500 mb-4" />
-              <h3 className="text-xl font-black text-slate-900">Restricted Module</h3>
-              <p className="text-slate-500 mt-1">Moderators cannot modify system-wide configurations.</p>
+              <ShieldAlert size={64} className="text-amber-500 mb-4" />
+              <h3 className="text-2xl font-black text-slate-900">Restricted Module</h3>
+              <p className="text-slate-500 mt-2 font-medium">Moderators cannot modify system-wide configurations.</p>
            </div>
         )}
       </div>
