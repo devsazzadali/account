@@ -5,7 +5,7 @@ import {
   ShieldCheck, Zap, Star
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../lib/supabase";
 
 export function LiveSupportWidget() {
   const [isOpen, setIsOpen] = useState(false);
