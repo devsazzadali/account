@@ -7,8 +7,8 @@ const TAB_FILTERS = ["All", "New Order", "Delivering", "Preparing", "Delivered",
 
 const STATUS_STEPS = ["New Order", "Preparing", "Delivering", "Waiting for confirmation", "Completed", "Evaluate"];
 
-export function AdminOrders() {
-  const [activeTab, setActiveTab] = useState("All");
+export function AdminOrders({ setActiveTab: parentSetActiveTab }: { setActiveTab?: (tab: string) => void }) {
+  const [activeTab, setActiveTabLocal] = useState("All");
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -30,7 +30,6 @@ export function AdminOrders() {
     const channel = supabase
       .channel('orders_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-        console.log('Order update:', payload);
         fetchOrders();
       })
       .subscribe();
@@ -57,6 +56,7 @@ export function AdminOrders() {
   }
 
   async function updateOrderStatus(orderId: string, newStatus: string, credentials?: string) {
+    if (!orderId) return;
     setUpdatingId(orderId);
     try {
       const payload: any = { status: newStatus };
@@ -77,17 +77,17 @@ export function AdminOrders() {
 
   const tabCount = (tab: string) => {
     if (tab === "All") return orders.length;
-    if (tab === "New Order") return orders.filter(o => o.status === "New Order" || o.status === "Awaiting Verification").length;
+    if (tab === "New Order") return orders.filter(o => o.status === "New Order" || o.status === "Awaiting Verification" || o.status === "Paid").length;
     return orders.filter(o => o.status === tab).length;
   };
 
   const filteredOrders = orders.filter(o => {
     const matchTab =
       activeTab === "All" ? true :
-      activeTab === "New Order" ? (o.status === "New Order" || o.status === "Awaiting Verification") :
+      activeTab === "New Order" ? (o.status === "New Order" || o.status === "Awaiting Verification" || o.status === "Paid") :
       o.status === activeTab;
 
-    const matchOrderNum = filterOrderNum === "" || o.id.toLowerCase().includes(filterOrderNum.toLowerCase());
+    const matchOrderNum = filterOrderNum === "" || (o.id || "").toLowerCase().includes(filterOrderNum.toLowerCase());
     const matchProduct = filterProduct === "" || (o.products?.title || "").toLowerCase().includes(filterProduct.toLowerCase());
     const matchSeller = filterSeller === "All" || o.username === filterSeller;
     const matchCategory = filterCategory === "All" || o.products?.category === filterCategory;
@@ -98,10 +98,10 @@ export function AdminOrders() {
   });
 
   const statusPills = [
-    { label: "New Order", count: orders.filter(o => o.status === "New Order").length },
+    { label: "New Order", count: orders.filter(o => o.status === "New Order" || o.status === "Paid").length },
     { label: "Delivering", count: orders.filter(o => o.status === "Delivering").length },
     { label: "Preparing", count: orders.filter(o => o.status === "Preparing").length },
-    { label: "Total Revenue", value: `$${orders.reduce((sum, o) => sum + (o.amount || 0), 0).toFixed(2)}` }
+    { label: "Total Revenue", value: `$${orders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0).toFixed(2)}` }
   ];
 
   return (
@@ -111,7 +111,7 @@ export function AdminOrders() {
         {TAB_FILTERS.map(tab => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => setActiveTabLocal(tab)}
             className={`px-5 py-3.5 text-[13px] font-medium whitespace-nowrap border-b-2 transition-all ${
               activeTab === tab
                 ? "border-primary-600 text-primary-600 font-bold"
@@ -128,31 +128,29 @@ export function AdminOrders() {
 
       {/* Filter bar */}
       <div className="border border-slate-200 m-4 rounded-2xl p-4 bg-slate-50/50">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Seller</label>
-            <select value={filterSeller} onChange={e => setFilterSeller(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] bg-white focus:outline-none focus:border-primary-600 transition-all">
-              {sellers.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category</label>
-            <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] bg-white focus:outline-none focus:border-primary-600 transition-all">
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Order ID</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Order #</label>
             <input value={filterOrderNum} onChange={e => setFilterOrderNum(e.target.value)} placeholder="Search ID..." className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-primary-600 transition-all" />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Product Title</label>
             <input value={filterProduct} onChange={e => setFilterProduct(e.target.value)} placeholder="Search title..." className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-primary-600 transition-all" />
           </div>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Internal Remarks</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category</label>
+            <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-primary-600 transition-all bg-white">
+              {categories.map(c => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Seller</label>
+            <select value={filterSeller} onChange={e => setFilterSeller(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-primary-600 transition-all bg-white">
+              {sellers.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Remarks</label>
             <input value={filterRemarks} onChange={e => setFilterRemarks(e.target.value)} placeholder="Search remarks..." className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-primary-600 transition-all" />
           </div>
           <div className="flex flex-col gap-1">
@@ -163,9 +161,6 @@ export function AdminOrders() {
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">To Date</label>
             <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-primary-600 transition-all" />
           </div>
-          <button onClick={fetchOrders} className="bg-primary-600 text-white rounded-xl px-6 py-2 text-[12px] font-bold hover:bg-primary-700 transition-all flex items-center gap-2 justify-center shadow-lg shadow-primary-600/20 uppercase tracking-widest">
-            <Search size={14} /> Search
-          </button>
         </div>
       </div>
 
@@ -182,58 +177,61 @@ export function AdminOrders() {
       </div>
 
       {/* Order Table */}
-      <div className="mx-4 border border-slate-200 rounded overflow-hidden">
+      <div className="mx-4 border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-left text-[13px]">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="px-4 py-3 font-bold text-slate-900">Product</th>
-              <th className="px-4 py-3 font-bold text-slate-900">Unit Price</th>
-              <th className="px-4 py-3 font-bold text-slate-900">Type</th>
-              <th className="px-4 py-3 font-bold text-slate-900">Status</th>
-              <th className="px-4 py-3 font-bold text-slate-900">
-                Internal remarks <span className="text-primary-600">ⓘ</span>
-              </th>
-              <th className="px-4 py-3 font-bold text-slate-900">Total Amount</th>
+              <th className="px-4 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Product Asset</th>
+              <th className="px-4 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Unit Value</th>
+              <th className="px-4 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Classification</th>
+              <th className="px-4 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Current Status</th>
+              <th className="px-4 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Notes</th>
+              <th className="px-4 py-3 font-bold text-primary-600 uppercase tracking-wider text-[10px]">Total (USD)</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#f0f0f0]">
+          <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr><td colSpan={6} className="py-16 text-center">
+              <tr><td colSpan={6} className="py-20 text-center">
                 <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary-600" />
+                <p className="text-[12px] text-slate-400 mt-3 font-medium">Fetching secure ledgers...</p>
               </td></tr>
             ) : filteredOrders.length === 0 ? (
-              <tr><td colSpan={6} className="py-16 text-center text-slate-400 text-[13px]">No orders found.</td></tr>
+              <tr><td colSpan={6} className="py-20 text-center text-slate-400">
+                <Search size={40} className="mx-auto text-slate-200 mb-3" />
+                <p className="text-[14px] font-bold text-slate-900">No transactions detected</p>
+                <p className="text-[12px] mt-1">Refine your filtration parameters</p>
+              </td></tr>
             ) : filteredOrders.map(order => (
-              <tr
-                key={order.id}
-                className="hover:bg-slate-50/50 cursor-pointer transition-colors"
+              <tr 
+                key={order.id} 
                 onClick={() => setSelectedOrder(order)}
+                className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
               >
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-slate-50 border border-slate-200 overflow-hidden shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 shadow-sm">
                       {order.products?.image
                         ? <img src={order.products.image} className="w-full h-full object-cover" alt="" />
                         : <div className="w-full h-full flex items-center justify-center text-slate-300 text-lg">📦</div>
                       }
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900 text-[13px] leading-tight max-w-[220px] truncate">
-                        {order.products?.title || "Unknown Product"}
+                      <div className="font-bold text-slate-900 text-[13px] leading-tight max-w-[220px] truncate group-hover:text-primary-600 transition-colors">
+                        {order.products?.title || "Unknown Asset"}
                       </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        #{order.id.split("-")[0].toUpperCase()} · {new Date(order.created_at).toLocaleDateString()}
+                      <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">
+                        #{ (order.id || "").split("-")[0].toUpperCase() } · {new Date(order.created_at).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-4 font-bold text-slate-900">${Number(order.total_price).toFixed(2)}</td>
-                <td className="px-4 py-4 text-slate-700">{order.products?.category || "Digital"}</td>
+                <td className="px-4 py-4 font-bold text-slate-900">${Number(order.total_price || 0).toFixed(2)}</td>
+                <td className="px-4 py-4 text-slate-600 font-medium">{order.products?.category || "Digital"}</td>
                 <td className="px-4 py-4">
                   <StatusBadge status={order.status} />
                 </td>
-                <td className="px-4 py-4 text-slate-400 text-[12px]">—</td>
-                <td className="px-4 py-4 font-bold text-primary-600">${Number(order.total_price).toFixed(2)}</td>
+                <td className="px-4 py-4 text-slate-400 text-[12px] font-medium">—</td>
+                <td className="px-4 py-4 font-black text-primary-600 text-[14px]">${Number(order.total_price || 0).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
@@ -248,6 +246,7 @@ export function AdminOrders() {
             onClose={() => setSelectedOrder(null)}
             onUpdate={updateOrderStatus}
             isUpdating={updatingId === selectedOrder.id}
+            setActiveTab={parentSetActiveTab}
           />
         )}
       </AnimatePresence>
@@ -267,13 +266,13 @@ function StatusBadge({ status }: { status: string }) {
   };
   const cls = map[status] || "text-slate-700 bg-slate-50 border-slate-200";
   return (
-    <span className={`inline-block px-2.5 py-0.5 rounded border text-[11px] font-bold ${cls}`}>
+    <span className={`inline-block px-2.5 py-0.5 rounded-lg border text-[11px] font-bold ${cls} shadow-sm`}>
       {status}
     </span>
   );
 }
 
-function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
+function SoldDetailModal({ order, onClose, onUpdate, isUpdating, setActiveTab }: any) {
   const [credentialFields, setCredentialFields] = useState<Record<string, string>>(() => {
     try {
       return typeof order.credentials === 'string' ? JSON.parse(order.credentials) : (order.credentials || {});
@@ -325,7 +324,6 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
   async function handleSendDm() {
     if (!dmText.trim()) {
       dmInputRef.current?.focus();
-      dmInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     setIsSending(true);
@@ -333,10 +331,10 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
       const targetUsername = order.username || order.customer_email?.split("@")[0] || "User";
       const { error } = await supabase.from("messages").insert({
         username: targetUsername,
-        subject: `Order #${order.id.split("-")[0].toUpperCase()}`,
+        subject: `Order #${(order.id || "").split("-")[0].toUpperCase()}`,
         message: "[ADMIN_INITIATED]",
         reply: dmText,
-        status: "replied",
+        status: "unread",
         replied_at: new Date().toISOString(),
       });
       if (error) throw error;
@@ -375,10 +373,6 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <h2 className="text-[18px] font-display font-bold text-slate-900">Sold Details</h2>
           <div className="flex items-center gap-3">
-            <span className="text-[12px] text-slate-400">
-              <span className="text-slate-900 font-medium mr-1">★</span>
-              Rating options
-            </span>
             <button onClick={onClose} className="p-1.5 hover:bg-slate-50 rounded transition-colors">
               <X size={18} className="text-slate-400" />
             </button>
@@ -416,11 +410,6 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
         {/* Order Info Bar */}
         <div className="px-6 py-3 bg-slate-50/50 border-b border-slate-200 flex flex-wrap items-center gap-4 text-[12px]">
           <span className="font-bold text-slate-900">Order number: <span className="text-primary-600">{order.id}</span></span>
-          {(order.status === "Delivering" || order.status === "Preparing") && (
-            <span className="text-primary-600 font-bold flex items-center gap-1.5 animate-pulse">
-              <AlertCircle size={14} /> Critical timeline active
-            </span>
-          )}
           <span className="text-slate-400 ml-auto">Order Date: {new Date(order.created_at).toLocaleString()}</span>
           <StatusBadge status={order.status} />
         </div>
@@ -438,10 +427,17 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
           </div>
           <div className="flex flex-wrap gap-2">
             <button 
-              onClick={handleSendDm} 
+              onClick={() => {
+                const targetUser = order.username || order.customer_email?.split("@")[0];
+                if (targetUser && setActiveTab) {
+                   localStorage.setItem("selectedUserChat", targetUser);
+                   setActiveTab("messages");
+                   onClose();
+                }
+              }} 
               className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-[12px] font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
             >
-              <MessageSquare size={14} /> Chat Now
+              <MessageSquare size={14} /> Open Chat
             </button>
             <a 
               href={`mailto:${order.customer_email}`}
@@ -454,12 +450,6 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
               className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-red-500 rounded-xl text-[12px] font-bold hover:bg-red-50 transition-all active:scale-95"
             >
               <XCircle size={14} /> Cancel Order
-            </button>
-            <button 
-              onClick={() => alert("Upload feature coming soon in version 2.0")}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-[12px] font-bold hover:bg-slate-50 transition-all active:scale-95"
-            >
-              <Upload size={14} /> Attachments
             </button>
           </div>
         </div>
@@ -478,7 +468,6 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
                 <ShieldCheck size={18} className="text-primary-400" />
                 <span className="text-[13px] font-bold uppercase tracking-widest">Credential Protocol</span>
               </div>
-              <button className="w-8 h-8 rounded-lg bg-white/10 text-white text-xl leading-none flex items-center justify-center hover:bg-white/20 transition-all">+</button>
             </div>
             <div className="p-6 space-y-5 bg-white">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
@@ -514,6 +503,7 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
         <div className="px-6 pb-4">
           <div className="flex items-center gap-3 mb-3">
             <input
+              ref={dmInputRef}
               value={dmText}
               onChange={e => setDmText(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSendDm()}
@@ -540,10 +530,6 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
               {isUpdating ? <Loader2 size={14} className="animate-spin" /> : null}
               Confirm Delivered
             </button>
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-slate-100">
-            <p className="text-[11px] text-slate-400">Trading Status 0/1 delivered</p>
           </div>
         </div>
       </motion.div>

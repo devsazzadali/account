@@ -28,16 +28,23 @@ export function AdminMessages() {
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
+  const [userOrders, setUserOrders] = useState<any[]>([]);
 
   useEffect(() => {
     fetchMessages();
     fetchProfiles();
     
+    // Check for user pre-selection from Orders
+    const preSelected = localStorage.getItem("selectedUserChat");
+    if (preSelected) {
+      setSelectedUser(preSelected);
+      localStorage.removeItem("selectedUserChat");
+    }
+
     // Set up Realtime listener
     const channel = supabase
       .channel('messages_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (payload) => {
-        console.log('Realtime update:', payload);
         fetchMessages();
       })
       .subscribe();
@@ -47,8 +54,20 @@ export function AdminMessages() {
     };
   }, []);
 
+  useEffect(() => {
+    if (selectedUser) {
+      fetchUserOrders(selectedUser);
+      markMessagesAsRead(selectedUser);
+    }
+  }, [selectedUser]);
+
+  async function fetchUserOrders(username: string) {
+    const { data } = await supabase.from('orders').select('*, products(title)').eq('username', username).order('created_at', { ascending: false });
+    setUserOrders(data || []);
+  }
+
   async function fetchProfiles() {
-    const { data } = await supabase.from('profiles').select('username, full_name').order('username');
+    const { data } = await supabase.from('profiles').select('*').order('username');
     setAllProfiles(data || []);
   }
 
@@ -61,84 +80,57 @@ export function AdminMessages() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, selectedUser]);
 
-  // Mark as read when selecting a user
-  useEffect(() => {
-    if (selectedUser) {
-      markMessagesAsRead(selectedUser);
-    }
-  }, [selectedUser]);
-
   async function markMessagesAsRead(username: string) {
     try {
-      const { error } = await supabase
-        .from('messages')
-        .update({ status: 'replied' }) // Using 'replied' as the read status in this system
-        .eq('username', username)
-        .eq('status', 'unread');
-      
-      if (error) throw error;
-    } catch (e) {
-      console.error("Error marking as read:", e);
-    }
+      await supabase.from('messages').update({ status: 'replied' }).eq('username', username).eq('status', 'unread');
+    } catch (e) { console.error(e); }
   }
 
   async function fetchMessages() {
     try {
-        const { data, error } = await supabase
-            .from('messages')
-            .select('*')
-            .order('created_at', { ascending: true });
-        
+        const { data, error } = await supabase.from('messages').select('*').order('created_at', { ascending: true });
         if (error) throw error;
         setMessages(data || []);
-        
-        // Auto-select first user if none selected
         if (data && data.length > 0 && !selectedUser) {
             const uniqueUsers = Array.from(new Set(data.map(m => m.username)));
             if (uniqueUsers.length > 0) setSelectedUser(uniqueUsers[0]);
         }
         setLoading(false);
     } catch (err: any) {
-        console.error("Fetch Error:", err.message);
         setLoading(false);
     }
   }
 
-  async function handleSendReply(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedUser || !replyText.trim()) return;
+  async function handleSendReply(e?: React.FormEvent, overrideText?: string) {
+    if (e) e.preventDefault();
+    const textToSend = overrideText || replyText;
+    if (!selectedUser || !textToSend.trim()) return;
 
     setIsReplying(true);
     try {
-        // Insert a new threaded row as admin initiated
         const { error } = await supabase.from('messages').insert({
             username: selectedUser,
             subject: "Direct Chat",
             message: "[ADMIN_INITIATED]",
-            reply: replyText,
+            reply: textToSend,
             status: 'replied',
             replied_at: new Date().toISOString()
         });
-
         if (error) throw error;
-
         setReplyText("");
         fetchMessages();
     } catch (err: any) {
-        alert("Error sending response: " + err.message);
+        alert("Error: " + err.message);
     } finally {
         setIsReplying(false);
     }
   }
 
-  // Group messages by user
   const groupedUsers = React.useMemo(() => {
       const map = new Map<string, any[]>();
       messages.forEach(msg => {
-          if (!map.has(msg.username)) {
-              map.set(msg.username, []);
-          }
-          map.get(msg.username).push(msg);
+          if (!map.has(msg.username)) map.set(msg.username, []);
+          map.get(msg.username)!.push(msg);
       });
       return map;
   }, [messages]);
@@ -146,253 +138,254 @@ export function AdminMessages() {
   const sortedUserList = Array.from(groupedUsers.keys())
       .filter(u => u.toLowerCase().includes(searchQuery.toLowerCase()))
       .sort((a, b) => {
-          const lastMsgA = groupedUsers.get(a).slice(-1)[0];
-          const lastMsgB = groupedUsers.get(b).slice(-1)[0];
+          const lastMsgA = groupedUsers.get(a)!.slice(-1)[0];
+          const lastMsgB = groupedUsers.get(b)!.slice(-1)[0];
           return new Date(lastMsgB.created_at).getTime() - new Date(lastMsgA.created_at).getTime();
       });
 
   const activeThread = selectedUser ? groupedUsers.get(selectedUser) || [] : [];
+  const selectedProfile = allProfiles.find(p => p.username === selectedUser);
 
-  const filteredNewChatProfiles = allProfiles.filter(p => 
-    p.username?.toLowerCase().includes(userSearch.toLowerCase()) ||
-    p.full_name?.toLowerCase().includes(userSearch.toLowerCase())
-  );
+  const quickReplies = [
+    "Hello! How can I help you today?",
+    "Your order is currently being processed.",
+    "The credentials have been sent. Please check your order details.",
+    "Thank you for your purchase!",
+    "Is there anything else you need assistance with?"
+  ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 h-[calc(100vh-140px)] bg-[#efeae2] border border-slate-200 shadow-2xl rounded-3xl overflow-hidden font-sans relative z-10">
+    <div className="flex h-[calc(100vh-140px)] bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-2xl font-sans">
       
-      {/* Sidebar: Message List */}
-      <div className="lg:col-span-4 border-r border-[#d1d7db] flex flex-col bg-white z-20">
-        <div className="bg-[#f0f2f5] px-4 py-3 flex items-center justify-between border-b border-[#d1d7db]">
-            <div className="w-10 h-10 rounded-full bg-[#dfe5e7] flex items-center justify-center text-[#54656f]">
-                <User size={20} />
-            </div>
-            <div className="flex items-center gap-4 text-[#54656f]">
-                <button onClick={() => setShowNewChatModal(true)} className="p-2 hover:bg-slate-200 rounded-full transition-colors" title="New Chat">
-                  <MessageSquare size={20} />
-                </button>
-                <MoreVertical size={20} />
-            </div>
+      {/* Sidebar: Chat List */}
+      <div className="w-[350px] border-r border-slate-100 flex flex-col bg-white shrink-0">
+        <div className="p-6 border-b border-slate-50">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-display font-black text-slate-900 tracking-tight">Inbox</h2>
+            <button onClick={() => setShowNewChatModal(true)} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all text-slate-600">
+              <MessageSquare size={20} />
+            </button>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input 
+              type="text" 
+              placeholder="Search conversations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-none rounded-xl text-[13px] focus:ring-2 focus:ring-primary-600/10 outline-none"
+            />
+          </div>
         </div>
 
-        <div className="p-2 bg-white border-b border-[#d1d7db]">
-            <div className="bg-[#f0f2f5] rounded-lg flex items-center px-4 py-1.5 gap-3">
-                <Search size={18} className="text-[#54656f]" />
-                <input 
-                    type="text" 
-                    placeholder="Search or start new chat"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-transparent border-none w-full text-[14px] text-[#111b21] focus:outline-none placeholder-[#54656f]"
-                />
-            </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
-            {loading && sortedUserList.length === 0 ? (
-                <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[#00a884]" /></div>
-            ) : sortedUserList.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-8 text-[#54656f] text-sm text-center">
-                    No active chats found.
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {sortedUserList.map((user) => {
+            const msgs = groupedUsers.get(user)!;
+            const lastMsg = msgs[msgs.length - 1];
+            const unread = msgs.some((m: any) => m.status === 'unread' && m.message !== '[ADMIN_INITIATED]');
+            
+            return (
+              <button 
+                key={user}
+                onClick={() => setSelectedUser(user)}
+                className={`w-full p-4 flex items-center gap-4 transition-all relative ${
+                  selectedUser === user ? "bg-slate-50" : "hover:bg-slate-50/50"
+                }`}
+              >
+                {selectedUser === user && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-600" />}
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0 relative">
+                  <User size={24} />
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white" />
                 </div>
-            ) : sortedUserList.map((user) => {
-                const msgs = groupedUsers.get(user);
-                const lastMsg = msgs[msgs.length - 1];
-                const previewText = lastMsg.message === '[ADMIN_INITIATED]' ? `You: ${lastMsg.reply}` : lastMsg.message;
-                const unread = msgs.some((m: any) => m.status === 'unread' && m.message !== '[ADMIN_INITIATED]');
-
-                return (
-                    <button 
-                        key={user}
-                        onClick={() => setSelectedUser(user)}
-                        className={`w-full flex items-center gap-3 p-3 transition-colors ${
-                            selectedUser === user ? "bg-[#f0f2f5]" : "hover:bg-[#f5f6f6]"
-                        }`}
-                    >
-                        <div className="w-12 h-12 rounded-full bg-[#dfe5e7] flex items-center justify-center text-[#54656f] shrink-0">
-                            <User size={24} />
-                        </div>
-                        <div className="flex-1 min-w-0 border-b border-[#f0f2f5] pb-3">
-                            <div className="flex justify-between items-baseline mb-1">
-                                <span className="text-[16px] text-[#111b21] truncate">{user}</span>
-                                <span className={`text-[12px] ${unread ? 'text-[#00a884] font-bold' : 'text-[#667781]'}`}>
-                                    {new Date(lastMsg.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-[13px] text-[#667781] truncate pr-2">{previewText}</span>
-                                {unread && <div className="w-5 h-5 bg-[#00a884] rounded-full text-white text-[10px] flex items-center justify-center font-bold">!</div>}
-                            </div>
-                        </div>
-                    </button>
-                )
-            })}
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[14px] font-bold text-slate-900 truncate">{user}</span>
+                    <span className="text-[11px] text-slate-400">
+                      {new Date(lastMsg.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                  <div className="text-[12px] text-slate-500 truncate pr-4">
+                    {lastMsg.message === '[ADMIN_INITIATED]' ? `Me: ${lastMsg.reply}` : lastMsg.message}
+                  </div>
+                </div>
+                {unread && <div className="w-2 h-2 bg-primary-600 rounded-full animate-pulse" />}
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      {/* Main: Conversation View */}
-      <div className="lg:col-span-8 flex flex-col bg-[#efeae2] relative z-10">
+      {/* Main: Chat View */}
+      <div className="flex-1 flex flex-col bg-[#f9fbfd]">
         {selectedUser ? (
-            <>
-                {/* Chat Header */}
-                <div className="bg-[#f0f2f5] px-4 py-3 flex items-center justify-between border-b border-[#d1d7db] shrink-0 shadow-sm relative z-20">
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-[#dfe5e7] flex items-center justify-center text-[#54656f]">
-                            <User size={20} />
-                        </div>
-                        <div>
-                            <h4 className="text-[16px] text-[#111b21]">{selectedUser}</h4>
-                            <p className="text-[12px] text-[#667781]">Customer Account</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-6 text-[#54656f]">
-                        <Search size={20} className="cursor-pointer hover:text-[#111b21] transition-colors" />
-                        <MoreVertical size={20} className="cursor-pointer hover:text-[#111b21] transition-colors" />
-                    </div>
+          <>
+            {/* Header */}
+            <div className="px-6 py-4 bg-white border-b border-slate-100 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
+                  <User size={20} />
                 </div>
-
-                {/* Discussion Area */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar relative">
-                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'url("https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png")', backgroundSize: '400px' }}></div>
-                    
-                    <div className="flex justify-center mb-8 relative z-10">
-                        <div className="bg-[#ffeecd] text-[#544326] text-[11px] font-bold px-4 py-1.5 rounded-lg shadow-sm border border-[#f5dfb5]">
-                            Chat connected with {selectedUser}. Ensure professional conduct in support channels.
-                        </div>
-                    </div>
-
-                    {activeThread.map((msg: any) => {
-                        const isUserInitiated = msg.message !== '[ADMIN_INITIATED]';
-                        const hasAdminReply = !!msg.reply;
-                        
-                        return (
-                            <React.Fragment key={msg.id}>
-                                {/* User Bubble (Customer) */}
-                                {isUserInitiated && (
-                                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start relative z-10">
-                                        <div className="max-w-[75%] bg-white text-[#111b21] p-3 rounded-2xl rounded-tl-sm shadow-sm relative group">
-                                            {msg.subject !== "Direct Chat" && msg.subject !== "General Inquiry" && (
-                                                <div className="text-[11px] font-bold text-[#00a884] mb-1">{msg.subject}</div>
-                                            )}
-                                            <p className="text-[14px] leading-relaxed pr-12 whitespace-pre-wrap">{msg.message}</p>
-                                            <div className="absolute bottom-1.5 right-2 flex items-center gap-1 text-[#667781]">
-                                                <span className="text-[10px]">{new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                )}
-
-                                {/* Admin Bubble (You) */}
-                                {hasAdminReply && (
-                                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-end relative z-10">
-                                        <div className="max-w-[75%] bg-[#d9fdd3] text-[#111b21] p-3 rounded-2xl rounded-tr-sm shadow-sm relative group">
-                                            <p className="text-[14px] leading-relaxed pr-12 whitespace-pre-wrap">{msg.reply}</p>
-                                            <div className="absolute bottom-1.5 right-2 flex items-center gap-1 text-[#667781]">
-                                                <span className="text-[10px]">{new Date(msg.replied_at || msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                                <CheckCheck size={14} className="text-[#53bdeb]" />
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </React.Fragment>
-                        );
-                    })}
-                    <div ref={chatEndRef} />
+                <div>
+                  <h3 className="text-[15px] font-bold text-slate-900">{selectedUser}</h3>
+                  <div className="flex items-center gap-2 text-[11px] text-emerald-600 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Online
+                  </div>
                 </div>
-
-                {/* Reply Composer */}
-                <div className="bg-[#f0f2f5] p-3 flex items-end gap-3 shrink-0 relative z-20">
-                    <div className="flex gap-4 items-center px-2 pb-3 text-[#54656f]">
-                        <Smile size={24} className="cursor-pointer hover:text-[#111b21] transition-colors" />
-                        <Paperclip size={22} className="cursor-pointer hover:text-[#111b21] transition-colors" />
-                    </div>
-                    
-                    <form onSubmit={handleSendReply} className="flex-1 flex gap-3 relative">
-                        <textarea 
-                            value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSendReply(e);
-                                }
-                            }}
-                            placeholder="Type a message"
-                            className="w-full bg-white border-none rounded-xl px-4 py-3 text-[15px] text-[#111b21] focus:outline-none shadow-sm resize-none"
-                            rows={1}
-                            style={{ minHeight: '44px', maxHeight: '120px' }}
-                        />
-                        <button 
-                            type="submit"
-                            disabled={isReplying || !replyText.trim()}
-                            className="w-11 h-11 shrink-0 bg-[#00a884] text-white rounded-full flex items-center justify-center hover:bg-[#008f6f] transition-all disabled:opacity-50 shadow-md"
-                        >
-                            {isReplying ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="ml-1" />}
-                        </button>
-                    </form>
-                </div>
-            </>
-        ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-[#f0f2f5] border-l border-[#d1d7db]">
-                <ShieldCheck size={80} className="text-[#d1d7db] mb-6" />
-                <h3 className="text-[28px] text-[#41525d] font-light mb-4">AccountStore Web</h3>
-                <p className="text-[14px] text-[#667781] mt-2 max-w-md leading-relaxed">Select a user conversation from the left menu to view the full chat history and send direct messages securely.</p>
-                <div className="mt-10 text-[12px] text-[#8696a0] flex items-center gap-1"><CheckCircle2 size={12}/> End-to-end encrypted</div>
+              </div>
+              <div className="flex items-center gap-2">
+                 <button className="p-2 text-slate-400 hover:text-slate-600"><Search size={18} /></button>
+                 <button className="p-2 text-slate-400 hover:text-slate-600"><MoreVertical size={18} /></button>
+              </div>
             </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
+              {activeThread.map((msg: any) => {
+                const isUser = msg.message !== '[ADMIN_INITIATED]';
+                return (
+                  <div key={msg.id} className={`flex ${!isUser ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[70%] group`}>
+                      <div className={`p-4 rounded-3xl shadow-sm ${
+                        !isUser 
+                          ? "bg-primary-600 text-white rounded-tr-none" 
+                          : "bg-white text-slate-900 border border-slate-100 rounded-tl-none"
+                      }`}>
+                        {isUser && msg.subject !== "Direct Chat" && (
+                          <div className="text-[10px] font-black uppercase tracking-widest text-primary-600 mb-1">{msg.subject}</div>
+                        )}
+                        <p className="text-[14px] leading-relaxed whitespace-pre-wrap">{isUser ? msg.message : msg.reply}</p>
+                      </div>
+                      <div className={`mt-1.5 flex items-center gap-2 text-[10px] text-slate-400 px-2 ${!isUser ? 'justify-end' : 'justify-start'}`}>
+                        {new Date(msg.replied_at || msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                        {!isUser && <CheckCheck size={12} className="text-primary-600" />}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Quick Replies */}
+            <div className="px-6 py-2 flex gap-2 overflow-x-auto no-scrollbar">
+              {quickReplies.map((qr, i) => (
+                <button 
+                  key={i} 
+                  onClick={() => handleSendReply(undefined, qr)}
+                  className="whitespace-nowrap px-4 py-1.5 bg-white border border-slate-200 rounded-full text-[12px] text-slate-600 hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
+                >
+                  {qr}
+                </button>
+              ))}
+            </div>
+
+            {/* Input */}
+            <div className="p-6 bg-white border-t border-slate-100">
+              <form onSubmit={handleSendReply} className="flex items-center gap-4">
+                <button type="button" className="p-2 text-slate-400 hover:text-slate-600"><Paperclip size={20} /></button>
+                <div className="flex-1 relative">
+                  <textarea 
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendReply())}
+                    placeholder="Type your message here..."
+                    className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3 text-[14px] focus:ring-2 focus:ring-primary-600/10 outline-none resize-none transition-all"
+                    rows={1}
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={isReplying || !replyText.trim()}
+                  className="w-11 h-11 bg-primary-600 text-white rounded-2xl flex items-center justify-center hover:bg-primary-700 transition-all shadow-lg shadow-primary-600/20 disabled:opacity-50"
+                >
+                  {isReplying ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                </button>
+              </form>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
+            <div className="w-24 h-24 rounded-3xl bg-primary-50 flex items-center justify-center text-primary-600 mb-6">
+              <MessageSquare size={48} />
+            </div>
+            <h3 className="text-2xl font-display font-black text-slate-900 mb-2">Your Conversations</h3>
+            <p className="text-slate-500 max-w-sm">Select a contact from the left to start messaging. Your communication is secure and monitored.</p>
+          </div>
         )}
       </div>
+
+      {/* Right Sidebar: User Context (Fiverr-like) */}
+      {selectedUser && (
+        <div className="w-[300px] border-l border-slate-100 bg-white flex flex-col shrink-0">
+          <div className="p-6 text-center border-b border-slate-50">
+             <div className="w-20 h-20 rounded-3xl bg-slate-100 border border-slate-200 mx-auto flex items-center justify-center text-slate-400 mb-4 shadow-sm relative">
+                <User size={40} />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-4 border-white" />
+             </div>
+             <h4 className="font-black text-slate-900 text-[16px]">{selectedUser}</h4>
+             <p className="text-[12px] text-slate-400 mb-4">{selectedProfile?.full_name || "Premium Member"}</p>
+             <button className="w-full py-2.5 bg-slate-900 text-white text-[12px] font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10">View Profile</button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+             <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Current Orders</h5>
+             <div className="space-y-3">
+               {userOrders.length === 0 ? (
+                 <div className="text-[12px] text-slate-400 bg-slate-50 p-4 rounded-2xl text-center border border-dashed border-slate-200">No active orders</div>
+               ) : userOrders.map(order => (
+                 <div key={order.id} className="p-3 bg-white border border-slate-100 rounded-2xl shadow-sm hover:border-primary-600/30 transition-all cursor-default">
+                    <div className="text-[11px] font-bold text-slate-900 truncate mb-1">{order.products?.title}</div>
+                    <div className="flex justify-between items-center text-[10px]">
+                       <span className="text-primary-600 font-black">${order.total_price}</span>
+                       <span className="text-slate-400">#{order.id.split('-')[0].toUpperCase()}</span>
+                    </div>
+                 </div>
+               ))}
+             </div>
+
+             <div className="mt-8">
+               <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Quick Stats</h5>
+               <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-2xl">
+                     <div className="text-[14px] font-black text-slate-900">{userOrders.length}</div>
+                     <div className="text-[9px] font-bold text-slate-400 uppercase">Orders</div>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-2xl">
+                     <div className="text-[14px] font-black text-slate-900">${userOrders.reduce((s,o) => s+Number(o.total_price), 0)}</div>
+                     <div className="text-[9px] font-bold text-slate-400 uppercase">Total</div>
+                  </div>
+               </div>
+             </div>
+          </div>
+        </div>
+      )}
 
       {/* New Chat Modal */}
       <AnimatePresence>
         {showNewChatModal && (
           <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setShowNewChatModal(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowNewChatModal(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
               <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                <h3 className="text-lg font-display font-bold text-slate-900">Start New Chat</h3>
+                <h3 className="text-lg font-display font-black text-slate-900">Start New Chat</h3>
                 <button onClick={() => setShowNewChatModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
               </div>
-              
               <div className="p-4 border-b border-slate-100">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input 
-                    type="text" 
-                    placeholder="Search users..."
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary-600/20 outline-none"
-                  />
+                  <input type="text" placeholder="Search users..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm outline-none" />
                 </div>
               </div>
-
               <div className="flex-1 overflow-y-auto p-2">
-                {filteredNewChatProfiles.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-sm">No users found</div>
-                ) : (
-                  filteredNewChatProfiles.map(profile => (
-                    <button
-                      key={profile.username}
-                      onClick={() => startNewChat(profile.username)}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-2xl transition-colors text-left"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center text-primary-600 font-bold">
-                        {profile.username[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="text-[14px] font-bold text-slate-900">{profile.username}</div>
-                        <div className="text-[11px] text-slate-400">{profile.full_name || "Account User"}</div>
-                      </div>
-                    </button>
-                  ))
-                )}
+                {allProfiles.filter(p => p.username.toLowerCase().includes(userSearch.toLowerCase())).map(profile => (
+                  <button key={profile.username} onClick={() => startNewChat(profile.username)} className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-2xl transition-all text-left">
+                    <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 font-bold">{profile.username[0].toUpperCase()}</div>
+                    <div>
+                      <div className="text-[14px] font-bold text-slate-900">{profile.username}</div>
+                      <div className="text-[11px] text-slate-400">{profile.full_name || "Member"}</div>
+                    </div>
+                  </button>
+                ))}
               </div>
             </motion.div>
           </div>

@@ -33,7 +33,7 @@ export function AdminDashboardPage() {
         {activeTab === "dashboard" && <AdminOverview setActiveTab={setActiveTab} />}
         {activeTab === "products" && <AdminProducts />}
         {activeTab === "categories" && <AdminCategories />}
-        {activeTab === "orders" && <AdminOrders />}
+        {activeTab === "orders" && <AdminOrders setActiveTab={setActiveTab} />}
         {activeTab === "messages" && <AdminMessages />}
         {activeTab === "customers" && <AdminCustomers setActiveTab={setActiveTab} />}
         {activeTab === "settings" && <AdminSettings />}
