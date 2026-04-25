@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { StorePage } from "./pages/StorePage";
@@ -13,34 +13,45 @@ import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { CreateListingPage } from "./pages/Seller/CreateListingPage";
 import { SoldOrdersPage } from "./pages/Seller/SoldOrdersPage";
 import { Home, Search, ShoppingBag, User as UserIcon } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
+
+function LayoutManager({ children, onSearch }: { children: React.ReactNode, onSearch: (q: string) => void }) {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/seller');
+
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50 pb-20 md:pb-0">
+      {!isAdminRoute && <Header onSearch={onSearch} />}
+      
+      <main className="flex-1">
+        {children}
+      </main>
+
+      {!isAdminRoute && <Footer />}
+      {!isAdminRoute && <MobileTabBar />}
+    </div>
+  );
+}
 
 export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
     <Router>
-      <div className="min-h-screen flex flex-col bg-slate-50 pb-20 md:pb-0">
-        <Header onSearch={setSearchQuery} />
-        
-        <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<StorePage searchQuery={searchQuery} />} />
-            <Route path="/dashboard" element={<UserDashboardPage />} />
-            <Route path="/admin" element={<AdminDashboardPage />} />
-            <Route path="/seller/create-listing" element={<CreateListingPage />} />
-            <Route path="/seller/orders" element={<SoldOrdersPage />} />
-            <Route path="/product/:id" element={<ProductDetailsPage />} />
-            <Route path="/checkout/:productId" element={<CheckoutPage />} />
-            <Route path="/order/:orderId" element={<OrderPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-          </Routes>
-        </main>
-
-        <Footer />
-        <MobileTabBar />
-      </div>
+      <LayoutManager onSearch={setSearchQuery}>
+        <Routes>
+          <Route path="/" element={<StorePage searchQuery={searchQuery} />} />
+          <Route path="/dashboard" element={<UserDashboardPage />} />
+          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/seller/create-listing" element={<CreateListingPage />} />
+          <Route path="/seller/orders" element={<SoldOrdersPage />} />
+          <Route path="/product/:id" element={<ProductDetailsPage />} />
+          <Route path="/checkout/:productId" element={<CheckoutPage />} />
+          <Route path="/order/:orderId" element={<OrderPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+        </Routes>
+      </LayoutManager>
     </Router>
   );
 }

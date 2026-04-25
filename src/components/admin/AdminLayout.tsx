@@ -13,9 +13,11 @@ import {
   Menu,
   X,
   ShieldCheck,
+  ChevronLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
+import { useNavigate } from "react-router-dom";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -37,10 +39,11 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
   const username = localStorage.getItem("username") || "Admin";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 10000); // Poll every 10s for header badge
+    const interval = setInterval(fetchUnreadCount, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -58,8 +61,10 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
   }
 
   function handleLogout() {
-    localStorage.clear();
-    window.location.href = "/login";
+    supabase.auth.signOut().then(() => {
+      localStorage.clear();
+      navigate("/login");
+    });
   }
 
   return (
@@ -76,7 +81,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             className="flex items-center gap-3 cursor-pointer shrink-0 mr-2 group"
             onClick={() => setActiveTab("dashboard")}
           >
-            <div className="bg-primary-600 p-2.5 rounded-xl shadow-lg shadow-primary-900/20">
+            <div className="bg-slate-900 p-2.5 rounded-xl shadow-lg shadow-slate-900/20">
               <ShieldCheck className="text-white" size={20} />
             </div>
             <div>
@@ -85,34 +90,38 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
               </h1>
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">System Online</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Node Online</span>
               </div>
             </div>
           </div>
 
           {/* Search */}
-          <div className="flex-1 flex items-stretch max-w-2xl ml-4">
+          <div className="flex-1 flex items-stretch max-w-2xl ml-4 hidden md:flex">
             <div className="relative w-full flex items-center">
               <Search size={16} className="absolute left-3 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search orders, products, users..."
-                className="w-full pl-10 pr-4 py-2 text-[13px] text-slate-900 bg-slate-50 border border-slate-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none rounded-xl transition-all"
+                placeholder="Search encrypted ledgers..."
+                className="w-full pl-10 pr-4 py-2.5 text-[13px] text-slate-900 bg-slate-50 border border-slate-200 focus:border-primary-500 transition-all rounded-xl"
               />
             </div>
           </div>
 
           {/* Right icons */}
-          <div className="flex items-center gap-3 ml-2">
-            {/* Bell */}
-            <button className="relative text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-lg hover:bg-slate-50">
-              <Bell size={20} />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center border-2 border-white">
-                  {unreadCount}
-                </span>
-              )}
+          <div className="flex items-center gap-3 ml-auto lg:ml-2">
+            
+            {/* Direct Home Link */}
+            <button 
+              onClick={() => navigate('/')}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-900 hover:text-white transition-all"
+            >
+               <ChevronLeft size={14} /> Exit to Site
             </button>
+
+            {/* Notification Icon - REMOVED AS PER USER REQUEST */}
+            {/* <button className="relative text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-lg hover:bg-slate-50">
+              <Bell size={20} />
+            </button> */}
 
             {/* Messages */}
             <button
@@ -120,6 +129,11 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
               onClick={() => setActiveTab("messages")}
             >
               <MessageSquare size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-primary-600 rounded-full text-[9px] font-bold text-white flex items-center justify-center border-2 border-white">
+                  {unreadCount}
+                </span>
+              )}
             </button>
 
             {/* Avatar */}
@@ -127,23 +141,14 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
               className="flex items-center gap-2 cursor-pointer pl-2 border-l border-slate-200 ml-1"
               onClick={() => setActiveTab("settings")}
             >
-              <div className="w-8 h-8 rounded-full border border-slate-200 overflow-hidden shadow-sm">
+              <div className="w-8 h-8 rounded-lg border border-slate-200 overflow-hidden shadow-sm">
                 <img
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}&backgroundColor=0f766e`}
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`}
                   alt="avatar"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <span className="text-slate-700 text-[13px] font-medium hidden md:block">{username}</span>
             </div>
-
-            {/* Logout */}
-            <button
-              onClick={handleLogout}
-              className="hidden md:flex items-center gap-1 text-slate-400 hover:text-red-500 text-[12px] font-medium transition-colors pl-3 border-l border-slate-200 ml-1"
-            >
-              <LogOut size={16} />
-            </button>
 
             {/* Mobile menu toggle */}
             <button
@@ -156,16 +161,16 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
         </div>
 
         {/* Row 2: Nav Tabs */}
-        <div className="bg-slate-50/50 border-t border-slate-100 overflow-x-auto hidden lg:block">
+        <div className="bg-white border-t border-slate-100 overflow-x-auto hidden lg:block">
           <div className="flex items-center px-4 md:px-8">
             {menuItems.map(item => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-2 px-5 py-3 text-[13px] whitespace-nowrap border-b-2 transition-all ${
+                className={`flex items-center gap-2 px-6 py-4 text-[11px] font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 transition-all ${
                   activeTab === item.id
-                    ? "border-primary-600 text-primary-600 font-semibold bg-white"
-                    : "border-transparent text-slate-500 hover:text-slate-800 font-medium hover:border-slate-300 hover:bg-white/50"
+                    ? "border-primary-600 text-primary-600 bg-primary-50/10"
+                    : "border-transparent text-slate-400 hover:text-slate-800 hover:border-slate-200"
                 }`}
               >
                 <item.icon size={15} className={activeTab === item.id ? "text-primary-600" : "text-slate-400"} />
@@ -188,19 +193,19 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
                 <button
                   key={item.id}
                   onClick={() => { setActiveTab(item.id); setMobileMenuOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-6 py-3.5 text-[14px] border-b border-slate-50 transition-all ${
+                  className={`w-full flex items-center gap-3 px-6 py-4 text-[12px] font-black uppercase tracking-widest border-b border-slate-50 transition-all ${
                     activeTab === item.id
-                      ? "text-primary-600 font-semibold bg-primary-50/50"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                      ? "text-primary-600 bg-primary-50/50"
+                      : "text-slate-500 hover:bg-slate-50"
                   }`}
                 >
-                  <item.icon size={18} className={activeTab === item.id ? "text-primary-600" : "text-slate-400"} />
+                  <item.icon size={18} />
                   {item.label}
                 </button>
               ))}
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-6 py-3.5 text-[14px] text-red-500 font-medium bg-red-50/30 border-b border-slate-50"
+                className="w-full flex items-center gap-3 px-6 py-4 text-[12px] font-black uppercase tracking-widest text-red-500 bg-red-50/30"
               >
                 <LogOut size={18} />
                 Sign Out
@@ -215,10 +220,10 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.15 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
           >
             {children}
           </motion.div>
@@ -226,17 +231,17 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
       </main>
 
       {/* ── Mobile bottom bar ── */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] flex justify-around items-center py-2 z-[200] pb-safe">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-2xl flex justify-around items-center py-3 z-[200] pb-safe">
         {menuItems.slice(0, 5).map(item => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center gap-1 px-3 py-1.5 transition-all rounded-lg ${
-              activeTab === item.id ? "text-primary-600 bg-primary-50" : "text-slate-400 hover:text-slate-600"
+            className={`flex flex-col items-center gap-1 px-3 transition-all ${
+              activeTab === item.id ? "text-primary-600" : "text-slate-400"
             }`}
           >
-            <item.icon size={20} className={activeTab === item.id ? "text-primary-600" : "text-slate-400"} />
-            <span className={`text-[10px] tracking-tight ${activeTab === item.id ? "font-bold" : "font-medium"}`}>
+            <item.icon size={22} />
+            <span className="text-[9px] font-black uppercase tracking-tighter">
               {item.label}
             </span>
           </button>
