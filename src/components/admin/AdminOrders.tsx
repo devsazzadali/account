@@ -57,25 +57,37 @@ export function AdminOrders() {
     }
   }
 
+  const categories = ["All", ...new Set(orders.map(o => o.products?.category).filter(Boolean))];
+  const sellers = ["All", ...new Set(orders.map(o => o.username).filter(Boolean))];
+
   const tabCount = (tab: string) => {
     if (tab === "All") return orders.length;
-    if (tab === "New Order") return orders.filter(o => o.status === "Awaiting Verification").length;
+    if (tab === "New Order") return orders.filter(o => o.status === "New Order" || o.status === "Awaiting Verification").length;
     return orders.filter(o => o.status === tab).length;
   };
 
   const filteredOrders = orders.filter(o => {
     const matchTab =
       activeTab === "All" ? true :
-      activeTab === "New Order" ? o.status === "Awaiting Verification" :
+      activeTab === "New Order" ? (o.status === "New Order" || o.status === "Awaiting Verification") :
       o.status === activeTab;
 
     const matchOrderNum = filterOrderNum === "" || o.id.toLowerCase().includes(filterOrderNum.toLowerCase());
     const matchProduct = filterProduct === "" || (o.products?.title || "").toLowerCase().includes(filterProduct.toLowerCase());
+    const matchSeller = filterSeller === "All" || o.username === filterSeller;
+    const matchCategory = filterCategory === "All" || o.products?.category === filterCategory;
     const matchFrom = filterFrom === "" || new Date(o.created_at) >= new Date(filterFrom);
     const matchTo = filterTo === "" || new Date(o.created_at) <= new Date(filterTo + "T23:59:59");
 
-    return matchTab && matchOrderNum && matchProduct && matchFrom && matchTo;
+    return matchTab && matchOrderNum && matchProduct && matchSeller && matchCategory && matchFrom && matchTo;
   });
+
+  const statusPills = [
+    { label: "New Order", count: orders.filter(o => o.status === "New Order").length },
+    { label: "Delivering", count: orders.filter(o => o.status === "Delivering").length },
+    { label: "Preparing", count: orders.filter(o => o.status === "Preparing").length },
+    { label: "Total Revenue", value: `$${orders.reduce((sum, o) => sum + (o.amount || 0), 0).toFixed(2)}` }
+  ];
 
   return (
     <div className="bg-white min-h-screen font-sans">
@@ -100,54 +112,57 @@ export function AdminOrders() {
       </div>
 
       {/* Filter bar */}
-      <div className="border border-slate-200 m-4 rounded p-4 bg-slate-50">
+      <div className="border border-slate-200 m-4 rounded-2xl p-4 bg-slate-50/50">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-          <div className="flex items-center gap-2">
-            <label className="text-[12px] text-slate-700 whitespace-nowrap">Seller:</label>
-            <select value={filterSeller} onChange={e => setFilterSeller(e.target.value)} className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] bg-white focus:outline-none focus:border-primary-600">
-              <option>All</option>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Seller</label>
+            <select value={filterSeller} onChange={e => setFilterSeller(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] bg-white focus:outline-none focus:border-primary-600 transition-all">
+              {sellers.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-[12px] text-slate-700 whitespace-nowrap">Category:</label>
-            <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] bg-white focus:outline-none focus:border-primary-600">
-              <option>All</option>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category</label>
+            <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] bg-white focus:outline-none focus:border-primary-600 transition-all">
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-[12px] text-slate-700 whitespace-nowrap">Order number:</label>
-            <input value={filterOrderNum} onChange={e => setFilterOrderNum(e.target.value)} placeholder="Order number" className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-primary-600" />
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Order ID</label>
+            <input value={filterOrderNum} onChange={e => setFilterOrderNum(e.target.value)} placeholder="Search ID..." className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-primary-600 transition-all" />
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-[12px] text-slate-700 whitespace-nowrap">Product Title:</label>
-            <input value={filterProduct} onChange={e => setFilterProduct(e.target.value)} placeholder="Product Title" className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-primary-600" />
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Product Title</label>
+            <input value={filterProduct} onChange={e => setFilterProduct(e.target.value)} placeholder="Search title..." className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-primary-600 transition-all" />
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-center">
-          <div className="flex items-center gap-2">
-            <label className="text-[12px] text-slate-700 whitespace-nowrap">Internal remarks:</label>
-            <input value={filterRemarks} onChange={e => setFilterRemarks(e.target.value)} placeholder="Internal remarks" className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-primary-600" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Internal Remarks</label>
+            <input value={filterRemarks} onChange={e => setFilterRemarks(e.target.value)} placeholder="Search remarks..." className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-primary-600 transition-all" />
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-[12px] text-slate-700 whitespace-nowrap">From:</label>
-            <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-primary-600" />
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">From Date</label>
+            <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-primary-600 transition-all" />
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-[12px] text-slate-700 whitespace-nowrap">To:</label>
-            <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-primary-600" />
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">To Date</label>
+            <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-primary-600 transition-all" />
           </div>
-          <button onClick={fetchOrders} className="bg-primary-600 text-white rounded px-6 py-2 text-[13px] font-bold hover:bg-primary-700 transition-colors flex items-center gap-2 justify-center">
+          <button onClick={fetchOrders} className="bg-primary-600 text-white rounded-xl px-6 py-2 text-[12px] font-bold hover:bg-primary-700 transition-all flex items-center gap-2 justify-center shadow-lg shadow-primary-600/20 uppercase tracking-widest">
             <Search size={14} /> Search
           </button>
         </div>
       </div>
 
       {/* Sub-tab status pills */}
-      <div className="flex gap-2 px-4 pb-3">
-        {["New Order(0)", "Delivering(0)", "PREPARING(1)", "100.00$"].map((label, i) => (
-          <span key={i} className={`px-3 py-1 rounded text-[11px] font-bold cursor-pointer border ${i === 2 ? "bg-primary-600 text-white border-primary-600" : "bg-white text-slate-700 border-slate-200 hover:border-primary-600"}`}>
-            {label}
-          </span>
+      <div className="flex flex-wrap gap-3 px-4 pb-4">
+        {statusPills.map((pill, i) => (
+          <div key={i} className="bg-white border border-slate-200 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{pill.label}</span>
+            <span className="text-[13px] font-black text-primary-600">
+              {pill.value !== undefined ? pill.value : pill.count}
+            </span>
+          </div>
         ))}
       </div>
 

@@ -8,6 +8,7 @@ import { AdminOrders } from "../components/admin/AdminOrders";
 import { AdminSettings } from "../components/admin/AdminSettings";
 import { AdminCustomers } from "../components/admin/AdminCustomers";
 import { AdminMessages } from "../components/admin/AdminMessages";
+import { AdminCategories } from "../components/admin/AdminCategories";
 
 export function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -31,6 +32,7 @@ export function AdminDashboardPage() {
       <div className="p-4">
         {activeTab === "dashboard" && <AdminOverview setActiveTab={setActiveTab} />}
         {activeTab === "products" && <AdminProducts />}
+        {activeTab === "categories" && <AdminCategories />}
         {activeTab === "orders" && <AdminOrders />}
         {activeTab === "messages" && <AdminMessages />}
         {activeTab === "customers" && <AdminCustomers />}

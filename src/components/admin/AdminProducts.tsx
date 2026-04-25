@@ -26,7 +26,19 @@ export function AdminProducts() {
     region: "Worldwide", fullAccess: true,
   });
 
-  useEffect(() => { fetchProducts(); }, []);
+  const [categoriesList, setCategoriesList] = useState<any[]>([]);
+
+  useEffect(() => { 
+    fetchProducts(); 
+    fetchCategories();
+  }, []);
+
+  async function fetchCategories() {
+    try {
+      const { data, error } = await supabase.from("categories").select("*").order("name");
+      if (!error && data) setCategoriesList(data);
+    } catch (e) {}
+  }
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -97,7 +109,7 @@ export function AdminProducts() {
     } catch (e: any) { showToast(e.message, "error"); }
   }
 
-  const categories = ["All", ...new Set(products.map(p => p.category).filter(Boolean))];
+  const categories = ["All", ...categoriesList.map(c => c.name)];
 
   const filtered = products.filter(p => {
     const matchSearch = searchQuery === "" ||
@@ -359,10 +371,9 @@ export function AdminProducts() {
                         onChange={e => setFormData({ ...formData, category: e.target.value })}
                         className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-primary-600"
                       >
-                        <option>Game Accounts</option>
-                        <option>Software Keys</option>
-                        <option>In-Game Currency</option>
-                        <option>Boosting Service</option>
+                        {categoriesList.map(c => (
+                          <option key={c.id} value={c.name}>{c.name}</option>
+                        ))}
                       </select>
                     </Field>
                   </div>
