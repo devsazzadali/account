@@ -413,7 +413,7 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating, setActiveTab }:
                 </div>
              </div>
           </div>
-        </div>
+          </motion.div>
       </div>
     );
 }
