@@ -22,8 +22,10 @@ import {
   Package,
   ExternalLink,
   ShieldAlert,
-  HelpCircle,
-  Headphones
+  Headphones,
+  Calendar,
+  Check,
+  MoreHorizontal
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
@@ -42,7 +44,7 @@ export function UserMessages() {
     
     // Real-time Subscription
     const channel = supabase
-      .channel('user_messages_realtime')
+      .channel('user_messages_fiverr')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
         fetchMessages();
       })
@@ -113,7 +115,7 @@ export function UserMessages() {
     try {
         const { error } = await supabase.from('messages').insert({
             username: username,
-            subject: "User Communication",
+            subject: "Inbox Inquiry",
             message: newMessage,
             status: 'unread'
         });
@@ -122,231 +124,221 @@ export function UserMessages() {
         setNewMessage("");
         fetchMessages();
     } catch (err: any) {
-        alert("Encryption Node Error: " + err.message);
+        alert("Error: " + err.message);
     } finally {
         setIsSending(false);
     }
   }
 
   return (
-    <div className="flex h-[calc(100vh-180px)] bg-white border border-slate-200 shadow-2xl rounded-[3rem] overflow-hidden font-sans relative">
+    <div className="flex h-[calc(100vh-140px)] bg-white border border-[#e4e5e7] rounded-lg overflow-hidden font-sans">
       
-      {/* ── Left Sidebar: Inbox Navigation ── */}
-      <div className="hidden lg:flex w-[340px] flex-col border-r border-slate-100 bg-white">
-        <div className="p-8 border-b border-slate-100 bg-slate-50/50">
-           <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-black text-slate-900 tracking-tighter italic">Inbox</h3>
-              <div className="w-2.5 h-2.5 rounded-full bg-[#1dbf73] animate-pulse shadow-lg shadow-emerald-500/50" />
-           </div>
-           <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input 
-                type="text" 
-                placeholder="Search threads..." 
-                className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-[13px] font-bold focus:outline-none focus:border-[#1dbf73] transition-all"
-              />
-           </div>
+      {/* ── Sidebar: Inbox List (Fiverr Style) ── */}
+      <div className="hidden lg:flex w-[300px] flex-col border-r border-[#e4e5e7]">
+        <div className="p-4 border-b border-[#e4e5e7] flex items-center justify-between bg-white">
+           <h3 className="text-[18px] font-bold text-[#404145]">Inbox</h3>
+           <button className="p-2 text-[#74767e] hover:bg-[#f5f5f5] rounded-full transition-all">
+              <MoreHorizontal size={18} />
+           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            <button className="w-full p-6 flex items-center gap-5 bg-emerald-50 border border-emerald-100 rounded-[2rem] transition-all shadow-sm">
-                <div className="w-14 h-14 rounded-2xl bg-[#1dbf73] flex items-center justify-center text-white shadow-xl shadow-emerald-500/30 shrink-0">
-                    <Headphones size={28} />
+        <div className="p-4 border-b border-[#e4e5e7] bg-white">
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#b5b6ba]" size={16} />
+                <input 
+                    type="text" 
+                    placeholder="Search messages" 
+                    className="w-full bg-[#f5f5f5] border-none rounded py-2.5 pl-10 pr-4 text-[13px] focus:ring-1 focus:ring-[#1dbf73] focus:bg-white transition-all outline-none"
+                />
+            </div>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+            <button className="w-full p-4 flex items-center gap-3 bg-[#f1fdf7] border-l-4 border-[#1dbf73] transition-all">
+                <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-[#1dbf73] flex items-center justify-center text-white shrink-0 font-bold">
+                        S
+                    </div>
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#1dbf73] rounded-full border-2 border-white" />
                 </div>
                 <div className="flex-1 text-left min-w-0">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-[15px] font-black text-slate-900">Support Agent</span>
-                        <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-white px-2 py-0.5 rounded-full border border-emerald-100">Live</span>
+                    <div className="flex justify-between items-center mb-0.5">
+                        <span className="text-[14px] font-bold text-[#404145] truncate">Customer Support</span>
+                        <span className="text-[11px] text-[#74767e]">Online</span>
                     </div>
-                    <p className="text-[12px] text-slate-500 font-medium truncate">System protocols active. How can we assist?</p>
+                    <p className="text-[12px] text-[#74767e] truncate font-normal">How can we help you today?</p>
                 </div>
             </button>
         </div>
       </div>
 
-      {/* ── Center: Communication Interface ── */}
+      {/* ── Main: Chat Area (Fiverr Style) ── */}
       <div className="flex-1 flex flex-col bg-white">
-        {/* Thread Header */}
-        <div className="px-10 py-6 border-b border-slate-100 flex items-center justify-between z-10 bg-white shadow-sm">
-           <div className="flex items-center gap-5">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-[#e4e5e7] flex items-center justify-between bg-white">
+           <div className="flex items-center gap-3">
               <div className="relative">
-                 <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl">
-                    <User size={24} />
+                 <div className="w-10 h-10 rounded-full bg-[#1dbf73] flex items-center justify-center text-white font-bold text-sm">
+                    S
                  </div>
-                 <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-white shadow-lg" />
+                 <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#1dbf73] rounded-full border-2 border-white" />
               </div>
               <div>
-                 <div className="text-[18px] font-black text-slate-900 flex items-center gap-3">
-                    Support Intelligence Node
-                    <Star size={14} className="text-amber-400 fill-amber-400" />
-                    <span className="text-[9px] text-white font-black uppercase tracking-[0.2em] px-2.5 py-1 bg-[#1dbf73] rounded-lg shadow-lg shadow-emerald-500/20">Verified</span>
+                 <div className="text-[15px] font-bold text-[#404145] flex items-center gap-2">
+                    Customer Support
                  </div>
-                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Operational Tier: High Priority</p>
+                 <p className="text-[12px] text-[#1dbf73] font-medium">Online</p>
               </div>
            </div>
-           <div className="flex gap-2">
-              <button className="p-3 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-2xl transition-all"><Info size={20} /></button>
-              <button className="p-3 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-2xl transition-all"><MoreVertical size={20} /></button>
+           <div className="flex items-center gap-3">
+              <button className="text-[#74767e] hover:text-[#1dbf73] p-2 transition-all"><Star size={18} /></button>
+              <button className="text-[#74767e] hover:text-[#1dbf73] p-2 transition-all"><Search size={18} /></button>
+              <button className="text-[#74767e] hover:text-[#1dbf73] p-2 transition-all"><MoreVertical size={18} /></button>
            </div>
         </div>
 
-        {/* Message Flow */}
-        <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar bg-[#f8fafc]/50">
-           <div className="flex justify-center mb-12">
-              <div className="px-8 py-2.5 bg-white rounded-full border border-slate-200 shadow-sm text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3">
-                 <ShieldCheck size={16} className="text-[#1dbf73]" />
-                 Quantum Encryption: Protocol 7G Active
-              </div>
-           </div>
-
+        {/* Messages Flow */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white custom-scrollbar">
            {loading ? (
-              <div className="flex flex-col items-center justify-center h-64 text-center">
-                 <Loader2 className="animate-spin text-[#1dbf73] w-12 h-12 mb-6" />
-                 <p className="text-[12px] text-slate-400 font-black uppercase tracking-widest">Decrypting Secure Thread...</p>
+              <div className="flex flex-col items-center justify-center h-64">
+                 <Loader2 className="animate-spin text-[#1dbf73] w-8 h-8 mb-4" />
+                 <p className="text-[13px] text-[#74767e]">Loading conversation...</p>
               </div>
            ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-center opacity-40">
-                  <MessageSquare size={64} className="text-slate-200 mb-6" />
-                  <p className="text-[14px] font-black text-slate-400 uppercase tracking-widest">Communication Channel Empty</p>
-                  <p className="text-[11px] text-slate-400 mt-2 font-medium">Send a message to initialize the node.</p>
+              <div className="flex flex-col items-center justify-center h-64 text-center">
+                  <div className="w-16 h-16 bg-[#f5f5f5] rounded-full flex items-center justify-center mb-4">
+                     <MessageSquare className="text-[#b5b6ba]" size={32} />
+                  </div>
+                  <p className="text-[15px] font-bold text-[#404145]">No messages yet</p>
+                  <p className="text-[13px] text-[#74767e] mt-1">Start a conversation with our support team.</p>
               </div>
            ) : (
               messages.map((msg) => {
                  const isAdmin = msg.message === '[ADMIN_INITIATED]';
                  return (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 10 }} 
-                        animate={{ opacity: 1, y: 0 }} 
-                        key={msg.id} 
-                        className="space-y-4"
-                    >
-                       {!isAdmin && (
-                          <div className="flex justify-end">
-                             <div className="max-w-[85%] md:max-w-[65%] bg-slate-900 text-white p-7 rounded-[2rem] rounded-tr-sm shadow-2xl shadow-slate-900/20">
-                                <p className="text-[15px] font-medium leading-relaxed whitespace-pre-wrap">{msg.message}</p>
-                                <div className="mt-4 flex items-center justify-end gap-3 text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">
-                                   {new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-                                   <CheckCheck size={16} className={msg.status === 'replied' ? "text-[#1dbf73]" : ""} />
-                                </div>
-                             </div>
+                    <div key={msg.id} className={`flex ${isAdmin ? 'justify-start' : 'justify-end'} group`}>
+                       <div className={`flex gap-3 max-w-[85%] ${isAdmin ? 'flex-row' : 'flex-row-reverse'}`}>
+                          <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-white text-[11px] font-bold ${isAdmin ? 'bg-[#1dbf73]' : 'bg-[#404145]'}`}>
+                             {isAdmin ? 'S' : (username[0] || 'U').toUpperCase()}
                           </div>
-                       )}
-                       {isAdmin && (
-                          <div className="flex gap-5 items-start">
-                             <div className="w-12 h-12 rounded-2xl bg-[#1dbf73]/10 border border-[#1dbf73]/20 flex items-center justify-center shrink-0 shadow-sm">
-                                <Zap size={22} className="text-[#1dbf73]" />
+                          <div className="flex flex-col">
+                             <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[13px] font-bold text-[#404145]">{isAdmin ? 'Support' : 'Me'}</span>
+                                <span className="text-[11px] text-[#b5b6ba]">{new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
                              </div>
-                             <div className="max-w-[85%] md:max-w-[65%]">
-                                <div className="bg-white border border-slate-200 p-7 rounded-[2.5rem] rounded-tl-sm shadow-xl shadow-slate-200/50">
-                                   <p className="text-[15px] text-slate-800 font-bold leading-relaxed whitespace-pre-wrap">{msg.reply}</p>
-                                   <div className="mt-5 pt-5 border-t border-slate-50 flex items-center justify-between">
-                                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{new Date(msg.replied_at || msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                                      <div className="flex gap-3">
-                                         <button className="p-2 hover:bg-slate-50 text-slate-300 hover:text-[#1dbf73] rounded-xl transition-all"><ThumbsUp size={16} /></button>
-                                         <button className="p-2 hover:bg-slate-50 text-slate-300 hover:text-red-500 rounded-xl transition-all"><ThumbsDown size={16} /></button>
-                                      </div>
-                                   </div>
+                             <div className={`p-4 rounded-2xl text-[14px] leading-relaxed whitespace-pre-wrap ${
+                                isAdmin 
+                                ? 'bg-[#f5f5f5] text-[#404145] rounded-tl-none' 
+                                : 'bg-[#1dbf73] text-white rounded-tr-none'
+                             }`}>
+                                {isAdmin ? msg.reply : msg.message}
+                             </div>
+                             {!isAdmin && (
+                                <div className="mt-1 flex justify-end">
+                                   <CheckCheck size={14} className={msg.status === 'replied' ? "text-[#1dbf73]" : "text-[#b5b6ba]"} />
                                 </div>
-                             </div>
+                             )}
                           </div>
-                       )}
-                    </motion.div>
+                       </div>
+                    </div>
                  )
               })
            )}
            <div ref={chatEndRef} />
         </div>
 
-        {/* Action Node */}
-        <div className="p-10 bg-white border-t border-slate-100 relative">
-           <form onSubmit={handleSendMessage} className="relative group">
-              <div className="absolute left-6 top-6 text-slate-300 group-focus-within:text-[#1dbf73] transition-colors">
-                 <Smile size={24} className="cursor-pointer" />
-              </div>
+        {/* Input Area (Fiverr Style) */}
+        <div className="p-4 border-t border-[#e4e5e7] bg-white">
+           <form onSubmit={handleSendMessage} className="border border-[#e4e5e7] rounded-md overflow-hidden bg-white focus-within:border-[#1dbf73] transition-all">
               <textarea 
                  value={newMessage}
                  onChange={e => setNewMessage(e.target.value)}
                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
-                 placeholder="Transmit communication data..."
-                 className="w-full bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] pl-16 pr-32 py-6 text-[15px] font-bold text-slate-900 focus:outline-none focus:border-[#1dbf73] focus:bg-white transition-all resize-none min-h-[100px] shadow-inner"
+                 placeholder="Type your message here..."
+                 className="w-full p-4 text-[14px] text-[#404145] outline-none resize-none h-[100px]"
               />
-              <div className="absolute right-6 bottom-6 flex items-center gap-4">
-                 <Paperclip size={24} className="text-slate-300 cursor-pointer hover:text-slate-900 transition-colors" />
+              <div className="px-4 py-3 bg-[#f5f5f5] flex items-center justify-between border-t border-[#e4e5e7]">
+                 <div className="flex items-center gap-4 text-[#74767e]">
+                    <button type="button" className="hover:text-[#1dbf73] transition-all"><Paperclip size={18} /></button>
+                    <button type="button" className="hover:text-[#1dbf73] transition-all"><Smile size={18} /></button>
+                    <button type="button" className="hover:text-[#1dbf73] transition-all"><Package size={18} /></button>
+                 </div>
                  <button 
                   disabled={isSending || !newMessage.trim()}
-                  className="px-10 py-4 bg-slate-900 text-white rounded-2xl text-[13px] font-black uppercase tracking-[0.2em] hover:bg-slate-800 transition-all disabled:opacity-50 shadow-2xl shadow-slate-900/30 active:scale-95 flex items-center gap-3"
+                  className="px-6 py-2 bg-[#1dbf73] text-white rounded font-bold text-[14px] hover:bg-[#19a463] transition-all disabled:opacity-50"
                  >
-                    {isSending ? <Loader2 size={20} className="animate-spin" /> : <>Send <Send size={18} className="text-[#1dbf73]" /></>}
+                    {isSending ? <Loader2 size={16} className="animate-spin" /> : "Send"}
                  </button>
               </div>
            </form>
-           <div className="mt-6 flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-4">
-              <div className="flex items-center gap-3">
-                 <Zap size={14} className="text-amber-500" />
-                 Encrypted Link Authorized
+           <div className="mt-2 flex items-center justify-between text-[11px] text-[#74767e]">
+              <div className="flex items-center gap-1">
+                 <ShieldCheck size={12} className="text-[#1dbf73]" />
+                 Secure Conversation
               </div>
-              <p>Shift + Enter for new line</p>
+              <p>Press Enter to send</p>
            </div>
         </div>
       </div>
 
-      {/* ── Right Sidebar: Tactical Context ── */}
-      <div className="hidden xl:flex w-[320px] flex-col bg-slate-50/30 border-l border-slate-100 overflow-y-auto">
-         <div className="p-10 border-b border-slate-100">
-            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8 flex items-center gap-2">
-                <Clock size={14} className="text-[#1dbf73]" /> Order Intelligence
-            </h4>
-            {lastOrder ? (
-              <div className="space-y-8">
-                 <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 rounded-[1.5rem] bg-white border border-slate-200 overflow-hidden shrink-0 shadow-lg p-1">
-                       <img src={lastOrder.products?.image} alt="" className="w-full h-full object-cover rounded-xl" />
-                    </div>
-                    <div className="min-w-0">
-                       <div className="text-[15px] font-black text-slate-900 truncate tracking-tight">{lastOrder.products?.title}</div>
-                       <div className="text-[12px] font-black text-[#1dbf73] mt-1">${lastOrder.total_price}</div>
-                    </div>
-                 </div>
-                 <div className="p-6 bg-white rounded-[2rem] border border-slate-100 space-y-5 shadow-sm">
-                    <div className="flex justify-between items-center">
-                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</span>
-                       <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-amber-100 shadow-sm">{lastOrder.status}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hash</span>
-                       <span className="text-[10px] font-bold text-slate-900 font-mono">#{lastOrder.id.split('-')[0].toUpperCase()}</span>
-                    </div>
-                 </div>
-                 <button className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-[11px] uppercase tracking-[0.2em] hover:bg-slate-800 transition-all flex items-center justify-center gap-3 shadow-xl shadow-slate-900/20">
-                    <Package size={18} /> Asset Ledger
-                 </button>
-              </div>
-            ) : (
-              <div className="text-center py-16 opacity-30">
-                 <ShieldAlert size={56} className="mx-auto mb-6 text-slate-200" />
-                 <p className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400">Context Null</p>
-              </div>
-            )}
+      {/* ── Sidebar: Info Panel (Fiverr Style) ── */}
+      <div className="hidden xl:flex w-[300px] flex-col border-l border-[#e4e5e7] bg-white">
+         <div className="p-6 border-b border-[#e4e5e7]">
+            <h4 className="text-[14px] font-bold text-[#404145] mb-6">About Support</h4>
+            <div className="space-y-5">
+               <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#f5f5f5] flex items-center justify-center text-[#74767e]">
+                     <LifeBuoy size={20} />
+                  </div>
+                  <div>
+                     <div className="text-[13px] font-bold text-[#404145]">Help Center</div>
+                     <div className="text-[11px] text-[#74767e]">24/7 Availability</div>
+                  </div>
+               </div>
+               <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#f5f5f5] flex items-center justify-center text-[#74767e]">
+                     <Clock size={20} />
+                  </div>
+                  <div>
+                     <div className="text-[13px] font-bold text-[#404145]">Avg. Response</div>
+                     <div className="text-[11px] text-[#74767e]">Within 1 hour</div>
+                  </div>
+               </div>
+            </div>
          </div>
 
-         <div className="p-10">
-            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8 flex items-center gap-2">
-                <HelpCircle size={14} className="text-[#1dbf73]" /> Support FAQ
-            </h4>
-            <div className="space-y-6">
-                {[
-                    { q: "How to claim assets?", a: "Go to procurement history." },
-                    { q: "2FA protocols?", a: "Ask in secure thread." },
-                    { q: "Refund policy?", a: "Check service grid terms." }
-                ].map((faq, i) => (
-                    <div key={i} className="group cursor-pointer">
-                        <div className="text-[13px] font-black text-slate-900 flex items-center justify-between group-hover:text-[#1dbf73] transition-colors">
-                            {faq.q} <ChevronRight size={14} />
-                        </div>
-                        <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed opacity-0 h-0 group-hover:opacity-100 group-hover:h-auto transition-all">{faq.a}</p>
-                    </div>
-                ))}
+         {lastOrder && (
+            <div className="p-6 border-b border-[#e4e5e7]">
+               <h4 className="text-[14px] font-bold text-[#404145] mb-4">Latest Order</h4>
+               <div className="p-4 border border-[#e4e5e7] rounded-lg space-y-3">
+                  <div className="text-[13px] font-bold text-[#404145] truncate">{lastOrder.products?.title}</div>
+                  <div className="flex justify-between items-center">
+                     <span className="text-[12px] text-[#74767e]">Order ID</span>
+                     <span className="text-[12px] font-bold text-[#404145]">#{lastOrder.id.split('-')[0].toUpperCase()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                     <span className="text-[12px] text-[#74767e]">Status</span>
+                     <span className="px-2 py-0.5 bg-[#f1fdf7] text-[#1dbf73] rounded text-[10px] font-bold uppercase">{lastOrder.status}</span>
+                  </div>
+                  <button className="w-full mt-2 py-2.5 bg-white border border-[#e4e5e7] text-[#404145] rounded font-bold text-[12px] hover:bg-[#f5f5f5] transition-all flex items-center justify-center gap-2">
+                     <Package size={14} /> View Details
+                  </button>
+               </div>
             </div>
-        </div>
+         )}
+
+         <div className="p-6">
+            <h4 className="text-[14px] font-bold text-[#404145] mb-4">Safety Tips</h4>
+            <ul className="space-y-3">
+               {[
+                  "Never share your login credentials.",
+                  "Only pay through our secure checkout.",
+                  "Check asset details before finalizing."
+               ].map((tip, i) => (
+                  <li key={i} className="flex gap-2 text-[12px] text-[#74767e] leading-relaxed">
+                     <Check size={14} className="text-[#1dbf73] shrink-0 mt-0.5" /> {tip}
+                  </li>
+               ))}
+            </ul>
+         </div>
       </div>
 
     </div>
