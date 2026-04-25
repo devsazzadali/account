@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Loader2, Search, RefreshCw, X, Send, CheckCircle2, Upload, Mail, MessageSquare, XCircle } from "lucide-react";
+import { Loader2, Search, RefreshCw, X, Send, CheckCircle2, Upload, Mail, MessageSquare, XCircle, AlertCircle, Info, ShieldCheck } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
 
