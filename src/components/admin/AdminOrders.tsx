@@ -80,19 +80,19 @@ export function AdminOrders() {
   return (
     <div className="bg-white min-h-screen font-sans">
       {/* Tab bar */}
-      <div className="border-b border-[#e0e0e0] flex items-center gap-0 overflow-x-auto">
+      <div className="border-b border-slate-200 flex items-center gap-0 overflow-x-auto">
         {TAB_FILTERS.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-5 py-3.5 text-[13px] font-medium whitespace-nowrap border-b-2 transition-all ${
               activeTab === tab
-                ? "border-[#e4393c] text-[#e4393c] font-bold"
-                : "border-transparent text-[#555] hover:text-[#e4393c]"
+                ? "border-primary-600 text-primary-600 font-bold"
+                : "border-transparent text-slate-700 hover:text-primary-600"
             }`}
           >
             {tab}
-            <span className={`ml-1.5 text-[11px] font-bold ${activeTab === tab ? "text-[#e4393c]" : "text-[#999]"}`}>
+            <span className={`ml-1.5 text-[11px] font-bold ${activeTab === tab ? "text-primary-600" : "text-slate-400"}`}>
               ({tabCount(tab)})
             </span>
           </button>
@@ -100,43 +100,43 @@ export function AdminOrders() {
       </div>
 
       {/* Filter bar */}
-      <div className="border border-[#e0e0e0] m-4 rounded p-4 bg-[#fafafa]">
+      <div className="border border-slate-200 m-4 rounded p-4 bg-slate-50">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
           <div className="flex items-center gap-2">
-            <label className="text-[12px] text-[#555] whitespace-nowrap">Seller:</label>
-            <select value={filterSeller} onChange={e => setFilterSeller(e.target.value)} className="flex-1 border border-[#ddd] rounded px-2 py-1.5 text-[12px] bg-white focus:outline-none focus:border-[#e4393c]">
+            <label className="text-[12px] text-slate-700 whitespace-nowrap">Seller:</label>
+            <select value={filterSeller} onChange={e => setFilterSeller(e.target.value)} className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] bg-white focus:outline-none focus:border-primary-600">
               <option>All</option>
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[12px] text-[#555] whitespace-nowrap">Category:</label>
-            <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="flex-1 border border-[#ddd] rounded px-2 py-1.5 text-[12px] bg-white focus:outline-none focus:border-[#e4393c]">
+            <label className="text-[12px] text-slate-700 whitespace-nowrap">Category:</label>
+            <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] bg-white focus:outline-none focus:border-primary-600">
               <option>All</option>
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[12px] text-[#555] whitespace-nowrap">Order number:</label>
-            <input value={filterOrderNum} onChange={e => setFilterOrderNum(e.target.value)} placeholder="Order number" className="flex-1 border border-[#ddd] rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-[#e4393c]" />
+            <label className="text-[12px] text-slate-700 whitespace-nowrap">Order number:</label>
+            <input value={filterOrderNum} onChange={e => setFilterOrderNum(e.target.value)} placeholder="Order number" className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-primary-600" />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[12px] text-[#555] whitespace-nowrap">Product Title:</label>
-            <input value={filterProduct} onChange={e => setFilterProduct(e.target.value)} placeholder="Product Title" className="flex-1 border border-[#ddd] rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-[#e4393c]" />
+            <label className="text-[12px] text-slate-700 whitespace-nowrap">Product Title:</label>
+            <input value={filterProduct} onChange={e => setFilterProduct(e.target.value)} placeholder="Product Title" className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-primary-600" />
           </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-center">
           <div className="flex items-center gap-2">
-            <label className="text-[12px] text-[#555] whitespace-nowrap">Internal remarks:</label>
-            <input value={filterRemarks} onChange={e => setFilterRemarks(e.target.value)} placeholder="Internal remarks" className="flex-1 border border-[#ddd] rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-[#e4393c]" />
+            <label className="text-[12px] text-slate-700 whitespace-nowrap">Internal remarks:</label>
+            <input value={filterRemarks} onChange={e => setFilterRemarks(e.target.value)} placeholder="Internal remarks" className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-primary-600" />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[12px] text-[#555] whitespace-nowrap">From:</label>
-            <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="flex-1 border border-[#ddd] rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-[#e4393c]" />
+            <label className="text-[12px] text-slate-700 whitespace-nowrap">From:</label>
+            <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-primary-600" />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[12px] text-[#555] whitespace-nowrap">To:</label>
-            <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="flex-1 border border-[#ddd] rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-[#e4393c]" />
+            <label className="text-[12px] text-slate-700 whitespace-nowrap">To:</label>
+            <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-[12px] focus:outline-none focus:border-primary-600" />
           </div>
-          <button onClick={fetchOrders} className="bg-[#e4393c] text-white rounded px-6 py-2 text-[13px] font-bold hover:bg-[#c0292b] transition-colors flex items-center gap-2 justify-center">
+          <button onClick={fetchOrders} className="bg-primary-600 text-white rounded px-6 py-2 text-[13px] font-bold hover:bg-primary-700 transition-colors flex items-center gap-2 justify-center">
             <Search size={14} /> Search
           </button>
         </div>
@@ -145,65 +145,65 @@ export function AdminOrders() {
       {/* Sub-tab status pills */}
       <div className="flex gap-2 px-4 pb-3">
         {["New Order(0)", "Delivering(0)", "PREPARING(1)", "100.00$"].map((label, i) => (
-          <span key={i} className={`px-3 py-1 rounded text-[11px] font-bold cursor-pointer border ${i === 2 ? "bg-[#e4393c] text-white border-[#e4393c]" : "bg-white text-[#555] border-[#ddd] hover:border-[#e4393c]"}`}>
+          <span key={i} className={`px-3 py-1 rounded text-[11px] font-bold cursor-pointer border ${i === 2 ? "bg-primary-600 text-white border-primary-600" : "bg-white text-slate-700 border-slate-200 hover:border-primary-600"}`}>
             {label}
           </span>
         ))}
       </div>
 
       {/* Order Table */}
-      <div className="mx-4 border border-[#e0e0e0] rounded overflow-hidden">
+      <div className="mx-4 border border-slate-200 rounded overflow-hidden">
         <table className="w-full text-left text-[13px]">
-          <thead className="bg-[#f5f5f5] border-b border-[#e0e0e0]">
+          <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="px-4 py-3 font-bold text-[#333]">Product</th>
-              <th className="px-4 py-3 font-bold text-[#333]">Unit Price</th>
-              <th className="px-4 py-3 font-bold text-[#333]">Type</th>
-              <th className="px-4 py-3 font-bold text-[#333]">Status</th>
-              <th className="px-4 py-3 font-bold text-[#333]">
-                Internal remarks <span className="text-[#e4393c]">ⓘ</span>
+              <th className="px-4 py-3 font-bold text-slate-900">Product</th>
+              <th className="px-4 py-3 font-bold text-slate-900">Unit Price</th>
+              <th className="px-4 py-3 font-bold text-slate-900">Type</th>
+              <th className="px-4 py-3 font-bold text-slate-900">Status</th>
+              <th className="px-4 py-3 font-bold text-slate-900">
+                Internal remarks <span className="text-primary-600">ⓘ</span>
               </th>
-              <th className="px-4 py-3 font-bold text-[#333]">Total Amount</th>
+              <th className="px-4 py-3 font-bold text-slate-900">Total Amount</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#f0f0f0]">
             {loading ? (
               <tr><td colSpan={6} className="py-16 text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#e4393c]" />
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary-600" />
               </td></tr>
             ) : filteredOrders.length === 0 ? (
-              <tr><td colSpan={6} className="py-16 text-center text-[#999] text-[13px]">No orders found.</td></tr>
+              <tr><td colSpan={6} className="py-16 text-center text-slate-400 text-[13px]">No orders found.</td></tr>
             ) : filteredOrders.map(order => (
               <tr
                 key={order.id}
-                className="hover:bg-[#fff8f8] cursor-pointer transition-colors"
+                className="hover:bg-slate-50/50 cursor-pointer transition-colors"
                 onClick={() => setSelectedOrder(order)}
               >
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-[#f5f5f5] border border-[#e0e0e0] overflow-hidden shrink-0">
+                    <div className="w-10 h-10 rounded bg-slate-50 border border-slate-200 overflow-hidden shrink-0">
                       {order.products?.image
                         ? <img src={order.products.image} className="w-full h-full object-cover" alt="" />
-                        : <div className="w-full h-full flex items-center justify-center text-[#ccc] text-lg">📦</div>
+                        : <div className="w-full h-full flex items-center justify-center text-slate-300 text-lg">📦</div>
                       }
                     </div>
                     <div>
-                      <div className="font-semibold text-[#333] text-[13px] leading-tight max-w-[220px] truncate">
+                      <div className="font-semibold text-slate-900 text-[13px] leading-tight max-w-[220px] truncate">
                         {order.products?.title || "Unknown Product"}
                       </div>
-                      <div className="text-[11px] text-[#999] mt-0.5">
+                      <div className="text-[11px] text-slate-400 mt-0.5">
                         #{order.id.split("-")[0].toUpperCase()} · {new Date(order.created_at).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-4 font-bold text-[#333]">${Number(order.total_price).toFixed(2)}</td>
-                <td className="px-4 py-4 text-[#555]">{order.products?.category || "Digital"}</td>
+                <td className="px-4 py-4 font-bold text-slate-900">${Number(order.total_price).toFixed(2)}</td>
+                <td className="px-4 py-4 text-slate-700">{order.products?.category || "Digital"}</td>
                 <td className="px-4 py-4">
                   <StatusBadge status={order.status} />
                 </td>
-                <td className="px-4 py-4 text-[#999] text-[12px]">—</td>
-                <td className="px-4 py-4 font-bold text-[#e4393c]">${Number(order.total_price).toFixed(2)}</td>
+                <td className="px-4 py-4 text-slate-400 text-[12px]">—</td>
+                <td className="px-4 py-4 font-bold text-primary-600">${Number(order.total_price).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
@@ -227,15 +227,15 @@ export function AdminOrders() {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    "Delivered": "text-[#52c41a] bg-[#f6ffed] border-[#b7eb8f]",
-    "Completed": "text-[#52c41a] bg-[#f6ffed] border-[#b7eb8f]",
-    "Paid": "text-[#1890ff] bg-[#e6f7ff] border-[#91d5ff]",
-    "Preparing": "text-[#fa8c16] bg-[#fff7e6] border-[#ffd591]",
+    "Delivered": "text-emerald-600 bg-emerald-50 border-emerald-200",
+    "Completed": "text-emerald-600 bg-emerald-50 border-emerald-200",
+    "Paid": "text-[#1890ff] bg-blue-50 border-[#91d5ff]",
+    "Preparing": "text-amber-500 bg-[#fff7e6] border-[#ffd591]",
     "Delivering": "text-[#722ed1] bg-[#f9f0ff] border-[#d3adf7]",
-    "Cancelled": "text-[#ff4d4f] bg-[#fff1f0] border-[#ffa39e]",
-    "Awaiting Verification": "text-[#fa8c16] bg-[#fff7e6] border-[#ffd591]",
+    "Cancelled": "text-[#ff4d4f] bg-red-50 border-red-200",
+    "Awaiting Verification": "text-amber-500 bg-[#fff7e6] border-[#ffd591]",
   };
-  const cls = map[status] || "text-[#555] bg-[#f5f5f5] border-[#ddd]";
+  const cls = map[status] || "text-slate-700 bg-slate-50 border-slate-200";
   return (
     <span className={`inline-block px-2.5 py-0.5 rounded border text-[11px] font-bold ${cls}`}>
       {status}
@@ -297,38 +297,38 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
         className="relative bg-white w-full max-w-4xl my-8 mx-4 rounded shadow-2xl"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e0e0e0]">
-          <h2 className="text-[18px] font-bold text-[#333]">Sold Details</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <h2 className="text-[18px] font-bold text-slate-900">Sold Details</h2>
           <div className="flex items-center gap-3">
-            <span className="text-[12px] text-[#999]">
-              <span className="text-[#333] font-medium mr-1">★</span>
+            <span className="text-[12px] text-slate-400">
+              <span className="text-slate-900 font-medium mr-1">★</span>
               Rating options
             </span>
-            <button onClick={onClose} className="p-1.5 hover:bg-[#f5f5f5] rounded transition-colors">
-              <X size={18} className="text-[#999]" />
+            <button onClick={onClose} className="p-1.5 hover:bg-slate-50 rounded transition-colors">
+              <X size={18} className="text-slate-400" />
             </button>
           </div>
         </div>
 
         {/* Progress Steps */}
-        <div className="px-6 py-5 border-b border-[#e0e0e0] bg-white">
+        <div className="px-6 py-5 border-b border-slate-200 bg-white">
           <div className="flex items-center">
             {STATUS_STEPS.map((step, i) => (
               <React.Fragment key={step}>
                 <div className="flex flex-col items-center flex-1">
                   <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[11px] font-bold transition-all ${
                     i <= currentStepIndex
-                      ? "bg-[#e4393c] border-[#e4393c] text-white"
-                      : "bg-white border-[#ccc] text-[#ccc]"
+                      ? "bg-primary-600 border-primary-600 text-white"
+                      : "bg-white border-[#ccc] text-slate-300"
                   }`}>
                     {i <= currentStepIndex ? <CheckCircle2 size={14} /> : i + 1}
                   </div>
-                  <span className={`text-[10px] mt-1.5 text-center leading-tight ${i <= currentStepIndex ? "text-[#e4393c] font-bold" : "text-[#bbb]"}`}>
+                  <span className={`text-[10px] mt-1.5 text-center leading-tight ${i <= currentStepIndex ? "text-primary-600 font-bold" : "text-slate-400"}`}>
                     {step}
                   </span>
                 </div>
                 {i < STATUS_STEPS.length - 1 && (
-                  <div className={`h-0.5 flex-1 -mt-4 transition-all ${i < currentStepIndex ? "bg-[#e4393c]" : "bg-[#e0e0e0]"}`} />
+                  <div className={`h-0.5 flex-1 -mt-4 transition-all ${i < currentStepIndex ? "bg-primary-600" : "bg-[#e0e0e0]"}`} />
                 )}
               </React.Fragment>
             ))}
@@ -336,51 +336,51 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
         </div>
 
         {/* Order Info Bar */}
-        <div className="px-6 py-3 bg-[#fafafa] border-b border-[#e0e0e0] flex flex-wrap items-center gap-4 text-[12px]">
-          <span className="font-bold text-[#333]">Order number: {order.id}</span>
+        <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-4 text-[12px]">
+          <span className="font-bold text-slate-900">Order number: {order.id}</span>
           {order.status === "Delivering" && (
-            <span className="text-[#e4393c] font-bold">⏰ Exceeded the promised delivery time for X hours</span>
+            <span className="text-primary-600 font-bold">⏰ Exceeded the promised delivery time for X hours</span>
           )}
-          <span className="text-[#999]">Order Date: {new Date(order.created_at).toLocaleString()}</span>
+          <span className="text-slate-400">Order Date: {new Date(order.created_at).toLocaleString()}</span>
           <StatusBadge status={order.status} />
         </div>
 
         {/* Buyer info + action buttons */}
-        <div className="px-6 py-4 border-b border-[#e0e0e0] flex flex-wrap items-center gap-4">
+        <div className="px-6 py-4 border-b border-slate-200 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-[#e4393c]/10 flex items-center justify-center text-[#e4393c] font-bold text-[15px]">
+            <div className="w-9 h-9 rounded-full bg-primary-600/10 flex items-center justify-center text-primary-600 font-bold text-[15px]">
               {order.customer_email[0].toUpperCase()}
             </div>
             <div>
-              <div className="text-[13px] font-bold text-[#333]">{order.customer_email.split("@")[0]}</div>
-              <div className="text-[10px] text-[#999]">buyer</div>
+              <div className="text-[13px] font-bold text-slate-900">{order.customer_email.split("@")[0]}</div>
+              <div className="text-[10px] text-slate-400">buyer</div>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 ml-4">
-            <button onClick={handleSendDm} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#52c41a] text-white rounded text-[12px] font-bold hover:bg-[#3da012] transition-colors">
+            <button onClick={handleSendDm} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded text-[12px] font-bold hover:bg-[#3da012] transition-colors">
               <MessageSquare size={13} /> Chat Now
             </button>
-            <a href={`mailto:${order.customer_email}`} className="flex items-center gap-1.5 px-3 py-1.5 border border-[#ddd] text-[#555] rounded text-[12px] font-bold hover:bg-[#f5f5f5] transition-colors">
+            <a href={`mailto:${order.customer_email}`} className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-700 rounded text-[12px] font-bold hover:bg-slate-50 transition-colors">
               <Mail size={13} /> Contact buyers by mail
             </a>
-            <button onClick={() => onUpdate(order.id, "Cancelled")} className="flex items-center gap-1.5 px-3 py-1.5 border border-[#ddd] text-[#555] rounded text-[12px] font-bold hover:bg-[#f5f5f5] transition-colors">
+            <button onClick={() => onUpdate(order.id, "Cancelled")} className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-700 rounded text-[12px] font-bold hover:bg-slate-50 transition-colors">
               <XCircle size={13} /> Cancel Order
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-[#ddd] text-[#555] rounded text-[12px] font-bold hover:bg-[#f5f5f5] transition-colors">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-700 rounded text-[12px] font-bold hover:bg-slate-50 transition-colors">
               <Upload size={13} /> Upload/View
             </button>
           </div>
         </div>
 
         {/* Product info */}
-        <div className="px-6 py-4 border-b border-[#e0e0e0] grid grid-cols-2 gap-4 text-[13px]">
-          <div><span className="text-[#999]">Game:</span> <span className="font-medium text-[#333] ml-2">{order.products?.category || "—"}</span></div>
-          <div><span className="text-[#999]">Product Title:</span> <span className="font-medium text-[#333] ml-2">{order.products?.title || "—"}</span></div>
+        <div className="px-6 py-4 border-b border-slate-200 grid grid-cols-2 gap-4 text-[13px]">
+          <div><span className="text-slate-400">Game:</span> <span className="font-medium text-slate-900 ml-2">{order.products?.category || "—"}</span></div>
+          <div><span className="text-slate-400">Product Title:</span> <span className="font-medium text-slate-900 ml-2">{order.products?.title || "—"}</span></div>
         </div>
 
         {/* Accounts Info / Credential Form */}
         <div className="px-6 py-4">
-          <div className="border border-[#e0e0e0] rounded">
+          <div className="border border-slate-200 rounded">
             <div className="flex items-center justify-between px-4 py-3 bg-[#222] text-white rounded-t">
               <span className="text-[13px] font-bold">Accounts Info</span>
               <button className="w-6 h-6 rounded bg-white/20 text-white text-lg leading-none flex items-center justify-center hover:bg-white/30">+</button>
@@ -407,15 +407,15 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
                 "Additional information",
               ].map((field, i) => (
                 <div key={i}>
-                  <label className="text-[12px] text-[#555] block mb-1">{field}</label>
+                  <label className="text-[12px] text-slate-700 block mb-1">{field}</label>
                   <input
-                    className="w-full border-b border-[#ddd] py-1.5 px-1 text-[13px] focus:outline-none focus:border-[#e4393c] bg-transparent transition-colors"
+                    className="w-full border-b border-slate-200 py-1.5 px-1 text-[13px] focus:outline-none focus:border-primary-600 bg-transparent transition-colors"
                     placeholder={field.startsWith("*") ? "" : "If not filled in (none)"}
                   />
                 </div>
               ))}
               <div className="pt-2">
-                <button className="px-5 py-2 bg-[#e4393c] text-white text-[13px] font-bold rounded hover:bg-[#c0292b] transition-colors">
+                <button className="px-5 py-2 bg-primary-600 text-white text-[13px] font-bold rounded hover:bg-primary-700 transition-colors">
                   Submit
                 </button>
               </div>
@@ -431,7 +431,7 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
               onChange={e => setDmText(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSendDm()}
               placeholder="Send a direct message to customer..."
-              className="flex-1 border border-[#ddd] rounded px-3 py-2 text-[13px] focus:outline-none focus:border-[#e4393c]"
+              className="flex-1 border border-slate-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-primary-600"
             />
             <button
               onClick={handleSendDm}
@@ -442,21 +442,21 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
               Send
             </button>
           </div>
-          {dmSent && <p className="text-[11px] text-[#52c41a] font-bold mb-2">✓ Message sent to customer's chat.</p>}
+          {dmSent && <p className="text-[11px] text-emerald-600 font-bold mb-2">✓ Message sent to customer's chat.</p>}
 
           <div className="flex justify-end">
             <button
               disabled={isUpdating}
               onClick={handleDeliver}
-              className="px-6 py-2.5 bg-[#e4393c] text-white text-[13px] font-bold rounded hover:bg-[#c0292b] transition-colors flex items-center gap-2 disabled:opacity-60"
+              className="px-6 py-2.5 bg-primary-600 text-white text-[13px] font-bold rounded hover:bg-primary-700 transition-colors flex items-center gap-2 disabled:opacity-60"
             >
               {isUpdating ? <Loader2 size={14} className="animate-spin" /> : null}
               Confirm Delivered
             </button>
           </div>
 
-          <div className="mt-3 pt-3 border-t border-[#f0f0f0]">
-            <p className="text-[11px] text-[#999]">Trading Status 0/1 delivered</p>
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <p className="text-[11px] text-slate-400">Trading Status 0/1 delivered</p>
           </div>
         </div>
       </motion.div>

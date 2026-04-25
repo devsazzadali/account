@@ -121,7 +121,7 @@ export function AdminProducts() {
             animate={{ opacity: 1, y: 0, x: "-50%" }}
             exit={{ opacity: 0, y: -20, x: "-50%" }}
             className={`fixed top-4 left-1/2 z-[300] px-5 py-3 rounded shadow-lg flex items-center gap-2 text-white text-[13px] font-bold ${
-              toast.type === "success" ? "bg-[#52c41a]" : "bg-[#e4393c]"
+              toast.type === "success" ? "bg-emerald-500" : "bg-primary-600"
             }`}
           >
             {toast.type === "success" ? <Check size={16} /> : <AlertCircle size={16} />}
@@ -131,51 +131,51 @@ export function AdminProducts() {
       </AnimatePresence>
 
       {/* Header */}
-      <div className="border-b border-[#e0e0e0] px-6 py-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#fafafa]">
+      <div className="border-b border-slate-200 px-6 py-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50">
         <div>
-          <h2 className="text-[20px] font-bold text-[#333]">Product Management</h2>
-          <p className="text-[13px] text-[#999] mt-0.5">Manage your marketplace listings and inventory</p>
+          <h2 className="text-[20px] font-bold text-slate-900">Product Management</h2>
+          <p className="text-[13px] text-slate-400 mt-0.5">Manage your marketplace listings and inventory</p>
         </div>
         <button
           onClick={() => handleOpenDrawer()}
-          className="px-5 py-2.5 bg-[#e4393c] text-white text-[13px] font-bold rounded hover:bg-[#c0292b] transition-colors flex items-center gap-2 shadow-sm"
+          className="px-5 py-2.5 bg-primary-600 text-white text-[13px] font-bold rounded hover:bg-primary-700 transition-colors flex items-center gap-2 shadow-sm"
         >
           <Plus size={16} /> Create New Offer
         </button>
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-[#e0e0e0]">
-        <MiniStat label="Total Products" value={products.length} color="#1976d2" />
-        <MiniStat label="Active" value={products.filter(p => p.stock > 0).length} color="#52c41a" />
-        <MiniStat label="Low Stock" value={products.filter(p => p.stock <= 5 && p.stock > 0).length} color="#fa8c16" />
-        <MiniStat label="Out of Stock" value={products.filter(p => p.stock === 0).length} color="#e4393c" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-slate-200">
+        <MiniStat label="Total Products" value={products.length} color="#2563eb" />
+        <MiniStat label="Active" value={products.filter(p => p.stock > 0).length} color="#059669" />
+        <MiniStat label="Low Stock" value={products.filter(p => p.stock <= 5 && p.stock > 0).length} color="#f59e0b" />
+        <MiniStat label="Out of Stock" value={products.filter(p => p.stock === 0).length} color="#0d9488" />
       </div>
 
       {/* Filter Bar */}
-      <div className="px-6 py-4 border-b border-[#e0e0e0] bg-[#fafafa]">
+      <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="relative md:col-span-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#bbb]" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search by product name or ID..."
-              className="w-full pl-10 pr-4 py-2 border border-[#ddd] rounded text-[13px] focus:outline-none focus:border-[#e4393c] bg-white"
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded text-[13px] focus:outline-none focus:border-primary-600 bg-white"
             />
           </div>
           <select
             value={filterCategory}
             onChange={e => setFilterCategory(e.target.value)}
-            className="border border-[#ddd] rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-[#e4393c]"
+            className="border border-slate-200 rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-primary-600"
           >
             {categories.map(c => <option key={c}>{c}</option>)}
           </select>
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="border border-[#ddd] rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-[#e4393c]"
+            className="border border-slate-200 rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-primary-600"
           >
             <option>All</option>
             <option>Active</option>
@@ -187,70 +187,70 @@ export function AdminProducts() {
       {/* Product Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-[13px]">
-          <thead className="bg-[#f5f5f5] border-b border-[#e0e0e0]">
+          <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="px-6 py-3 font-bold text-[#333]">Product</th>
-              <th className="px-6 py-3 font-bold text-[#333]">Category</th>
-              <th className="px-6 py-3 font-bold text-[#333]">Price</th>
-              <th className="px-6 py-3 font-bold text-[#333]">Stock</th>
-              <th className="px-6 py-3 font-bold text-[#333]">Status</th>
-              <th className="px-6 py-3 font-bold text-[#333] text-right">Actions</th>
+              <th className="px-6 py-3 font-bold text-slate-900">Product</th>
+              <th className="px-6 py-3 font-bold text-slate-900">Category</th>
+              <th className="px-6 py-3 font-bold text-slate-900">Price</th>
+              <th className="px-6 py-3 font-bold text-slate-900">Stock</th>
+              <th className="px-6 py-3 font-bold text-slate-900">Status</th>
+              <th className="px-6 py-3 font-bold text-slate-900 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#f0f0f0]">
             {loading ? (
               <tr><td colSpan={6} className="py-16 text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#e4393c]" />
-                <p className="text-[12px] text-[#999] mt-2">Loading products...</p>
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary-600" />
+                <p className="text-[12px] text-slate-400 mt-2">Loading products...</p>
               </td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={6} className="py-16 text-center text-[#999]">
+              <tr><td colSpan={6} className="py-16 text-center text-slate-400">
                 <Package size={40} className="mx-auto text-[#ddd] mb-2" />
                 <p className="text-[13px]">No products found</p>
               </td></tr>
             ) : filtered.map(product => (
-              <tr key={product.id} className="hover:bg-[#fff8f8] transition-colors group">
+              <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded bg-[#f5f5f5] border border-[#e0e0e0] overflow-hidden shrink-0">
+                    <div className="w-12 h-12 rounded bg-slate-50 border border-slate-200 overflow-hidden shrink-0">
                       <img src={product.image} className="w-full h-full object-cover" alt="" />
                     </div>
                     <div className="min-w-0">
-                      <div className="font-semibold text-[#333] truncate max-w-[280px] group-hover:text-[#e4393c] transition-colors">
+                      <div className="font-semibold text-slate-900 truncate max-w-[280px] group-hover:text-primary-600 transition-colors">
                         {product.title}
                       </div>
-                      <div className="text-[11px] text-[#999] mt-0.5">
+                      <div className="text-[11px] text-slate-400 mt-0.5">
                         ID: #{product.id.split("-")[0].toUpperCase()}
                       </div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="inline-block px-2.5 py-0.5 rounded bg-[#f0f2f5] text-[#555] text-[11px] font-bold border border-[#e0e0e0]">
+                  <span className="inline-block px-2.5 py-0.5 rounded bg-[#f0f2f5] text-slate-700 text-[11px] font-bold border border-slate-200">
                     {product.category || "—"}
                   </span>
                 </td>
-                <td className="px-6 py-4 font-bold text-[#e4393c] text-[14px]">
+                <td className="px-6 py-4 font-bold text-primary-600 text-[14px]">
                   ${Number(product.price).toFixed(2)}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-16 h-1.5 bg-[#f0f0f0] rounded-full overflow-hidden">
+                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${product.stock > 5 ? "bg-[#52c41a]" : product.stock > 0 ? "bg-[#fa8c16]" : "bg-[#e4393c]"}`}
+                        className={`h-full rounded-full ${product.stock > 5 ? "bg-emerald-500" : product.stock > 0 ? "bg-amber-500" : "bg-primary-600"}`}
                         style={{ width: `${Math.min(100, (product.stock / 20) * 100)}%` }}
                       />
                     </div>
-                    <span className="text-[12px] font-bold text-[#333]">{product.stock}</span>
+                    <span className="text-[12px] font-bold text-slate-900">{product.stock}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   {product.stock > 0 ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-[#f6ffed] text-[#52c41a] border border-[#b7eb8f]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#52c41a] animate-pulse" /> Active
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Active
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-[#fff1f0] text-[#e4393c] border border-[#ffa39e]">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-red-50 text-primary-600 border border-red-200">
                       Out of Stock
                     </span>
                   )}
@@ -259,14 +259,14 @@ export function AdminProducts() {
                   <div className="flex items-center justify-end gap-1">
                     <button
                       onClick={() => handleOpenDrawer(product)}
-                      className="p-2 text-[#999] hover:text-[#1976d2] hover:bg-[#e6f7ff] rounded transition-colors"
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                       title="Edit"
                     >
                       <Edit size={15} />
                     </button>
                     <button
                       onClick={() => handleDelete(product.id)}
-                      className="p-2 text-[#999] hover:text-[#e4393c] hover:bg-[#fff1f0] rounded transition-colors"
+                      className="p-2 text-slate-400 hover:text-primary-600 hover:bg-red-50 rounded transition-colors"
                       title="Delete"
                     >
                       <Trash2 size={15} />
@@ -280,7 +280,7 @@ export function AdminProducts() {
       </div>
 
       {/* Results count */}
-      <div className="px-6 py-3 border-t border-[#e0e0e0] bg-[#fafafa] text-[12px] text-[#999]">
+      <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 text-[12px] text-slate-400">
         Showing {filtered.length} of {products.length} products
       </div>
 
@@ -299,12 +299,12 @@ export function AdminProducts() {
               className="fixed top-0 right-0 h-full w-full max-w-xl bg-white shadow-2xl z-[101] flex flex-col overflow-hidden"
             >
               {/* Drawer Header */}
-              <div className="px-6 py-4 border-b border-[#e0e0e0] flex items-center justify-between bg-[#fafafa]">
-                <h3 className="text-[16px] font-bold text-[#333]">
+              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <h3 className="text-[16px] font-bold text-slate-900">
                   {editingId ? "Edit Product" : "Create New Offer"}
                 </h3>
-                <button onClick={() => setShowDrawer(false)} className="p-1.5 hover:bg-[#f0f0f0] rounded transition-colors">
-                  <X size={18} className="text-[#999]" />
+                <button onClick={() => setShowDrawer(false)} className="p-1.5 hover:bg-slate-100 rounded transition-colors">
+                  <X size={18} className="text-slate-400" />
                 </button>
               </div>
 
@@ -314,21 +314,21 @@ export function AdminProducts() {
                 {/* Image */}
                 <Section title="Product Image" icon={<ImageIcon size={15} />}>
                   <div className="flex gap-4">
-                    <div className="w-24 h-24 rounded border-2 border-dashed border-[#ddd] bg-[#fafafa] overflow-hidden flex items-center justify-center shrink-0">
+                    <div className="w-24 h-24 rounded border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center shrink-0">
                       {formData.image ? (
                         <img src={formData.image} className="w-full h-full object-cover" alt="" />
                       ) : (
-                        <Upload size={20} className="text-[#ccc]" />
+                        <Upload size={20} className="text-slate-300" />
                       )}
                     </div>
                     <div className="flex-1">
-                      <label className="text-[12px] text-[#555] block mb-1">Image URL</label>
+                      <label className="text-[12px] text-slate-700 block mb-1">Image URL</label>
                       <input
                         type="text"
                         value={formData.image}
                         onChange={e => setFormData({ ...formData, image: e.target.value })}
                         placeholder="https://example.com/image.jpg"
-                        className="w-full border border-[#ddd] rounded px-3 py-2 text-[13px] focus:outline-none focus:border-[#e4393c]"
+                        className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-primary-600"
                       />
                     </div>
                   </div>
@@ -341,7 +341,7 @@ export function AdminProducts() {
                       required type="text" value={formData.title}
                       onChange={e => setFormData({ ...formData, title: e.target.value })}
                       placeholder="e.g. Valorant Immortal Smurf | 50+ Skins"
-                      className="w-full border border-[#ddd] rounded px-3 py-2 text-[13px] focus:outline-none focus:border-[#e4393c]"
+                      className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-primary-600"
                     />
                   </Field>
                   <div className="grid grid-cols-2 gap-4 mt-3">
@@ -350,14 +350,14 @@ export function AdminProducts() {
                         required type="number" step="0.01" value={formData.price}
                         onChange={e => setFormData({ ...formData, price: e.target.value })}
                         placeholder="29.99"
-                        className="w-full border border-[#ddd] rounded px-3 py-2 text-[13px] focus:outline-none focus:border-[#e4393c]"
+                        className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-primary-600"
                       />
                     </Field>
                     <Field label="Category">
                       <select
                         value={formData.category}
                         onChange={e => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full border border-[#ddd] rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-[#e4393c]"
+                        className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-primary-600"
                       >
                         <option>Game Accounts</option>
                         <option>Software Keys</option>
@@ -372,13 +372,13 @@ export function AdminProducts() {
                 <Section title="Delivery & Stock" icon={<Zap size={15} />}>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label="Delivery Method">
-                      <div className="flex gap-1 p-0.5 bg-[#f5f5f5] rounded border border-[#ddd]">
+                      <div className="flex gap-1 p-0.5 bg-slate-50 rounded border border-slate-200">
                         {["Instant Delivery", "Manual Escrow"].map(m => (
                           <button
                             key={m} type="button"
                             onClick={() => setFormData({ ...formData, deliveryMethod: m })}
                             className={`flex-1 py-1.5 text-[11px] font-bold rounded transition-all ${
-                              formData.deliveryMethod === m ? "bg-white shadow-sm text-[#e4393c] border border-[#e0e0e0]" : "text-[#999]"
+                              formData.deliveryMethod === m ? "bg-white shadow-sm text-primary-600 border border-slate-200" : "text-slate-400"
                             }`}
                           >
                             {m.split(" ")[0]}
@@ -390,14 +390,14 @@ export function AdminProducts() {
                       <input
                         type="number" value={formData.stock}
                         onChange={e => setFormData({ ...formData, stock: e.target.value })}
-                        className="w-full border border-[#ddd] rounded px-3 py-2 text-[13px] focus:outline-none focus:border-[#e4393c]"
+                        className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-primary-600"
                       />
                     </Field>
                     <Field label="Platform">
                       <select
                         value={formData.platform}
                         onChange={e => setFormData({ ...formData, platform: e.target.value })}
-                        className="w-full border border-[#ddd] rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-[#e4393c]"
+                        className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-primary-600"
                       >
                         <option>Global PC</option>
                         <option>PlayStation Network</option>
@@ -409,7 +409,7 @@ export function AdminProducts() {
                       <select
                         value={formData.region}
                         onChange={e => setFormData({ ...formData, region: e.target.value })}
-                        className="w-full border border-[#ddd] rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-[#e4393c]"
+                        className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-primary-600"
                       >
                         <option>Worldwide</option>
                         <option>North America (NA)</option>
@@ -418,15 +418,15 @@ export function AdminProducts() {
                       </select>
                     </Field>
                   </div>
-                  <label className="flex items-center gap-3 mt-4 p-3 bg-[#fafafa] border border-[#ddd] rounded cursor-pointer hover:border-[#e4393c] transition-colors">
+                  <label className="flex items-center gap-3 mt-4 p-3 bg-slate-50 border border-slate-200 rounded cursor-pointer hover:border-primary-600 transition-colors">
                     <input
                       type="checkbox" checked={formData.fullAccess}
                       onChange={e => setFormData({ ...formData, fullAccess: e.target.checked })}
-                      className="w-4 h-4 rounded border-[#ddd] text-[#e4393c] focus:ring-[#e4393c]"
+                      className="w-4 h-4 rounded border-slate-200 text-primary-600 focus:ring-primary-500"
                     />
                     <div>
-                      <div className="text-[13px] font-bold text-[#333]">Provide Full Original Email Access</div>
-                      <div className="text-[11px] text-[#999]">Increases trust and sale price</div>
+                      <div className="text-[13px] font-bold text-slate-900">Provide Full Original Email Access</div>
+                      <div className="text-[11px] text-slate-400">Increases trust and sale price</div>
                     </div>
                   </label>
                 </Section>
@@ -437,23 +437,23 @@ export function AdminProducts() {
                     rows={4} value={formData.description}
                     onChange={e => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Provide detailed product description, features, limitations..."
-                    className="w-full border border-[#ddd] rounded px-3 py-2 text-[13px] focus:outline-none focus:border-[#e4393c] resize-none"
+                    className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-primary-600 resize-none"
                   />
                 </Section>
               </div>
 
               {/* Drawer Footer */}
-              <div className="px-6 py-4 border-t border-[#e0e0e0] flex gap-3 bg-[#fafafa]">
+              <div className="px-6 py-4 border-t border-slate-200 flex gap-3 bg-slate-50">
                 <button
                   onClick={() => setShowDrawer(false)}
-                  className="flex-1 py-2.5 border border-[#ddd] text-[#555] text-[13px] font-bold rounded hover:bg-[#f5f5f5] transition-colors"
+                  className="flex-1 py-2.5 border border-slate-200 text-slate-700 text-[13px] font-bold rounded hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="flex-[2] py-2.5 bg-[#e4393c] text-white text-[13px] font-bold rounded hover:bg-[#c0292b] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-[2] py-2.5 bg-primary-600 text-white text-[13px] font-bold rounded hover:bg-primary-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : (
                     <>{editingId ? "Update Product" : "Publish Offer"} <ArrowRight size={14} /></>
@@ -470,8 +470,8 @@ export function AdminProducts() {
 
 function MiniStat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="px-6 py-4 border-r border-[#e0e0e0] last:border-r-0">
-      <div className="text-[11px] text-[#999] font-medium uppercase tracking-wide">{label}</div>
+    <div className="px-6 py-4 border-r border-slate-200 last:border-r-0">
+      <div className="text-[11px] text-slate-400 font-medium uppercase tracking-wide">{label}</div>
       <div className="text-[22px] font-black mt-0.5" style={{ color }}>{value}</div>
     </div>
   );
@@ -479,9 +479,9 @@ function MiniStat({ label, value, color }: { label: string; value: number; color
 
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="border border-[#e0e0e0] rounded">
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-[#f5f5f5] border-b border-[#e0e0e0] text-[13px] font-bold text-[#333]">
-        <span className="text-[#999]">{icon}</span> {title}
+    <div className="border border-slate-200 rounded">
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-[13px] font-bold text-slate-900">
+        <span className="text-slate-400">{icon}</span> {title}
       </div>
       <div className="p-4">{children}</div>
     </div>
@@ -491,7 +491,7 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-[12px] text-[#555] block mb-1">{label}</label>
+      <label className="text-[12px] text-slate-700 block mb-1">{label}</label>
       {children}
     </div>
   );
