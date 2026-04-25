@@ -125,10 +125,6 @@ export function AdminOverview({ setActiveTab }: Props) {
       </div>
 
       {/* ── Quick Links — Row 1 ── */}
-      <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-
-        {/* Products */}
-      {/* ── Quick Links — Row 1 ── */}
       <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
         {/* Products */}
