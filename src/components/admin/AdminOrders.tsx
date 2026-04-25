@@ -274,6 +274,11 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
+  const [credentialFields, setCredentialFields] = useState<Record<string, string>>(() => {
+    try {
+      return typeof order.credentials === 'string' ? JSON.parse(order.credentials) : (order.credentials || {});
+    } catch (e) {
+      return { "Login Account": order.credentials || "" };
     }
   });
 
