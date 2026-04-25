@@ -3,7 +3,8 @@ import {
   Search, User, Send, CheckCheck, Loader2, MoreVertical, Paperclip, 
   ShieldCheck, CheckCircle2, MessageSquare, RefreshCw, Clock, 
   Info, ExternalLink, Filter, ChevronRight, Mail, Phone,
-  AlertCircle, Archive, CheckCircle
+  AlertCircle, Archive, CheckCircle, Radio, Send as SendIcon,
+  Users, UserPlus, Zap
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
@@ -18,9 +19,14 @@ export function AdminMessages() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
   const [userOrders, setUserOrders] = useState<any[]>([]);
+  
+  // Broadcast state
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
 
   useEffect(() => {
     fetchMessages();
@@ -116,6 +122,34 @@ export function AdminMessages() {
     }
   }
 
+  async function handleBroadcast() {
+    if (!broadcastMessage.trim()) return;
+    setIsBroadcasting(true);
+    try {
+       // Send to all users currently in the allProfiles list
+       const promises = allProfiles.map(profile => {
+         return supabase.from('messages').insert({
+           username: profile.username,
+           subject: "Global Announcement",
+           message: "[ADMIN_INITIATED]",
+           reply: broadcastMessage,
+           status: 'replied',
+           replied_at: new Date().toISOString()
+         });
+       });
+       
+       await Promise.all(promises);
+       alert(`Broadcast sent to ${allProfiles.length} users successfully!`);
+       setBroadcastMessage("");
+       setShowBroadcastModal(false);
+       fetchMessages();
+    } catch (e: any) {
+      alert("Broadcast Error: " + e.message);
+    } finally {
+      setIsBroadcasting(false);
+    }
+  }
+
   const groupedUsers = useMemo(() => {
       const map = new Map<string, any[]>();
       messages.forEach(msg => {
@@ -159,9 +193,14 @@ export function AdminMessages() {
               <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" />
               Support Portal
             </h2>
-            <button onClick={() => setShowNewChatModal(true)} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors text-slate-500">
-              <PlusCircleIcon size={18} />
-            </button>
+            <div className="flex gap-1">
+               <button onClick={() => setShowBroadcastModal(true)} className="p-2 bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100 transition-colors" title="Global Broadcast">
+                <Zap size={18} />
+              </button>
+              <button onClick={() => setShowNewChatModal(true)} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors text-slate-500" title="New Ticket">
+                <PlusCircleIcon size={18} />
+              </button>
+            </div>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -389,6 +428,53 @@ export function AdminMessages() {
            </div>
         </div>
       )}
+
+      {/* Broadcast Modal ── */}
+      <AnimatePresence>
+        {showBroadcastModal && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowBroadcastModal(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col">
+              <div className="px-8 py-6 bg-primary-600 text-white flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                   <Zap size={24} />
+                   <div>
+                      <h3 className="text-xl font-black tracking-tight">Global Broadcast</h3>
+                      <p className="text-[11px] text-white/60 font-bold uppercase tracking-widest">Send message to {allProfiles.length} identities</p>
+                   </div>
+                </div>
+                <button onClick={() => setShowBroadcastModal(false)} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><X size={20} /></button>
+              </div>
+              <div className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Announcement Message</label>
+                  <textarea 
+                    value={broadcastMessage}
+                    onChange={e => setBroadcastMessage(e.target.value)}
+                    placeholder="Type your global message here..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-600 transition-all min-h-[150px] resize-none"
+                  />
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                   <AlertCircle size={20} className="text-amber-600 shrink-0" />
+                   <p className="text-[12px] text-amber-700 font-medium">This message will be sent to <strong>ALL</strong> registered users. This action cannot be undone.</p>
+                </div>
+                <div className="flex gap-4">
+                   <button onClick={() => setShowBroadcastModal(false)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
+                   <button 
+                    disabled={isBroadcasting || !broadcastMessage.trim()}
+                    onClick={handleBroadcast}
+                    className="flex-[2] py-4 bg-primary-600 text-white rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary-600/20"
+                  >
+                    {isBroadcasting ? <Loader2 size={16} className="animate-spin" /> : <SendIcon size={16} />}
+                    Dispatch Broadcast
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* New Chat Modal ── */}
       <AnimatePresence>
