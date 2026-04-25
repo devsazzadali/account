@@ -3,7 +3,7 @@ import {
   Plus, Edit, Trash2, Filter, Loader2, Search, X, Upload,
   Image as ImageIcon, Check, Package, DollarSign, Layers,
   ArrowRight, AlertCircle, Globe, MonitorSmartphone, ShieldCheck,
-  AlignLeft, Zap, MoreVertical, Info, ChevronDown, Eye, Copy
+  AlignLeft, Zap, MoreVertical, Info, ChevronDown, Eye, Copy, Trash
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
@@ -13,6 +13,7 @@ export function AdminProducts() {
   const [loading, setLoading] = useState(true);
   const [showDrawer, setShowDrawer] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -100,21 +101,35 @@ export function AdminProducts() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    if (!confirm("Are you sure you want to delete this asset from the registry?")) return;
+    
+    setDeletingId(id);
     try {
       const { error } = await supabase.from("products").delete().eq("id", id);
-      if (error) throw error;
-      setProducts(products.filter(p => p.id !== id));
-      showToast("Product removed");
-    } catch (e: any) { showToast(e.message, "error"); }
+      
+      if (error) {
+          // Check for foreign key constraint (orders)
+          if (error.code === '23503') {
+              throw new Error("Cannot delete product: It is linked to existing orders. Try setting stock to 0 instead.");
+          }
+          throw error;
+      }
+      
+      setProducts(prev => prev.filter(p => p.id !== id));
+      showToast("Asset purged from registry");
+    } catch (e: any) { 
+      showToast(e.message, "error"); 
+    } finally { 
+      setDeletingId(null); 
+    }
   }
 
   const categories = ["All", ...categoriesList.map(c => c.name)];
 
   const filtered = products.filter(p => {
     const matchSearch = searchQuery === "" ||
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.id.toLowerCase().includes(searchQuery.toLowerCase());
+      (p.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.id || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchCat = filterCategory === "All" || p.category === filterCategory;
     const matchStatus = filterStatus === "All" ||
       (filterStatus === "Active" && p.stock > 0) ||
@@ -123,7 +138,7 @@ export function AdminProducts() {
   });
 
   return (
-    <div className="bg-white min-h-screen font-sans">
+    <div className="bg-[#f8fafc] min-h-screen font-sans">
 
       {/* Toast */}
       <AnimatePresence>
@@ -132,168 +147,171 @@ export function AdminProducts() {
             initial={{ opacity: 0, y: -20, x: "-50%" }}
             animate={{ opacity: 1, y: 0, x: "-50%" }}
             exit={{ opacity: 0, y: -20, x: "-50%" }}
-            className={`fixed top-4 left-1/2 z-[300] px-5 py-3 rounded shadow-lg flex items-center gap-2 text-white text-[13px] font-bold ${
-              toast.type === "success" ? "bg-emerald-500" : "bg-primary-600"
+            className={`fixed top-6 left-1/2 z-[3000] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-white text-[13px] font-black uppercase tracking-widest ${
+              toast.type === "success" ? "bg-emerald-500 shadow-emerald-500/20" : "bg-red-600 shadow-red-500/20"
             }`}
           >
-            {toast.type === "success" ? <Check size={16} /> : <AlertCircle size={16} />}
+            {toast.type === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
             {toast.message}
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Header */}
-      <div className="border-b border-slate-200 px-6 py-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50">
+      <div className="bg-white border-b border-slate-200 px-8 py-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h2 className="text-[20px] font-bold text-slate-900">Product Management</h2>
-          <p className="text-[13px] text-slate-400 mt-0.5">Manage your marketplace listings and inventory</p>
+          <div className="flex items-center gap-3 mb-1">
+             <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Asset Inventory</h2>
+             <span className="px-3 py-1 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-full">Admin Node</span>
+          </div>
+          <p className="text-[14px] text-slate-500 font-medium">Manage marketplace listings, price matrices, and stock levels.</p>
         </div>
         <button
           onClick={() => handleOpenDrawer()}
-          className="px-5 py-2.5 bg-primary-600 text-white text-[13px] font-bold rounded hover:bg-primary-700 transition-colors flex items-center gap-2 shadow-sm"
+          className="px-8 py-4 bg-[#1dbf73] text-white text-[13px] font-black uppercase tracking-widest rounded-2xl hover:bg-[#19a463] transition-all flex items-center gap-3 shadow-xl shadow-emerald-500/20 active:scale-95"
         >
-          <Plus size={16} /> Create New Offer
+          <Plus size={18} /> Initialize New Asset
         </button>
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-slate-200">
-        <MiniStat label="Total Products" value={products.length} color="#2563eb" />
-        <MiniStat label="Active" value={products.filter(p => p.stock > 0).length} color="#059669" />
-        <MiniStat label="Low Stock" value={products.filter(p => p.stock <= 5 && p.stock > 0).length} color="#f59e0b" />
-        <MiniStat label="Out of Stock" value={products.filter(p => p.stock === 0).length} color="#0d9488" />
-      </div>
-
-      {/* Filter Bar */}
-      <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search by product name or ID..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded text-[13px] focus:outline-none focus:border-primary-600 bg-white"
-            />
-          </div>
-          <select
-            value={filterCategory}
-            onChange={e => setFilterCategory(e.target.value)}
-            className="border border-slate-200 rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-primary-600"
-          >
-            {categories.map(c => <option key={c}>{c}</option>)}
-          </select>
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            className="border border-slate-200 rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-primary-600"
-          >
-            <option>All</option>
-            <option>Active</option>
-            <option>Out of Stock</option>
-          </select>
+      <div className="p-8 space-y-8">
+        {/* Stats Row */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <StatCard label="Total Registry" value={products.length} icon={<Package size={20} />} color="text-slate-900" />
+            <StatCard label="Active Nodes" value={products.filter(p => p.stock > 0).length} icon={<Zap size={20} />} color="text-emerald-500" />
+            <StatCard label="Depleted Units" value={products.filter(p => p.stock === 0).length} icon={<XCircle size={20} />} color="text-red-500" />
+            <StatCard label="Valuation" value={`$${products.reduce((acc, p) => acc + (p.price * p.stock), 0).toLocaleString()}`} icon={<DollarSign size={20} />} color="text-blue-500" />
         </div>
-      </div>
 
-      {/* Product Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-[13px]">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th className="px-6 py-3 font-bold text-slate-900">Product</th>
-              <th className="px-6 py-3 font-bold text-slate-900">Category</th>
-              <th className="px-6 py-3 font-bold text-slate-900">Price</th>
-              <th className="px-6 py-3 font-bold text-slate-900">Stock</th>
-              <th className="px-6 py-3 font-bold text-slate-900">Status</th>
-              <th className="px-6 py-3 font-bold text-slate-900 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#f0f0f0]">
-            {loading ? (
-              <tr><td colSpan={6} className="py-16 text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary-600" />
-                <p className="text-[12px] text-slate-400 mt-2">Loading products...</p>
-              </td></tr>
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan={6} className="py-16 text-center text-slate-400">
-                <Package size={40} className="mx-auto text-[#ddd] mb-2" />
-                <p className="text-[13px]">No products found</p>
-              </td></tr>
-            ) : filtered.map(product => (
-              <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded bg-slate-50 border border-slate-200 overflow-hidden shrink-0">
-                      <img src={product.image} className="w-full h-full object-cover" alt="" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-semibold text-slate-900 truncate max-w-[280px] group-hover:text-primary-600 transition-colors">
-                        {product.title}
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        ID: #{product.id.split("-")[0].toUpperCase()}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-block px-2.5 py-0.5 rounded bg-[#f0f2f5] text-slate-700 text-[11px] font-bold border border-slate-200">
-                    {product.category || "—"}
-                  </span>
-                </td>
-                <td className="px-6 py-4 font-bold text-primary-600 text-[14px]">
-                  ${Number(product.price).toFixed(2)}
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${product.stock > 5 ? "bg-emerald-500" : product.stock > 0 ? "bg-amber-500" : "bg-primary-600"}`}
-                        style={{ width: `${Math.min(100, (product.stock / 20) * 100)}%` }}
-                      />
-                    </div>
-                    <span className="text-[12px] font-bold text-slate-900">{product.stock}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  {product.stock > 0 ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Active
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-red-50 text-primary-600 border border-red-200">
-                      Out of Stock
-                    </span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      onClick={() => handleOpenDrawer(product)}
-                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      title="Edit"
-                    >
-                      <Edit size={15} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="p-2 text-slate-400 hover:text-primary-600 hover:bg-red-50 rounded transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        {/* Filter Bar */}
+        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+            <div className="relative flex-1 w-full">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search by asset title or hash..."
+                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] font-bold text-slate-900 focus:outline-none focus:border-[#1dbf73] transition-all"
+                />
+            </div>
+            <div className="flex gap-3 w-full md:w-auto">
+                <select
+                    value={filterCategory}
+                    onChange={e => setFilterCategory(e.target.value)}
+                    className="flex-1 md:w-48 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[13px] font-bold focus:outline-none"
+                >
+                    {categories.map(c => <option key={c}>{c}</option>)}
+                </select>
+                <select
+                    value={filterStatus}
+                    onChange={e => setFilterStatus(e.target.value)}
+                    className="flex-1 md:w-48 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[13px] font-bold focus:outline-none"
+                >
+                    <option>All</option>
+                    <option>Active</option>
+                    <option>Out of Stock</option>
+                </select>
+            </div>
+        </div>
 
-      {/* Results count */}
-      <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 text-[12px] text-slate-400">
-        Showing {filtered.length} of {products.length} products
+        {/* Product Table */}
+        <div className="bg-white border border-slate-200 rounded-[3rem] shadow-xl shadow-slate-200/50 overflow-hidden">
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-[14px]">
+                <thead className="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                    <th className="px-8 py-5 font-black text-slate-400 uppercase tracking-widest text-[10px]">Asset Identity</th>
+                    <th className="px-8 py-5 font-black text-slate-400 uppercase tracking-widest text-[10px]">Node Category</th>
+                    <th className="px-8 py-5 font-black text-slate-400 uppercase tracking-widest text-[10px]">Price Unit</th>
+                    <th className="px-8 py-5 font-black text-slate-400 uppercase tracking-widest text-[10px]">Available Units</th>
+                    <th className="px-8 py-5 font-black text-slate-400 uppercase tracking-widest text-[10px]">Status</th>
+                    <th className="px-8 py-5 font-black text-[#1dbf73] uppercase tracking-widest text-[10px] text-right">Control</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                    {loading ? (
+                    <tr><td colSpan={6} className="py-32 text-center">
+                        <Loader2 className="w-10 h-10 animate-spin mx-auto text-[#1dbf73] mb-4" />
+                        <p className="text-[12px] text-slate-400 font-black uppercase tracking-widest">Decrypting Inventory...</p>
+                    </td></tr>
+                    ) : filtered.length === 0 ? (
+                    <tr><td colSpan={6} className="py-32 text-center">
+                        <Package size={48} className="mx-auto text-slate-100 mb-4" />
+                        <p className="text-[14px] font-black text-slate-900">Registry Entry Empty</p>
+                    </td></tr>
+                    ) : filtered.map(product => (
+                    <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-8 py-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                            <img src={product.image} className="w-full h-full object-cover" alt="" />
+                            </div>
+                            <div className="min-w-0">
+                            <div className="font-black text-slate-900 truncate max-w-[280px] group-hover:text-[#1dbf73] transition-colors">
+                                {product.title}
+                            </div>
+                            <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                                Hash: {product.id.split("-")[0].toUpperCase()}
+                            </div>
+                            </div>
+                        </div>
+                        </td>
+                        <td className="px-8 py-6">
+                        <span className="inline-block px-3 py-1 rounded-full bg-slate-50 text-slate-600 text-[11px] font-black uppercase tracking-widest border border-slate-100">
+                            {product.category || "—"}
+                        </span>
+                        </td>
+                        <td className="px-8 py-6 font-black text-slate-900 text-[16px]">
+                        ${Number(product.price).toFixed(2)}
+                        </td>
+                        <td className="px-8 py-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                                className={`h-full rounded-full ${product.stock > 5 ? "bg-emerald-500" : product.stock > 0 ? "bg-amber-500" : "bg-red-500"}`}
+                                style={{ width: `${Math.min(100, (product.stock / 20) * 100)}%` }}
+                            />
+                            </div>
+                            <span className="text-[13px] font-black text-slate-900">{product.stock}</span>
+                        </div>
+                        </td>
+                        <td className="px-8 py-6">
+                        {product.stock > 0 ? (
+                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Active
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-50 text-red-600 border border-red-100">
+                            Depleted
+                            </span>
+                        )}
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                            <button
+                            onClick={() => handleOpenDrawer(product)}
+                            className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-2xl transition-all"
+                            title="Modify Node"
+                            >
+                            <Edit size={18} />
+                            </button>
+                            <button
+                            onClick={() => handleDelete(product.id)}
+                            disabled={deletingId === product.id}
+                            className="p-3 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all disabled:opacity-50"
+                            title="Purge Node"
+                            >
+                            {deletingId === product.id ? <Loader2 size={18} className="animate-spin" /> : <Trash size={18} />}
+                            </button>
+                        </div>
+                        </td>
+                    </tr>
+                    ))}
+                </tbody>
+                </table>
+            </div>
+        </div>
       </div>
 
       {/* ── Drawer ── */}
@@ -303,73 +321,68 @@ export function AdminProducts() {
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowDrawer(false)}
-              className="fixed inset-0 bg-black/50 z-[100]"
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[2500]"
             />
             <motion.div
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 h-full w-full max-w-xl bg-white shadow-2xl z-[101] flex flex-col overflow-hidden"
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed top-0 right-0 h-full w-full max-w-2xl bg-white shadow-2xl z-[2501] flex flex-col overflow-hidden"
             >
-              {/* Drawer Header */}
-              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                <h3 className="text-[16px] font-bold text-slate-900">
-                  {editingId ? "Edit Product" : "Create New Offer"}
-                </h3>
-                <button onClick={() => setShowDrawer(false)} className="p-1.5 hover:bg-slate-100 rounded transition-colors">
-                  <X size={18} className="text-slate-400" />
+              <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white">
+                <div>
+                   <h3 className="text-2xl font-black tracking-tight">{editingId ? "Modify Asset Registry" : "Initialize New Node"}</h3>
+                   <p className="text-[10px] font-bold text-white/50 uppercase tracking-[0.3em] mt-1">Registry Authority Layer</p>
+                </div>
+                <button onClick={() => setShowDrawer(false)} className="p-3 hover:bg-white/10 rounded-2xl transition-colors">
+                  <X size={24} />
                 </button>
               </div>
 
-              {/* Drawer Body */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-5">
-
-                {/* Image */}
-                <Section title="Product Image" icon={<ImageIcon size={15} />}>
-                  <div className="flex gap-4">
-                    <div className="w-24 h-24 rounded border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center shrink-0">
+              <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar">
+                <Section title="Asset Visualization" icon={<ImageIcon size={18} />}>
+                  <div className="flex gap-8">
+                    <div className="w-32 h-32 rounded-[2rem] border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center shrink-0 shadow-inner">
                       {formData.image ? (
                         <img src={formData.image} className="w-full h-full object-cover" alt="" />
                       ) : (
-                        <Upload size={20} className="text-slate-300" />
+                        <Upload size={32} className="text-slate-300" />
                       )}
                     </div>
-                    <div className="flex-1">
-                      <label className="text-[12px] text-slate-700 block mb-1">Image URL</label>
-                      <input
-                        type="text"
-                        value={formData.image}
-                        onChange={e => setFormData({ ...formData, image: e.target.value })}
-                        placeholder="https://example.com/image.jpg"
-                        className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-primary-600"
-                      />
+                    <div className="flex-1 space-y-4">
+                      <Field label="Identity URL">
+                        <input
+                          type="text"
+                          value={formData.image}
+                          onChange={e => setFormData({ ...formData, image: e.target.value })}
+                          placeholder="https://..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-[14px] font-bold text-slate-900 focus:border-[#1dbf73] transition-all"
+                        />
+                      </Field>
                     </div>
                   </div>
                 </Section>
 
-                {/* Core Info */}
-                <Section title="Product Information" icon={<Package size={15} />}>
-                  <Field label="Product Title *">
+                <Section title="Value & Classification" icon={<Package size={18} />}>
+                  <Field label="Marketplace Title">
                     <input
                       required type="text" value={formData.title}
                       onChange={e => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="e.g. Valorant Immortal Smurf | 50+ Skins"
-                      className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-primary-600"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-[14px] font-bold text-slate-900 focus:border-[#1dbf73] transition-all"
                     />
                   </Field>
-                  <div className="grid grid-cols-2 gap-4 mt-3">
-                    <Field label="Price (USD) *">
+                  <div className="grid grid-cols-2 gap-6 mt-6">
+                    <Field label="Currency Unit (USD)">
                       <input
                         required type="number" step="0.01" value={formData.price}
                         onChange={e => setFormData({ ...formData, price: e.target.value })}
-                        placeholder="29.99"
-                        className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-primary-600"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-[14px] font-bold text-slate-900 focus:border-[#1dbf73] transition-all"
                       />
                     </Field>
-                    <Field label="Category">
+                    <Field label="Registry Node">
                       <select
                         value={formData.category}
                         onChange={e => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-primary-600"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-[14px] font-bold text-slate-900 focus:border-[#1dbf73] transition-all cursor-pointer"
                       >
                         {categoriesList.map(c => (
                           <option key={c.id} value={c.name}>{c.name}</option>
@@ -379,95 +392,54 @@ export function AdminProducts() {
                   </div>
                 </Section>
 
-                {/* Delivery & Stock */}
-                <Section title="Delivery & Stock" icon={<Zap size={15} />}>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Field label="Delivery Method">
-                      <div className="flex gap-1 p-0.5 bg-slate-50 rounded border border-slate-200">
-                        {["Instant Delivery", "Manual Escrow"].map(m => (
-                          <button
-                            key={m} type="button"
-                            onClick={() => setFormData({ ...formData, deliveryMethod: m })}
-                            className={`flex-1 py-1.5 text-[11px] font-bold rounded transition-all ${
-                              formData.deliveryMethod === m ? "bg-white shadow-sm text-primary-600 border border-slate-200" : "text-slate-400"
-                            }`}
-                          >
-                            {m.split(" ")[0]}
-                          </button>
-                        ))}
-                      </div>
-                    </Field>
-                    <Field label="Stock Quantity">
-                      <input
-                        type="number" value={formData.stock}
-                        onChange={e => setFormData({ ...formData, stock: e.target.value })}
-                        className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-primary-600"
-                      />
-                    </Field>
-                    <Field label="Platform">
-                      <select
-                        value={formData.platform}
-                        onChange={e => setFormData({ ...formData, platform: e.target.value })}
-                        className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-primary-600"
-                      >
-                        <option>Global PC</option>
-                        <option>PlayStation Network</option>
-                        <option>Xbox Live</option>
-                        <option>Mobile (iOS/Android)</option>
-                      </select>
-                    </Field>
-                    <Field label="Server Region">
-                      <select
-                        value={formData.region}
-                        onChange={e => setFormData({ ...formData, region: e.target.value })}
-                        className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-primary-600"
-                      >
-                        <option>Worldwide</option>
-                        <option>North America (NA)</option>
-                        <option>Europe (EU)</option>
-                        <option>Asia (AS)</option>
-                      </select>
-                    </Field>
-                  </div>
-                  <label className="flex items-center gap-3 mt-4 p-3 bg-slate-50 border border-slate-200 rounded cursor-pointer hover:border-primary-600 transition-colors">
-                    <input
-                      type="checkbox" checked={formData.fullAccess}
-                      onChange={e => setFormData({ ...formData, fullAccess: e.target.checked })}
-                      className="w-4 h-4 rounded border-slate-200 text-primary-600 focus:ring-primary-500"
-                    />
-                    <div>
-                      <div className="text-[13px] font-bold text-slate-900">Provide Full Original Email Access</div>
-                      <div className="text-[11px] text-slate-400">Increases trust and sale price</div>
+                <Section title="Inventory Dynamics" icon={<Zap size={18} />}>
+                    <div className="grid grid-cols-2 gap-6">
+                        <Field label="Units in Stock">
+                            <input
+                                type="number" value={formData.stock}
+                                onChange={e => setFormData({ ...formData, stock: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-[14px] font-bold text-slate-900 focus:border-[#1dbf73] transition-all"
+                            />
+                        </Field>
+                        <Field label="Asset Region">
+                            <select
+                                value={formData.region}
+                                onChange={e => setFormData({ ...formData, region: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-[14px] font-bold text-slate-900 focus:border-[#1dbf73] transition-all"
+                            >
+                                <option>Worldwide</option>
+                                <option>North America (NA)</option>
+                                <option>Europe (EU)</option>
+                                <option>Asia (AS)</option>
+                            </select>
+                        </Field>
                     </div>
-                  </label>
                 </Section>
 
-                {/* Description */}
-                <Section title="Description" icon={<AlignLeft size={15} />}>
+                <Section title="Detailed Spec" icon={<AlignLeft size={18} />}>
                   <textarea
-                    rows={4} value={formData.description}
+                    rows={6} value={formData.description}
                     onChange={e => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Provide detailed product description, features, limitations..."
-                    className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-primary-600 resize-none"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-[14px] font-bold text-slate-900 focus:border-[#1dbf73] transition-all resize-none"
+                    placeholder="Enter encrypted asset details..."
                   />
                 </Section>
               </div>
 
-              {/* Drawer Footer */}
-              <div className="px-6 py-4 border-t border-slate-200 flex gap-3 bg-slate-50">
+              <div className="px-10 py-8 border-t border-slate-100 flex gap-4 bg-slate-50">
                 <button
                   onClick={() => setShowDrawer(false)}
-                  className="flex-1 py-2.5 border border-slate-200 text-slate-700 text-[13px] font-bold rounded hover:bg-slate-50 transition-colors"
+                  className="flex-1 py-4 border-2 border-slate-200 text-slate-900 text-[13px] font-black uppercase tracking-widest rounded-2xl hover:bg-white transition-all"
                 >
-                  Cancel
+                  Abort
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="flex-[2] py-2.5 bg-primary-600 text-white text-[13px] font-bold rounded hover:bg-primary-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-[2] py-4 bg-slate-900 text-white text-[13px] font-black uppercase tracking-widest rounded-2xl hover:bg-slate-800 transition-all flex items-center justify-center gap-3 shadow-xl shadow-slate-900/20 disabled:opacity-50"
                 >
-                  {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : (
-                    <>{editingId ? "Update Product" : "Publish Offer"} <ArrowRight size={14} /></>
+                  {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : (
+                    <>{editingId ? "Update Node" : "Authorize Node"} <ArrowRight size={18} /></>
                   )}
                 </button>
               </div>
@@ -479,31 +451,38 @@ export function AdminProducts() {
   );
 }
 
-function MiniStat({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className="px-6 py-4 border-r border-slate-200 last:border-r-0">
-      <div className="text-[11px] text-slate-400 font-medium uppercase tracking-wide">{label}</div>
-      <div className="text-[22px] font-black mt-0.5" style={{ color }}>{value}</div>
-    </div>
-  );
+function StatCard({ label, value, icon, color }: any) {
+    return (
+        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
+            <div className={`${color} mb-4`}>{icon}</div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</div>
+            <div className={`text-3xl font-black text-slate-900`}>{value}</div>
+        </div>
+    );
 }
 
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="border border-slate-200 rounded">
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-[13px] font-bold text-slate-900">
-        <span className="text-slate-400">{icon}</span> {title}
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
+        <span className="text-[#1dbf73]">{icon}</span> {title}
       </div>
-      <div className="p-4">{children}</div>
+      <div className="bg-white p-2">{children}</div>
     </div>
   );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <label className="text-[12px] text-slate-700 block mb-1">{label}</label>
+    <div className="space-y-2">
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
       {children}
     </div>
   );
+}
+
+function XCircle(props: any) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-circle"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+  )
 }
