@@ -12,6 +12,7 @@ import { UserDashboardPage } from "./pages/UserDashboardPage";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { CreateListingPage } from "./pages/Seller/CreateListingPage";
 import { SoldOrdersPage } from "./pages/Seller/SoldOrdersPage";
+import { LiveSupportWidget } from "./components/LiveSupportWidget";
 import { Home, Search, ShoppingBag, User as UserIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -29,6 +30,7 @@ function LayoutManager({ children, onSearch }: { children: React.ReactNode, onSe
 
       {!isAdminRoute && <Footer />}
       {!isAdminRoute && <MobileTabBar />}
+      {!isAdminRoute && <LiveSupportWidget />}
     </div>
   );
 }
