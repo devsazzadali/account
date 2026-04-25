@@ -259,28 +259,49 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
-  const [creds, setCreds] = useState(order.credentials || "");
+  const [credentialFields, setCredentialFields] = useState<Record<string, string>>(() => {
+    try {
+      return typeof order.credentials === 'string' ? JSON.parse(order.credentials) : (order.credentials || {});
+    } catch (e) {
+      return { "Login Account": order.credentials || "" };
+    }
+  });
+
   const [dmText, setDmText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [dmSent, setDmSent] = useState(false);
 
+  const STATUS_STEPS_FLOW = ["New Order", "Preparing", "Delivering", "Waiting for confirmation", "Completed", "Evaluate"];
+
   const currentStepIndex = (() => {
-    if (order.status === "Awaiting Verification" || order.status === "Paid") return 1;
-    if (order.status === "Preparing") return 2;
-    if (order.status === "Delivering") return 2;
-    if (order.status === "Delivered" || order.status === "Completed") return 4;
-    return 0;
+    const s = order.status;
+    if (s === "New Order" || s === "Paid" || s === "Awaiting Verification") return 0;
+    if (s === "Preparing") return 1;
+    if (s === "Delivering") return 2;
+    if (s === "Waiting for confirmation") return 3;
+    if (s === "Completed" || s === "Delivered") return 4;
+    if (s === "Evaluate") return 5;
+    return -1;
   })();
 
   async function handleDeliver() {
-    await onUpdate(order.id, "Delivered", creds);
+    await onUpdate(order.id, "Delivered", JSON.stringify(credentialFields));
   }
+
+  async function handleSaveCredentials() {
+    await onUpdate(order.id, order.status, JSON.stringify(credentialFields));
+    alert("Credentials saved successfully.");
+  }
+
+  const handleFieldChange = (field: string, value: string) => {
+    setCredentialFields(prev => ({ ...prev, [field]: value }));
+  };
 
   async function handleSendDm() {
     if (!dmText.trim()) return;
     setIsSending(true);
     try {
-      const targetUsername = order.customer_email.split("@")[0];
+      const targetUsername = order.username || order.customer_email?.split("@")[0] || "User";
       const { error } = await supabase.from("messages").insert({
         username: targetUsername,
         subject: `Order #${order.id.split("-")[0].toUpperCase()}`,
@@ -300,6 +321,16 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
     }
   }
 
+  const fields = [
+    "* Login Account", "* Login Password", "* 2FA Code", "* cookies",
+    "Secondary Password(Security Answer)", "Account registration information (Last Name)",
+    "Account registration information (First Name)", "Account registration information (Country)",
+    "Account registration information (date of birth)", "Bind Email Address",
+    "Bind Mailbox Password", "Bind mailbox security issue 1", "Secret Answer 1",
+    "Bind mailbox security issue 2", "Secret Answer 2", "Bind mailbox security issue 3",
+    "Secret Answer 3", "Additional information",
+  ];
+
   return (
     <div className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto">
       <motion.div
@@ -313,7 +344,7 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h2 className="text-[18px] font-bold text-slate-900">Sold Details</h2>
+          <h2 className="text-[18px] font-display font-bold text-slate-900">Sold Details</h2>
           <div className="flex items-center gap-3">
             <span className="text-[12px] text-slate-400">
               <span className="text-slate-900 font-medium mr-1">★</span>
@@ -328,22 +359,25 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
         {/* Progress Steps */}
         <div className="px-6 py-5 border-b border-slate-200 bg-white">
           <div className="flex items-center">
-            {STATUS_STEPS.map((step, i) => (
+            {STATUS_STEPS_FLOW.map((step, i) => (
               <React.Fragment key={step}>
-                <div className="flex flex-col items-center flex-1">
-                  <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[11px] font-bold transition-all ${
+                <div 
+                  className="flex flex-col items-center flex-1 cursor-pointer group"
+                  onClick={() => onUpdate(order.id, step)}
+                >
+                  <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[11px] font-bold transition-all ${
                     i <= currentStepIndex
-                      ? "bg-primary-600 border-primary-600 text-white"
-                      : "bg-white border-[#ccc] text-slate-300"
+                      ? "bg-primary-600 border-primary-600 text-white shadow-lg shadow-primary-600/20"
+                      : "bg-white border-slate-200 text-slate-300 group-hover:border-primary-400"
                   }`}>
-                    {i <= currentStepIndex ? <CheckCircle2 size={14} /> : i + 1}
+                    {i < currentStepIndex ? <CheckCircle2 size={16} /> : i + 1}
                   </div>
-                  <span className={`text-[10px] mt-1.5 text-center leading-tight ${i <= currentStepIndex ? "text-primary-600 font-bold" : "text-slate-400"}`}>
+                  <span className={`text-[10px] mt-2 text-center leading-tight transition-colors ${i <= currentStepIndex ? "text-primary-600 font-bold" : "text-slate-400 group-hover:text-slate-600"}`}>
                     {step}
                   </span>
                 </div>
-                {i < STATUS_STEPS.length - 1 && (
-                  <div className={`h-0.5 flex-1 -mt-4 transition-all ${i < currentStepIndex ? "bg-primary-600" : "bg-[#e0e0e0]"}`} />
+                {i < STATUS_STEPS_FLOW.length - 1 && (
+                  <div className={`h-0.5 flex-1 -mt-5 transition-all ${i < currentStepIndex ? "bg-primary-600" : "bg-slate-100"}`} />
                 )}
               </React.Fragment>
             ))}
@@ -351,87 +385,84 @@ function SoldDetailModal({ order, onClose, onUpdate, isUpdating }: any) {
         </div>
 
         {/* Order Info Bar */}
-        <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-4 text-[12px]">
-          <span className="font-bold text-slate-900">Order number: {order.id}</span>
+        <div className="px-6 py-3 bg-slate-50/50 border-b border-slate-200 flex flex-wrap items-center gap-4 text-[12px]">
+          <span className="font-bold text-slate-900">Order number: <span className="text-primary-600">{order.id}</span></span>
           {order.status === "Delivering" && (
-            <span className="text-primary-600 font-bold">⏰ Exceeded the promised delivery time for X hours</span>
+            <span className="text-primary-600 font-bold flex items-center gap-1.5 animate-pulse">
+              <AlertCircle size={14} /> Exceeded promised delivery time
+            </span>
           )}
-          <span className="text-slate-400">Order Date: {new Date(order.created_at).toLocaleString()}</span>
+          <span className="text-slate-400 ml-auto">Order Date: {new Date(order.created_at).toLocaleString()}</span>
           <StatusBadge status={order.status} />
         </div>
 
         {/* Buyer info + action buttons */}
-        <div className="px-6 py-4 border-b border-slate-200 flex flex-wrap items-center gap-4">
+        <div className="px-6 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-primary-600/10 flex items-center justify-center text-primary-600 font-bold text-[15px]">
-              {order.customer_email[0].toUpperCase()}
+            <div className="w-10 h-10 rounded-xl bg-primary-600 text-white flex items-center justify-center font-bold text-[16px] shadow-lg shadow-primary-600/20">
+              {(order.username || order.customer_email || "U")[0].toUpperCase()}
             </div>
             <div>
-              <div className="text-[13px] font-bold text-slate-900">{order.customer_email.split("@")[0]}</div>
-              <div className="text-[10px] text-slate-400">buyer</div>
+              <div className="text-[14px] font-bold text-slate-900">{order.username || order.customer_email?.split("@")[0]}</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Client Node</div>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 ml-4">
-            <button onClick={handleSendDm} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded text-[12px] font-bold hover:bg-[#3da012] transition-colors">
-              <MessageSquare size={13} /> Chat Now
+          <div className="flex flex-wrap gap-2">
+            <button onClick={handleSendDm} className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-[12px] font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">
+              <MessageSquare size={14} /> Chat Now
             </button>
-            <a href={`mailto:${order.customer_email}`} className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-700 rounded text-[12px] font-bold hover:bg-slate-50 transition-colors">
-              <Mail size={13} /> Contact buyers by mail
+            <a href={`mailto:${order.customer_email}`} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-[12px] font-bold hover:bg-slate-50 transition-all">
+              <Mail size={14} /> Contact By Mail
             </a>
-            <button onClick={() => onUpdate(order.id, "Cancelled")} className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-700 rounded text-[12px] font-bold hover:bg-slate-50 transition-colors">
-              <XCircle size={13} /> Cancel Order
+            <button onClick={() => onUpdate(order.id, "Cancelled")} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-red-500 rounded-xl text-[12px] font-bold hover:bg-red-50 transition-all">
+              <XCircle size={14} /> Cancel Order
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-700 rounded text-[12px] font-bold hover:bg-slate-50 transition-colors">
-              <Upload size={13} /> Upload/View
+            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-[12px] font-bold hover:bg-slate-50 transition-all">
+              <Upload size={14} /> Attachments
             </button>
           </div>
         </div>
 
         {/* Product info */}
-        <div className="px-6 py-4 border-b border-slate-200 grid grid-cols-2 gap-4 text-[13px]">
-          <div><span className="text-slate-400">Game:</span> <span className="font-medium text-slate-900 ml-2">{order.products?.category || "—"}</span></div>
-          <div><span className="text-slate-400">Product Title:</span> <span className="font-medium text-slate-900 ml-2">{order.products?.title || "—"}</span></div>
+        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/30 flex justify-between items-center text-[13px]">
+          <div><span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-3">Game Instance:</span> <span className="font-bold text-slate-900">{order.products?.category || "—"}</span></div>
+          <div><span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-3">Asset Identity:</span> <span className="font-bold text-primary-600">{order.products?.title || "—"}</span></div>
         </div>
 
         {/* Accounts Info / Credential Form */}
-        <div className="px-6 py-4">
-          <div className="border border-slate-200 rounded">
-            <div className="flex items-center justify-between px-4 py-3 bg-[#222] text-white rounded-t">
-              <span className="text-[13px] font-bold">Accounts Info</span>
-              <button className="w-6 h-6 rounded bg-white/20 text-white text-lg leading-none flex items-center justify-center hover:bg-white/30">+</button>
+        <div className="px-6 py-6">
+          <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="flex items-center justify-between px-5 py-4 bg-slate-900 text-white">
+              <div className="flex items-center gap-3">
+                <ShieldCheck size={18} className="text-primary-400" />
+                <span className="text-[13px] font-bold uppercase tracking-widest">Credential Protocol</span>
+              </div>
+              <button className="w-8 h-8 rounded-lg bg-white/10 text-white text-xl leading-none flex items-center justify-center hover:bg-white/20 transition-all">+</button>
             </div>
-            <div className="p-4 space-y-3">
-              {[
-                "* Login Account",
-                "* Login Password",
-                "* 2FA Code",
-                "* cookies",
-                "Secondary Password(Security Answer)",
-                "Account registration information (Last Name)",
-                "Account registration information (First Name)",
-                "Account registration information (Country)",
-                "Account registration information (date of birth)",
-                "Bind Email Address",
-                "Bind Mailbox Password",
-                "Bind mailbox security issue 1",
-                "Secret Answer 1",
-                "Bind mailbox security issue 2",
-                "Secret Answer 2",
-                "Bind mailbox security issue 3",
-                "Secret Answer 3",
-                "Additional information",
-              ].map((field, i) => (
-                <div key={i}>
-                  <label className="text-[12px] text-slate-700 block mb-1">{field}</label>
-                  <input
-                    className="w-full border-b border-slate-200 py-1.5 px-1 text-[13px] focus:outline-none focus:border-primary-600 bg-transparent transition-colors"
-                    placeholder={field.startsWith("*") ? "" : "If not filled in (none)"}
-                  />
-                </div>
-              ))}
-              <div className="pt-2">
-                <button className="px-5 py-2 bg-primary-600 text-white text-[13px] font-bold rounded hover:bg-primary-700 transition-colors">
-                  Submit
+            <div className="p-6 space-y-5 bg-white">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                {fields.map((field, i) => (
+                  <div key={i}>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">{field}</label>
+                    <input
+                      value={credentialFields[field] || ""}
+                      onChange={(e) => handleFieldChange(field, e.target.value)}
+                      className="w-full border-b border-slate-200 py-2 px-1 text-[13px] font-medium focus:outline-none focus:border-primary-600 bg-transparent transition-all placeholder:text-slate-300"
+                      placeholder={field.startsWith("*") ? "Required field" : "Optional data node..."}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="pt-6 border-t border-slate-50 flex justify-between items-center">
+                <p className="text-[11px] text-slate-400 italic flex items-center gap-1.5">
+                  <Info size={12} /> Credentials are encrypted and sent upon confirmation.
+                </p>
+                <button 
+                  onClick={handleSaveCredentials}
+                  disabled={isUpdating}
+                  className="px-8 py-3 bg-primary-600 text-white text-[12px] font-bold rounded-xl hover:bg-primary-700 transition-all shadow-lg shadow-primary-600/20 uppercase tracking-widest flex items-center gap-2"
+                >
+                  {isUpdating ? <Loader2 size={16} className="animate-spin" /> : "Authorize & Save"}
                 </button>
               </div>
             </div>
