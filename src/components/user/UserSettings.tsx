@@ -1,10 +1,124 @@
-import React, { useState } from "react";
-import { User, Shield, Bell, CreditCard, Save, CheckCircle, Smartphone, Mail, Lock } from "lucide-react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect } from "react";
+import { User, Shield, Bell, CreditCard, Save, CheckCircle, Smartphone, Mail, Lock, Loader2, Camera, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "../../lib/supabase";
 
 export function UserSettings() {
   const [activeTab, setActiveTab] = useState("profile");
-  const username = localStorage.getItem("username") || "User";
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  
+  // Form States
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  async function fetchUserData() {
+    setLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      setUser(session.user);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (data) {
+        setProfile(data);
+        setFullName(data.full_name || "");
+        setUsername(data.username || "");
+        setBio(data.bio || "");
+        setAvatarUrl(data.avatar_url || "");
+      }
+    }
+    setLoading(false);
+  }
+
+  async function handleUpdateProfile() {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: fullName,
+          username: username,
+          bio: bio,
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      // Update local storage for legacy header support
+      localStorage.setItem("username", username);
+      alert("Identity Protocol Updated Successfully!");
+    } catch (e: any) {
+      alert("Sync Error: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    if (newPassword !== confirmPassword) {
+        alert("Password mismatch detected in protocol.");
+        return;
+    }
+    setSaving(true);
+    try {
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+        setNewPassword("");
+        setConfirmPassword("");
+        alert("Security Credentials Updated.");
+    } catch (e: any) {
+        alert("Security Error: " + e.message);
+    } finally {
+        setSaving(false);
+    }
+  }
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setSaving(true);
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+        const filePath = `avatars/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('profiles')
+            .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('profiles')
+            .getPublicUrl(filePath);
+
+        setAvatarUrl(publicUrl);
+        await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
+        alert("Neural Imaging Sync Complete!");
+    } catch (e: any) {
+        alert("Upload Error: " + e.message);
+    } finally {
+        setSaving(false);
+    }
+  }
 
   const tabs = [
     { id: "profile", label: "Identity Profile", icon: <User size={16} /> },
@@ -13,29 +127,43 @@ export function UserSettings() {
     { id: "notifications", label: "Comms Config", icon: <Bell size={16} /> },
   ];
 
+  if (loading) {
+    return (
+        <div className="flex flex-col items-center justify-center h-64 text-center">
+            <Loader2 className="animate-spin text-primary-600 w-10 h-10 mb-4" />
+            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Decrypting Personal Matrix...</p>
+        </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
-        <div>
-            <h2 className="text-2xl font-display font-bold text-slate-900 italic">System Configuration</h2>
-            <p className="text-sm text-slate-500">Manage your identity and platform security parameters.</p>
+    <div className="space-y-8 pb-20 lg:pb-0">
+        <div className="flex items-center justify-between">
+            <div>
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">System Configuration</h2>
+                <p className="text-sm text-slate-500 font-medium">Manage your identity and platform security parameters.</p>
+            </div>
+            {profile?.is_premium && (
+               <div className="px-4 py-1.5 bg-amber-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20">
+                  Premium Tier Active
+               </div>
+            )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Sidebar Tabs */}
-            <div className="space-y-1">
+            <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 scrollbar-hide">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                        className={`flex items-center gap-3 px-6 py-4 rounded-2xl text-[12px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-2 ${
                             activeTab === tab.id 
-                            ? "bg-white text-primary-600 shadow-sm border border-slate-200" 
-                            : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                            ? "bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-900/20" 
+                            : "bg-white text-slate-400 border-white hover:border-slate-200"
                         }`}
                     >
-                        <span className={activeTab === tab.id ? "text-primary-600" : "text-slate-400"}>
-                            {tab.icon}
-                        </span>
+                        {tab.icon}
                         {tab.label}
                     </button>
                 ))}
@@ -44,193 +172,135 @@ export function UserSettings() {
             {/* Main Content Area */}
             <div className="lg:col-span-3 space-y-6">
                 {activeTab === "profile" && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-6"
-                    >
-                        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
-                            <div className="flex items-center gap-6 mb-8">
-                                <div className="relative">
-                                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-blue-500 p-[2px]">
-                                        <div className="w-full h-full rounded-[0.9rem] bg-white flex items-center justify-center overflow-hidden">
-                                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="User" className="w-full h-full object-cover" />
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 md:p-12 shadow-sm">
+                            <div className="flex flex-col md:flex-row items-center gap-8 mb-12">
+                                <div className="relative group">
+                                    <div className="w-28 h-28 rounded-[2.5rem] bg-slate-100 border-4 border-white shadow-2xl overflow-hidden relative">
+                                        <img src={avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="User" className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Camera className="text-white w-8 h-8" />
                                         </div>
                                     </div>
-                                    <button className="absolute -bottom-2 -right-2 w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shadow-lg hover:bg-slate-800 transition-all">
-                                        <Smartphone size={14} />
-                                    </button>
+                                    <input type="file" onChange={handleAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" />
+                                    <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-primary-600 text-white flex items-center justify-center shadow-xl border-4 border-white">
+                                        <Camera size={16} />
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-900">{username}</h3>
-                                    <p className="text-xs text-slate-500 font-medium uppercase tracking-widest mt-1">Premium Member • ID: 8829-QX</p>
+                                <div className="text-center md:text-left">
+                                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">{fullName || username}</h3>
+                                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.3em] mt-1 flex items-center justify-center md:justify-start gap-2">
+                                       Node ID: {user.id.slice(0,8).toUpperCase()} • Tier: {profile?.is_premium ? 'Premium' : 'Standard'}
+                                    </p>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Display Name</label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Identity Display Name</label>
                                     <input 
                                         type="text" 
-                                        defaultValue={username}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
+                                        value={fullName}
+                                        onChange={e => setFullName(e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:border-primary-600 transition-all"
                                     />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Email Address</label>
-                                    <div className="relative">
-                                        <input 
-                                            type="email" 
-                                            defaultValue={`${username.toLowerCase()}@example.com`}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
-                                        />
-                                        <CheckCircle size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" />
-                                    </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">System Handle (@)</label>
+                                    <input 
+                                        type="text" 
+                                        value={username}
+                                        onChange={e => setUsername(e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:border-primary-600 transition-all"
+                                    />
                                 </div>
-                                <div className="md:col-span-2 space-y-1.5">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Bio / Profile Notes</label>
+                                <div className="md:col-span-2 space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Communication Bio</label>
                                     <textarea 
-                                        rows={3}
-                                        placeholder="Add a brief description of yourself..."
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all resize-none"
+                                        rows={4}
+                                        value={bio}
+                                        onChange={e => setBio(e.target.value)}
+                                        placeholder="Add encrypted notes to your profile..."
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:border-primary-600 transition-all resize-none"
                                     ></textarea>
                                 </div>
                             </div>
 
-                            <div className="mt-8 flex justify-end">
-                                <button className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10">
-                                    <Save size={18} />
-                                    Save Changes
+                            <div className="mt-12 flex justify-end">
+                                <button 
+                                    onClick={handleUpdateProfile}
+                                    disabled={saving}
+                                    className="px-10 py-5 bg-slate-900 text-white font-black text-[13px] uppercase tracking-widest rounded-2xl flex items-center gap-3 hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/20 disabled:opacity-50"
+                                >
+                                    {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                                    Commit Changes
                                 </button>
-                            </div>
-                        </div>
-
-                        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 flex items-start gap-4">
-                            <div className="p-2 bg-white rounded-xl shadow-sm text-blue-600">
-                                <Shield size={20} />
-                            </div>
-                            <div>
-                                <h4 className="text-sm font-bold text-blue-900">Account Protection</h4>
-                                <p className="text-xs text-blue-700/70 mt-1 leading-relaxed">Your account is currently protected by Titan™ Shield. All high-value transactions require secondary biometric or MFA verification.</p>
                             </div>
                         </div>
                     </motion.div>
                 )}
 
                 {activeTab === "security" && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-6"
-                    >
-                        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-8">
-                            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-white rounded-xl shadow-sm text-slate-900">
-                                        <Lock size={20} />
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 md:p-12 shadow-sm space-y-10">
+                            <div className="space-y-6">
+                                <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Update Security Credentials</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">New Password</label>
+                                        <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm focus:border-primary-600" />
                                     </div>
-                                    <div>
-                                        <h4 className="text-sm font-bold text-slate-900">Password Access</h4>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Last updated 14 days ago</p>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Confirm Protocol</label>
+                                        <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm focus:border-primary-600" />
                                     </div>
                                 </div>
-                                <button className="px-4 py-2 text-xs font-bold text-primary-600 hover:bg-primary-50 rounded-lg transition-colors border border-transparent hover:border-primary-100">Update</button>
+                                <button onClick={handleChangePassword} disabled={saving || !newPassword} className="px-8 py-4 bg-primary-600 text-white font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary-700 transition-all">Update Access Key</button>
                             </div>
 
-                            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                            <div className="p-6 bg-slate-900 rounded-3xl text-white flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-white rounded-xl shadow-sm text-primary-600">
-                                        <Smartphone size={20} />
+                                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-primary-400">
+                                        <ShieldCheck size={24} />
                                     </div>
                                     <div>
-                                        <h4 className="text-sm font-bold text-slate-900">Two-Factor Authentication</h4>
-                                        <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1">
-                                            <CheckCircle size={10} />
-                                            Enabled via Authenticator App
-                                        </p>
+                                        <h4 className="text-[14px] font-black">Titan™ MFA</h4>
+                                        <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest">Two-Factor Encryption Active</p>
                                     </div>
                                 </div>
-                                <button className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors border border-transparent">Manage</button>
-                            </div>
-
-                            <div className="pt-4 border-t border-slate-100">
-                                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-4">Authorized Sessions</h4>
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between p-3 border border-slate-100 rounded-xl">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400">
-                                                <Smartphone size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-900">iPhone 15 Pro • Dhaka, BD</p>
-                                                <p className="text-[10px] text-slate-400 font-medium">Current Session</p>
-                                            </div>
-                                        </div>
-                                        <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest">Active</span>
-                                    </div>
-                                </div>
+                                <button className="px-4 py-2 bg-white text-slate-900 rounded-lg text-[10px] font-black uppercase">Configure</button>
                             </div>
                         </div>
                     </motion.div>
                 )}
 
                 {activeTab === "billing" && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-6"
-                    >
-                         <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
-                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Linked Payment Methods</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-6 border-2 border-primary-500 bg-primary-50/20 rounded-2xl relative overflow-hidden group cursor-pointer">
-                                    <div className="absolute top-0 right-0 p-4">
-                                        <CheckCircle size={20} className="text-primary-600" />
-                                    </div>
-                                    <div className="flex flex-col h-full justify-between">
-                                        <div className="mb-8">
-                                            <CreditCard size={32} className="text-primary-600 mb-4" />
-                                            <p className="text-lg font-mono font-bold text-slate-900 tracking-wider">•••• •••• •••• 4492</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Primary Method</p>
-                                            <p className="text-sm font-bold text-slate-900">Exp: 12/28</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <button className="p-6 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-primary-500 hover:text-primary-600 hover:bg-primary-50/10 transition-all group">
-                                    <div className="p-3 bg-slate-50 rounded-full group-hover:bg-primary-100 transition-colors">
-                                        <CreditCard size={24} />
-                                    </div>
-                                    <span className="text-sm font-bold">Add New Method</span>
-                                </button>
-                            </div>
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                         <div className="bg-white border border-slate-200 rounded-[2.5rem] p-12 text-center">
+                            <CreditCard size={48} className="mx-auto text-slate-100 mb-6" />
+                            <h3 className="text-xl font-black text-slate-900 mb-2">Financial Nodes</h3>
+                            <p className="text-slate-500 max-w-xs mx-auto mb-8 font-medium">Payment encryption is managed via Stripe Secure Node. No local data is stored.</p>
+                            <button className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest">Connect Wallet</button>
                          </div>
                     </motion.div>
                 )}
 
                 {activeTab === "notifications" && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm"
-                    >
-                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Communication Matrix</h3>
-                        <div className="space-y-4">
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm">
+                        <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10 ml-2">Communication Matrix</h3>
+                        <div className="space-y-6">
                             {[
-                                { title: "Order Status Updates", desc: "Receive real-time notifications for delivery completions." },
-                                { title: "Security Alerts", desc: "Critical alerts regarding login attempts and account changes." },
-                                { title: "Asset Opportunities", desc: "Be the first to know about high-tier account drops." },
-                                { title: "Marketing & Digest", desc: "Weekly trends and platform updates." }
+                                { title: "Order Status Protocols", desc: "Real-time sync for procurement completions." },
+                                { title: "Security Breach Alerts", desc: "High-priority nodes for login attempts." },
+                                { title: "Asset Infiltration Drops", desc: "First-access nodes for rare account listings." }
                             ].map((item, i) => (
-                                <div key={i} className="flex items-center justify-between py-4 border-b border-slate-50 last:border-0">
-                                    <div>
-                                        <h4 className="text-sm font-bold text-slate-900">{item.title}</h4>
-                                        <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
+                                <div key={i} className="flex items-center justify-between p-6 bg-slate-50 border border-slate-100 rounded-2xl">
+                                    <div className="max-w-[70%]">
+                                        <h4 className="text-[14px] font-black text-slate-900">{item.title}</h4>
+                                        <p className="text-[12px] text-slate-500 font-medium mt-1 leading-relaxed">{item.desc}</p>
                                     </div>
-                                    <div className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-all ${i < 3 ? "bg-primary-600" : "bg-slate-200"}`}>
-                                        <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${i < 3 ? "translate-x-6" : "translate-x-0"}`}></div>
+                                    <div className={`w-14 h-7 rounded-full p-1 cursor-pointer transition-all ${i < 2 ? "bg-emerald-500" : "bg-slate-200"}`}>
+                                        <div className={`w-5 h-5 bg-white rounded-full shadow-lg transition-transform ${i < 2 ? "translate-x-7" : "translate-x-0"}`}></div>
                                     </div>
                                 </div>
                             ))}
