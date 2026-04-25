@@ -60,6 +60,14 @@ CREATE TABLE IF NOT EXISTS public.orders (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Ensure user_id exists if table was created previously without it
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='user_id') THEN
+        ALTER TABLE public.orders ADD COLUMN user_id UUID REFERENCES auth.users(id);
+    END IF;
+END $$;
+
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 
 DO $$ 
