@@ -35,7 +35,7 @@ export function AdminDashboardPage() {
         {activeTab === "categories" && <AdminCategories />}
         {activeTab === "orders" && <AdminOrders />}
         {activeTab === "messages" && <AdminMessages />}
-        {activeTab === "customers" && <AdminCustomers />}
+        {activeTab === "customers" && <AdminCustomers setActiveTab={setActiveTab} />}
         {activeTab === "settings" && <AdminSettings />}
       </div>
     </AdminLayout>

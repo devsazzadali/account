@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase";
-
 export function AdminMessages() {
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,8 +25,13 @@ export function AdminMessages() {
   const [searchQuery, setSearchQuery] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const [allProfiles, setAllProfiles] = useState<any[]>([]);
+
   useEffect(() => {
     fetchMessages();
+    fetchProfiles();
     
     // Set up Realtime listener
     const channel = supabase
@@ -42,6 +46,16 @@ export function AdminMessages() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  async function fetchProfiles() {
+    const { data } = await supabase.from('profiles').select('username, full_name').order('username');
+    setAllProfiles(data || []);
+  }
+
+  const startNewChat = (username: string) => {
+    setSelectedUser(username);
+    setShowNewChatModal(false);
+  };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -139,6 +153,11 @@ export function AdminMessages() {
 
   const activeThread = selectedUser ? groupedUsers.get(selectedUser) || [] : [];
 
+  const filteredNewChatProfiles = allProfiles.filter(p => 
+    p.username?.toLowerCase().includes(userSearch.toLowerCase()) ||
+    p.full_name?.toLowerCase().includes(userSearch.toLowerCase())
+  );
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 h-[calc(100vh-140px)] bg-[#efeae2] border border-slate-200 shadow-2xl rounded-3xl overflow-hidden font-sans relative z-10">
       
@@ -149,8 +168,9 @@ export function AdminMessages() {
                 <User size={20} />
             </div>
             <div className="flex items-center gap-4 text-[#54656f]">
-                <CheckCircle2 size={20} />
-                <MessageSquare size={20} />
+                <button onClick={() => setShowNewChatModal(true)} className="p-2 hover:bg-slate-200 rounded-full transition-colors" title="New Chat">
+                  <MessageSquare size={20} />
+                </button>
                 <MoreVertical size={20} />
             </div>
         </div>
@@ -321,6 +341,63 @@ export function AdminMessages() {
             </div>
         )}
       </div>
+
+      {/* New Chat Modal */}
+      <AnimatePresence>
+        {showNewChatModal && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowNewChatModal(false)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <h3 className="text-lg font-display font-bold text-slate-900">Start New Chat</h3>
+                <button onClick={() => setShowNewChatModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+              </div>
+              
+              <div className="p-4 border-b border-slate-100">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input 
+                    type="text" 
+                    placeholder="Search users..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary-600/20 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-2">
+                {filteredNewChatProfiles.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-sm">No users found</div>
+                ) : (
+                  filteredNewChatProfiles.map(profile => (
+                    <button
+                      key={profile.username}
+                      onClick={() => startNewChat(profile.username)}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-2xl transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center text-primary-600 font-bold">
+                        {profile.username[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-[14px] font-bold text-slate-900">{profile.username}</div>
+                        <div className="text-[11px] text-slate-400">{profile.full_name || "Account User"}</div>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

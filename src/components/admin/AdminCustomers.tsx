@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import {
   User, Mail, Calendar, ShieldCheck, Search, Loader2,
-  ExternalLink, ShieldAlert, Users, RefreshCw
+  ExternalLink, ShieldAlert, Users, RefreshCw, MessageSquare
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
-export function AdminCustomers() {
+export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -161,11 +161,14 @@ export function AdminCustomers() {
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                        onClick={() => setActiveTab?.("messages")}
+                        className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors" title="Send Message"
+                    >
+                        <MessageSquare size={15} />
+                    </button>
                     <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="View Profile">
                       <ExternalLink size={15} />
-                    </button>
-                    <button className="p-2 text-slate-400 hover:text-primary-600 hover:bg-red-50 rounded transition-colors" title="Flag User">
-                      <ShieldAlert size={15} />
                     </button>
                   </div>
                 </td>
