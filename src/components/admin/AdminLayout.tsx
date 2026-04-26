@@ -145,16 +145,6 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             icon={<Settings size={20} />} 
             collapsed={isSidebarCollapsed}
           />
-          <CollapsibleMenu 
-            label="Marketing Campaign" 
-            icon={<Zap size={20} />} 
-            collapsed={isSidebarCollapsed}
-          />
-          <CollapsibleMenu 
-            label="Withdrawal Management" 
-            icon={<DollarSign size={20} />} 
-            collapsed={isSidebarCollapsed}
-          />
           
           <div className="pt-6 px-3 pb-2">
               <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
