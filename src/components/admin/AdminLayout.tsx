@@ -14,6 +14,12 @@ import {
   X,
   ShieldCheck,
   ChevronLeft,
+  ChevronRight,
+  Plus,
+  Zap,
+  DollarSign,
+  AlertCircle,
+  ChevronDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
@@ -25,19 +31,9 @@ interface AdminLayoutProps {
   setActiveTab: (tab: string) => void;
 }
 
-const menuItems = [
-  { id: "dashboard",  icon: LayoutDashboard, label: "Overview" },
-  { id: "orders",     icon: ShoppingCart,    label: "Orders" },
-  { id: "products",   icon: Package,         label: "Products" },
-  { id: "categories", icon: Tag,             label: "Categories" },
-  { id: "messages",   icon: MessageSquare,   label: "Messages" },
-  { id: "customers",  icon: Users,           label: "Users" },
-  { id: "settings",   icon: Settings,        label: "Settings" },
-];
-
 export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutProps) {
   const username = localStorage.getItem("username") || "Admin";
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
 
@@ -68,185 +64,270 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
-
-      {/* ── Header: Logo + Search + User ── */}
-      <header className="bg-white sticky top-0 z-[200] border-b border-slate-200 shadow-sm">
-
-        {/* Row 1: Logo | Search | Icons */}
-        <div className="flex items-center gap-4 px-4 md:px-8 py-3">
-
-          {/* Logo */}
-          <div
-            className="flex items-center gap-3 cursor-pointer shrink-0 mr-2 group"
-            onClick={() => setActiveTab("dashboard")}
-          >
-            <div className="bg-slate-900 p-2.5 rounded-xl shadow-lg shadow-slate-900/20">
-              <ShieldCheck className="text-white" size={20} />
+    <div className="min-h-screen bg-[#F6F6F7] text-slate-900 flex font-sans selection:bg-red-100 selection:text-red-900">
+      
+      {/* ── Sidebar - Seller Center Red Theme ── */}
+      <aside 
+        className={`bg-white border-r border-slate-200 flex flex-col z-[500] relative shrink-0 transition-all duration-300 shadow-xl shadow-slate-200/50 ${isSidebarCollapsed ? 'w-[72px]' : 'w-[260px]'}`}
+      >
+        {/* Sidebar Header - Seller Center Red */}
+        <div className="h-16 flex items-center px-4 bg-[#E62E04] text-white shrink-0 shadow-lg shadow-red-500/10">
+            <div className="flex items-center gap-3 overflow-hidden">
+                <div className="w-10 h-10 flex items-center justify-center shrink-0 bg-white/10 rounded-xl border border-white/20">
+                    <ShieldCheck className="text-white" size={24} />
+                </div>
+                {!isSidebarCollapsed && (
+                    <div className="flex flex-col">
+                        <span className="font-black text-[15px] tracking-tight whitespace-nowrap uppercase leading-none">Seller Center</span>
+                        <span className="text-[10px] font-bold text-white/60 tracking-widest mt-1">OPERATIONAL NODE</span>
+                    </div>
+                )}
             </div>
-            <div>
-              <h1 className="text-xl font-display font-black tracking-tight text-slate-900">
-                COMMAND <span className="text-primary-600">CENTER</span>
-              </h1>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Node Online</span>
-              </div>
+        </div>
+
+        {/* User Quick Info */}
+        {!isSidebarCollapsed && (
+            <div className="p-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/50">
+                <div className="w-10 h-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-slate-200 shrink-0">
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="avatar" />
+                </div>
+                <div className="min-w-0">
+                    <div className="text-[13px] font-black text-slate-900 truncate uppercase">{username}</div>
+                    <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-tighter flex items-center gap-1">
+                        <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" /> Certified Seller
+                    </div>
+                </div>
             </div>
+        )}
+
+        {/* Menu Items */}
+        <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto custom-scrollbar">
+          <MenuItem 
+            id="dashboard" 
+            label="Home" 
+            icon={<LayoutDashboard size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem 
+            id="orders" 
+            label="Sold Orders" 
+            icon={<ShoppingCart size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            badge="2"
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem 
+            id="products" 
+            label="Create New Offers" 
+            icon={<Plus size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem 
+            id="active_offers" 
+            label="Active Offers" 
+            icon={<Package size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          
+          <div className="pt-6 px-3 pb-2">
+              <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
           </div>
 
-          {/* Search */}
-          <div className="flex-1 flex items-stretch max-w-2xl ml-4 hidden md:flex">
-            <div className="relative w-full flex items-center">
-              <Search size={16} className="absolute left-3 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search encrypted ledgers..."
-                className="w-full pl-10 pr-4 py-2.5 text-[13px] text-slate-900 bg-slate-50 border border-slate-200 focus:border-primary-500 transition-all rounded-xl"
-              />
-            </div>
+          <CollapsibleMenu 
+            label="Store Management" 
+            icon={<Settings size={20} />} 
+            collapsed={isSidebarCollapsed}
+          />
+          <CollapsibleMenu 
+            label="Marketing Campaign" 
+            icon={<Zap size={20} />} 
+            collapsed={isSidebarCollapsed}
+          />
+          <CollapsibleMenu 
+            label="Withdrawal Management" 
+            icon={<DollarSign size={20} />} 
+            collapsed={isSidebarCollapsed}
+          />
+          
+          <div className="pt-6 px-3 pb-2">
+              <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
           </div>
 
-          {/* Right icons */}
-          <div className="flex items-center gap-3 ml-auto lg:ml-2">
-            
-            {/* Direct Home Link */}
+          <MenuItem 
+            id="customers" 
+            label="Seller Information" 
+            icon={<Users size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem 
+            id="violation" 
+            label="Violation Center" 
+            icon={<AlertCircle size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-slate-100 space-y-1 bg-slate-50/30">
             <button 
-              onClick={() => navigate('/')}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-900 hover:text-white transition-all"
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition-all group"
             >
-               <ChevronLeft size={14} /> Exit to Site
+                <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                    {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+                </div>
+                {!isSidebarCollapsed && <span className="text-[12px] font-black uppercase tracking-widest group-hover:text-slate-900 transition-colors">Collapse menu</span>}
             </button>
-
-            {/* Notification Icon - REMOVED AS PER USER REQUEST */}
-            {/* <button className="relative text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-lg hover:bg-slate-50">
-              <Bell size={20} />
-            </button> */}
-
-            {/* Messages */}
-            <button
-              className="relative text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-lg hover:bg-slate-50"
-              onClick={() => setActiveTab("messages")}
-            >
-              <MessageSquare size={20} />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-primary-600 rounded-full text-[9px] font-bold text-white flex items-center justify-center border-2 border-white">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-
-            {/* Avatar */}
-            <div
-              className="flex items-center gap-2 cursor-pointer pl-2 border-l border-slate-200 ml-1"
-              onClick={() => setActiveTab("settings")}
-            >
-              <div className="w-8 h-8 rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-                <img
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`}
-                  alt="avatar"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-
-            {/* Mobile menu toggle */}
-            <button
-              className="lg:hidden text-slate-500 hover:text-slate-800 p-1 ml-1"
-              onClick={() => setMobileMenuOpen(v => !v)}
-            >
-              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Row 2: Nav Tabs */}
-        <div className="bg-white border-t border-slate-100 overflow-x-auto hidden lg:block">
-          <div className="flex items-center px-4 md:px-8">
-            {menuItems.map(item => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-2 px-6 py-4 text-[11px] font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 transition-all ${
-                  activeTab === item.id
-                    ? "border-primary-600 text-primary-600 bg-primary-50/10"
-                    : "border-transparent text-slate-400 hover:text-slate-800 hover:border-slate-200"
-                }`}
-              >
-                <item.icon size={15} className={activeTab === item.id ? "text-primary-600" : "text-slate-400"} />
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Mobile dropdown menu */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="bg-white border-t border-slate-100 overflow-hidden lg:hidden shadow-lg"
-            >
-              {menuItems.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => { setActiveTab(item.id); setMobileMenuOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-6 py-4 text-[12px] font-black uppercase tracking-widest border-b border-slate-50 transition-all ${
-                    activeTab === item.id
-                      ? "text-primary-600 bg-primary-50/50"
-                      : "text-slate-500 hover:bg-slate-50"
-                  }`}
-                >
-                  <item.icon size={18} />
-                  {item.label}
-                </button>
-              ))}
-              <button
+            <button 
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-6 py-4 text-[12px] font-black uppercase tracking-widest text-red-500 bg-red-50/30"
+                className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-400 hover:bg-red-50 hover:text-[#E62E04] transition-all group"
+            >
+                <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                    <LogOut size={18} />
+                </div>
+                {!isSidebarCollapsed && <span className="text-[12px] font-black uppercase tracking-widest">Terminate Session</span>}
+            </button>
+        </div>
+      </aside>
+
+      {/* ── Main Workspace ── */}
+      <div className="flex-1 flex flex-col relative z-10 overflow-hidden">
+        {/* Topbar */}
+        <header className="h-16 bg-white border-b border-slate-200 px-8 flex justify-between items-center shrink-0 shadow-sm z-40">
+          <div className="flex items-center gap-6 flex-1">
+              <div className="relative w-full max-w-xl group">
+                  <input 
+                    type="text" 
+                    placeholder="Scan ledgers by ID, product name, or seller hash..." 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-2.5 text-[13px] font-bold text-slate-900 focus:outline-none focus:border-red-300 focus:bg-white focus:ring-4 focus:ring-red-50 transition-all"
+                  />
+                  <Search className="absolute left-4 top-3 text-slate-400 group-focus-within:text-[#E62E04] transition-colors" size={18} />
+                  <div className="absolute right-3 top-2.5 flex items-center gap-1 opacity-20 group-focus-within:opacity-40 transition-opacity">
+                      <kbd className="text-[10px] font-sans border border-slate-400 rounded px-1.5 py-0.5">Ctrl</kbd>
+                      <kbd className="text-[10px] font-sans border border-slate-400 rounded px-1.5 py-0.5">K</kbd>
+                  </div>
+              </div>
+          </div>
+
+          <div className="flex items-center gap-4 ml-6">
+              {/* Messages */}
+              <button 
+                onClick={() => setActiveTab("messages")}
+                className="relative p-3 rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 hover:bg-white hover:border-slate-200 hover:text-slate-900 transition-all group"
               >
-                <LogOut size={18} />
-                Sign Out
+                  <MessageSquare size={20} className="group-hover:scale-110 transition-transform" />
+                  {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#E62E04] text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white animate-bounce">
+                          {unreadCount}
+                      </span>
+                  )}
               </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </header>
+              
+              <button className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 hover:bg-white hover:border-slate-200 hover:text-slate-900 transition-all group">
+                  <Bell size={20} className="group-hover:scale-110 transition-transform" />
+              </button>
 
-      {/* ── Main Content ── */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+              <div className="h-8 w-px bg-slate-200 mx-2" />
 
-      {/* ── Mobile bottom bar ── */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-2xl flex justify-around items-center py-3 z-[200] pb-safe">
-        {menuItems.slice(0, 5).map(item => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center gap-1 px-3 transition-all ${
-              activeTab === item.id ? "text-primary-600" : "text-slate-400"
-            }`}
-          >
-            <item.icon size={22} />
-            <span className="text-[9px] font-black uppercase tracking-tighter">
-              {item.label}
-            </span>
-          </button>
-        ))}
+              <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setActiveTab("settings")}>
+                  <div className="flex flex-col items-end">
+                      <span className="text-[13px] font-black text-slate-900 uppercase group-hover:text-[#E62E04] transition-colors">{username}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Platform Admin</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl border border-slate-200 bg-slate-100 overflow-hidden group-hover:border-[#E62E04] transition-all">
+                      <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="avatar" />
+                  </div>
+              </div>
+          </div>
+        </header>
+
+        {/* Content Area */}
+        <main className="flex-1 overflow-y-auto p-0 custom-scrollbar">
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className="h-full"
+                >
+                    {children}
+                </motion.div>
+            </AnimatePresence>
+        </main>
       </div>
     </div>
   );
+}
+
+function MenuItem({ id, label, icon, activeTab, setActiveTab, badge, collapsed }: any) {
+    const isActive = activeTab === id;
+    return (
+        <button
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all duration-300 relative group ${
+                isActive 
+                ? "bg-red-50 text-[#E62E04] shadow-sm shadow-red-500/5" 
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+        >
+            <div className={`shrink-0 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                {icon}
+            </div>
+            {!collapsed && (
+                <span className={`font-black text-[13px] uppercase tracking-wide whitespace-nowrap transition-all ${isActive ? 'translate-x-1' : ''}`}>
+                    {label}
+                </span>
+            )}
+            {badge && !collapsed && (
+                <span className="ml-auto px-2 py-0.5 bg-[#E62E04] text-white text-[10px] font-black rounded-full shadow-lg shadow-red-500/30">
+                    {badge}
+                </span>
+            )}
+            {isActive && !collapsed && (
+                <motion.div 
+                    layoutId="activePill"
+                    className="absolute left-0 w-1.5 h-6 bg-[#E62E04] rounded-r-full"
+                />
+            )}
+        </button>
+    );
+}
+
+function CollapsibleMenu({ label, icon, collapsed }: any) {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <div className="space-y-1">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all group`}
+            >
+                <div className="shrink-0 group-hover:scale-110 transition-transform">{icon}</div>
+                {!collapsed && (
+                    <>
+                        <span className="font-black text-[13px] uppercase tracking-wide whitespace-nowrap flex-1 text-left">{label}</span>
+                        <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                    </>
+                )}
+            </button>
+            {!collapsed && isOpen && (
+                <div className="pl-12 pr-4 space-y-1 py-1">
+                    <button className="w-full text-left py-2 text-[12px] font-bold text-slate-400 hover:text-[#E62E04] transition-all tracking-wide uppercase">General Config</button>
+                    <button className="w-full text-left py-2 text-[12px] font-bold text-slate-400 hover:text-[#E62E04] transition-all tracking-wide uppercase">Performance Hub</button>
+                </div>
+            )}
+        </div>
+    );
 }

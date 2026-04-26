@@ -6,9 +6,11 @@ import {
   MessageSquare, Mail, MailOpen,
   Users, UserCheck, UserX,
   Settings, Lock, Bell, HelpCircle,
-  ChevronRight, TrendingUp, Package, ShoppingCart, LayoutDashboard
+  ChevronRight, TrendingUp, Package, ShoppingCart, LayoutDashboard,
+  Zap, AlertCircle, ShieldCheck, DollarSign, Star
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
+import { motion } from "framer-motion";
 
 interface Props {
   setActiveTab?: (tab: string) => void;
@@ -41,7 +43,7 @@ export function AdminOverview({ setActiveTab }: Props) {
       const orders = ordersRes.data || [];
       const total = orders.length;
       const completed = orders.filter(o => o.status === "Delivered" || o.status === "Completed").length;
-      const processing = orders.filter(o => o.status === "Paid" || o.status === "Awaiting Verification").length;
+      const processing = orders.filter(o => o.status === "Paid" || o.status === "Awaiting Verification" || o.status === "Preparing").length;
       const balance = orders.reduce((s, o) => s + (Number(o.total_price) || 0), 0);
       const rate = total > 0 ? Math.round((completed / total) * 10000) / 100 : 0;
 
@@ -65,197 +67,200 @@ export function AdminOverview({ setActiveTab }: Props) {
     n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <div className="font-sans bg-slate-50 min-h-screen">
+    <div className="font-sans bg-[#F6F6F7] min-h-screen">
+      
+      {/* ── Seller Dashboard Header ── */}
+      <div className="bg-[#1A1A1A] text-white overflow-hidden relative">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-[600px] h-full bg-[#E62E04]/5 skew-x-[-20deg] translate-x-20" />
+          <div className="absolute top-10 right-20 w-32 h-32 bg-[#E62E04]/20 rounded-full blur-[100px]" />
 
-      {/* ── Hero Banner ── */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary-900 via-primary-700 to-primary-600 rounded-3xl shadow-xl border border-primary-800 mb-8 mt-2">
-        <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full bg-white/5 pointer-events-none blur-3xl" />
-        <div className="absolute -bottom-20 right-10 w-96 h-96 rounded-full bg-white/5 pointer-events-none blur-3xl" />
+          <div className="max-w-[1400px] mx-auto px-8 py-12 relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12">
+              <div className="flex items-center gap-8">
+                  <div className="w-28 h-28 rounded-2xl border-4 border-[#E62E04]/30 overflow-hidden shadow-2xl bg-white/5 shrink-0 relative group">
+                      <img
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}&backgroundColor=1a1a1a`}
+                        alt="avatar"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                          <Settings size={24} className="text-white" />
+                      </div>
+                  </div>
+                  <div>
+                      <div className="flex items-center gap-4">
+                          <h2 className="text-white text-3xl font-black tracking-tight uppercase">{username}</h2>
+                          <div className="bg-[#E62E04] text-white text-[10px] uppercase font-black tracking-[0.2em] px-3 py-1 rounded border border-white/10">Certified Merchant</div>
+                      </div>
+                      <div className="flex items-center gap-6 mt-4">
+                          <div className="flex flex-col">
+                              <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Platform Standing</span>
+                              <div className="flex items-center gap-1 mt-1">
+                                  {[1,2,3,4,5].map(i => <Star key={i} size={14} className={i <= 5 ? "text-[#FFD700] fill-[#FFD700]" : "text-white/20"} />)}
+                                  <span className="text-[12px] font-bold ml-2">5.00 / 5.00</span>
+                              </div>
+                          </div>
+                          <div className="w-px h-8 bg-white/10" />
+                          <div className="flex flex-col">
+                              <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Store Level</span>
+                              <span className="text-[14px] font-black mt-1 text-[#26D374]">GOLDEN ELITE</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
 
-        <div className="relative px-8 py-10 flex flex-col md:flex-row items-center justify-between gap-8">
-          {/* Avatar + info */}
-          <div className="flex items-center gap-6">
-            <div className="w-24 h-24 rounded-full border-4 border-white/20 overflow-hidden shadow-2xl bg-white/10 shrink-0">
-              <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}&backgroundColor=0f766e`}
-                alt="avatar"
-                className="w-full h-full object-cover"
+              <div className="flex flex-col items-center lg:items-end gap-2">
+                  <span className="text-white/40 text-[11px] font-black uppercase tracking-[0.3em]">Total Revenue Assets</span>
+                  <div className="text-white text-6xl font-black tracking-tighter flex items-start gap-1">
+                      <span className="text-2xl mt-2 text-[#E62E04]">$</span>
+                      {loading ? "—" : fmt(stats.balance)}
+                  </div>
+                  <div className="flex gap-4 mt-6">
+                      <button 
+                        onClick={() => setActiveTab?.("orders")}
+                        className="px-8 py-3 bg-[#E62E04] text-white text-[13px] font-black uppercase tracking-widest rounded transition-all shadow-xl shadow-red-500/20 hover:bg-[#c52804] active:scale-95"
+                      >
+                        Manage Ledger
+                      </button>
+                      <button 
+                        onClick={() => setActiveTab?.("settings")}
+                        className="px-8 py-3 bg-white/5 border border-white/10 text-white text-[13px] font-black uppercase tracking-widest rounded transition-all hover:bg-white hover:text-black"
+                      >
+                        Profile Nodes
+                      </button>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <div className="max-w-[1400px] mx-auto p-8 space-y-8">
+          
+          {/* Quick Metrics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <MetricCard 
+                label="Active Sales Hub" 
+                value={stats.totalOrders} 
+                sub="Total transactions"
+                icon={<ShoppingCart className="text-[#E62E04]" size={24} />}
               />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-white text-2xl font-display font-bold">{username}</h2>
-                <div className="bg-primary-500/50 text-white text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border border-primary-400">Admin</div>
+              <MetricCard 
+                label="Success Protocol" 
+                value={`${stats.successRate}%`} 
+                sub="Resolution frequency"
+                icon={<Zap className="text-[#26D374]" size={24} />}
+              />
+              <MetricCard 
+                label="Fulfillment Queue" 
+                value={stats.processingOrders} 
+                sub="Awaiting verification"
+                icon={<Clock className="text-[#FFA000]" size={24} />}
+              />
+              <MetricCard 
+                label="Inventory Density" 
+                value={stats.totalProducts} 
+                sub="Digital asset count"
+                icon={<Package className="text-[#00B0FF]" size={24} />}
+              />
+          </div>
+
+          {/* Warning Banner */}
+          <div className="bg-[#FFF9E6] border border-[#FDE6A6] rounded-lg p-5 flex items-start gap-4">
+              <div className="bg-[#FF9800] rounded-full p-1 mt-0.5">
+                  <AlertCircle size={16} className="text-white" />
               </div>
-              <div className="text-primary-100 text-[13px] mt-1.5 font-medium">
-                Total Revenue: <span className="text-white font-bold">USD ${loading ? "—" : fmt(stats.balance)}</span>
+              <div className="space-y-1">
+                  <p className="text-[14px] text-[#856404] font-bold">Important Security Protocol</p>
+                  <p className="text-[13px] text-[#856404] font-medium leading-relaxed">
+                      All sellers must strictly adhere to platform regulations. Violation points will result in immediate asset freeze. For details, view the <span className="text-blue-600 underline font-bold cursor-pointer">Merchant Service Agreement</span>.
+                  </p>
               </div>
-              <div className="flex items-center gap-1.5 mt-2 text-[12px] text-primary-200 font-medium">
-                Store Level: <span className="text-yellow-400 text-[10px]">⭐⭐⭐</span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Recent Activity Ledger */}
+              <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                      <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                          <History size={20} className="text-[#E62E04]" /> Activity Feed
+                      </h3>
+                      <button className="text-[12px] font-bold text-slate-400 hover:text-slate-900">View History</button>
+                  </div>
+                  <div className="p-0">
+                      <div className="divide-y divide-slate-50">
+                          {[1,2,3,4,5].map(i => (
+                              <div key={i} className="px-6 py-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
+                                  <div className={`w-2 h-2 rounded-full ${i % 2 === 0 ? "bg-[#26D374]" : "bg-[#E62E04]"}`} />
+                                  <div className="flex-1">
+                                      <p className="text-[13px] font-bold text-slate-800">Order #TXN_992{i} verified for clearance</p>
+                                      <p className="text-[11px] text-slate-400 font-medium">Instance processed by Protocol Alpha</p>
+                                  </div>
+                                  <span className="text-[11px] font-bold text-slate-400">2{i}m ago</span>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
               </div>
-            </div>
+
+              {/* Account Health */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-fit">
+                  <div className="px-6 py-5 border-b border-slate-100">
+                      <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                          <ShieldCheck size={20} className="text-[#26D374]" /> Health Status
+                      </h3>
+                  </div>
+                  <div className="p-8 space-y-8 text-center">
+                      <div className="relative inline-flex items-center justify-center">
+                          <svg className="w-32 h-32">
+                              <circle className="text-slate-100" strokeWidth="8" stroke="currentColor" fill="transparent" r="58" cx="64" cy="64" />
+                              <circle className="text-[#26D374]" strokeWidth="8" strokeDasharray={364.4} strokeDashoffset={364.4 * 0.05} strokeLinecap="round" stroke="currentColor" fill="transparent" r="58" cx="64" cy="64" />
+                          </svg>
+                          <div className="absolute flex flex-col">
+                              <span className="text-3xl font-black text-slate-900 leading-none">95%</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase">Optimal</span>
+                          </div>
+                      </div>
+                      <div className="space-y-4">
+                          <HealthItem label="Delivery Time" value="1.2h" status="FAST" />
+                          <HealthItem label="Chat Response" value="4m" status="GOOD" />
+                          <HealthItem label="Order Volume" value="High" status="PEAK" />
+                      </div>
+                  </div>
+              </div>
           </div>
-
-          {/* Balance */}
-          <div className="text-center md:text-right flex-1 flex flex-col items-center md:items-end">
-            <div className="text-primary-200 text-[13px] font-medium uppercase tracking-widest">Lifetime Revenue</div>
-            <div className="text-white text-5xl font-black mt-1 tracking-tight font-display drop-shadow-sm">
-              <span className="text-primary-300 text-3xl">$</span>{loading ? "—" : fmt(stats.balance)}
-            </div>
-            <button
-              onClick={() => setActiveTab?.("orders")}
-              className="mt-4 px-6 py-2.5 bg-white text-primary-700 text-[13px] font-bold rounded-xl hover:bg-primary-50 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2"
-            >
-              Manage Orders
-            </button>
-          </div>
-
-          {/* Stats box */}
-          <div className="hidden lg:flex border border-white/10 rounded-2xl bg-white/10 backdrop-blur-md overflow-hidden min-w-[200px] shadow-2xl">
-            <div className="flex-1 px-6 py-5 border-r border-white/10 flex flex-col items-center justify-center">
-              <div className="text-white text-3xl font-black font-display">{loading ? "—" : stats.successRate}%</div>
-              <div className="text-primary-200 text-[11px] mt-1 font-medium text-center leading-tight">Success Rate<br/>(out of {stats.totalOrders} Orders)</div>
-            </div>
-            <div className="flex-1 px-6 py-5 flex flex-col items-center justify-center">
-              <div className="text-white text-3xl font-black font-display">{loading ? "—" : stats.processingOrders}</div>
-              <div className="text-primary-200 text-[11px] mt-1 font-medium text-center leading-tight">Orders in<br/>Processing</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Quick Links — Row 1 ── */}
-      <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
-        {/* Products */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-          <SectionHeader icon={<Package size={18} className="text-primary-500" />} title="Products" />
-          <div className="py-2">
-            <NavLink icon={<List size={14}/>}       label="All Products"    onClick={() => setActiveTab?.("products")} />
-            <NavLink icon={<PlusCircle size={14}/>} label="Add New Product" onClick={() => setActiveTab?.("products")} />
-            <NavLink icon={<CheckSquare size={14}/>}label="Active Listings" onClick={() => setActiveTab?.("products")} />
-            <NavLink icon={<Tag size={14}/>}         label="Manage Categories" onClick={() => setActiveTab?.("categories")} />
-          </div>
-        </div>
-
-        {/* Orders */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-          <SectionHeader icon={<ShoppingCart size={18} className="text-amber-500" />} title="Orders" />
-          <div className="py-2">
-            <NavLink icon={<ClipboardList size={14}/>} label="All Orders"       onClick={() => setActiveTab?.("orders")} />
-            <NavLink icon={<Clock size={14}/>}          label="Pending Orders"   onClick={() => setActiveTab?.("orders")} />
-            <NavLink icon={<CheckCircle2 size={14}/>}   label="Delivered Orders" onClick={() => setActiveTab?.("orders")} />
-            <NavLink icon={<XCircle size={14}/>}        label="Cancelled Orders" onClick={() => setActiveTab?.("orders")} />
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-          <SectionHeader icon={<MessageSquare size={18} className="text-indigo-500" />} title="Messages" />
-          <div className="py-2">
-            <NavLink icon={<MessageSquare size={14}/>} label="All Messages"    onClick={() => setActiveTab?.("messages")} />
-            <NavLink icon={<MailOpen size={14}/>}       label="Unread Messages" onClick={() => setActiveTab?.("messages")} />
-            <NavLink icon={<Mail size={14}/>}           label="Sent Messages"   onClick={() => setActiveTab?.("messages")} />
-          </div>
-        </div>
-
-        {/* Users */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-          <SectionHeader icon={<Users size={18} className="text-emerald-500" />} title="Users" />
-          <div className="py-2">
-            <NavLink icon={<Users size={14}/>}    label="All Customers"  onClick={() => setActiveTab?.("customers")} />
-            <NavLink icon={<UserCheck size={14}/>} label="Active Users"   onClick={() => setActiveTab?.("customers")} />
-            <NavLink icon={<UserX size={14}/>}     label="Banned / Flagged" onClick={() => setActiveTab?.("customers")} />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Quick Links — Row 2 ── */}
-      <div className="px-6 md:px-8 pb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        {/* Categories */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-          <SectionHeader icon={<Tag size={18} className="text-sky-500" />} title="Categories" />
-          <div className="py-2">
-            <NavLink icon={<FolderOpen size={14}/>} label="All Categories"    onClick={() => setActiveTab?.("categories")} />
-            <NavLink icon={<PlusSquare size={14}/>}  label="Add New Category"  onClick={() => setActiveTab?.("categories")} />
-          </div>
-        </div>
-
-        {/* Settings */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-          <SectionHeader icon={<Settings size={18} className="text-slate-500" />} title="Settings" />
-          <div className="py-2">
-            <NavLink icon={<Settings size={14}/>}  label="General Settings" onClick={() => setActiveTab?.("settings")} />
-            <NavLink icon={<Lock size={14}/>}       label="Security"         onClick={() => setActiveTab?.("settings")} />
-            <NavLink icon={<Bell size={14}/>}       label="Notifications"    onClick={() => setActiveTab?.("settings")} />
-            <NavLink icon={<HelpCircle size={14}/>} label="Help & Support"   onClick={() => setActiveTab?.("settings")} />
-          </div>
-        </div>
-
-        {/* Analytics snapshot */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-          <SectionHeader icon={<LayoutDashboard size={18} className="text-rose-500" />} title="Quick Stats" />
-          <div className="py-3 px-5 space-y-3">
-            <StatRow label="Total Products" value={stats.totalProducts} color="text-primary-600" />
-            <StatRow label="Total Orders"   value={stats.totalOrders}   color="text-amber-600" />
-            <StatRow label="Completed"      value={stats.completedOrders} color="text-emerald-600" />
-            <StatRow label="Processing"     value={stats.processingOrders} color="text-sky-600" />
-            <StatRow label="Total Users"    value={stats.totalUsers}    color="text-indigo-600" />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Bottom Stats Bar ── */}
-      <div className="mx-6 md:mx-8 mb-8 bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 text-center divide-x divide-slate-100">
-          <StatTile label="Total Orders"   value={stats.totalOrders}    color="text-primary-600" />
-          <StatTile label="Completed"      value={stats.completedOrders} color="text-emerald-500" />
-          <StatTile label="Processing"     value={stats.processingOrders} color="text-amber-500" />
-          <StatTile label="Active Products" value={stats.totalProducts}  color="text-indigo-500" />
-          <StatTile label="Registered Users" value={stats.totalUsers}   color="text-rose-500" />
-        </div>
       </div>
     </div>
   );
 }
 
-function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
-  return (
-    <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 bg-slate-50/50">
-      <div className="bg-white p-1.5 rounded-lg shadow-sm border border-slate-200">{icon}</div>
-      <span className="text-[15px] font-bold text-slate-800 font-display">{title}</span>
-    </div>
-  );
+function MetricCard({ label, value, sub, icon }: any) {
+    return (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 group">
+            <div className="flex justify-between items-start">
+                <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-[#E62E04]/5 transition-colors">
+                    {icon}
+                </div>
+                <div className="text-right">
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{label}</p>
+                    <p className="text-2xl font-black text-slate-900">{value}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{sub}</p>
+                </div>
+            </div>
+        </div>
+    );
 }
 
-function NavLink({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick?: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-3 px-5 py-2.5 text-left text-[14px] text-slate-600 hover:bg-primary-50 hover:text-primary-700 transition-colors group"
-    >
-      <span className="text-slate-400 group-hover:text-primary-600 transition-colors">{icon}</span>
-      <span className="font-medium">{label}</span>
-      <ChevronRight size={14} className="ml-auto text-slate-300 group-hover:text-primary-600 transition-colors" />
-    </button>
-  );
+function HealthItem({ label, value, status }: any) {
+    return (
+        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <span className="text-[12px] font-bold text-slate-500">{label}</span>
+            <div className="flex items-center gap-3">
+                <span className="text-[13px] font-black text-slate-900">{value}</span>
+                <span className="px-2 py-0.5 bg-[#E8F5E9] text-[#2E7D32] text-[9px] font-black rounded uppercase tracking-widest">{status}</span>
+            </div>
+        </div>
+    );
 }
 
-function StatRow({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className="flex items-center justify-between text-[13px] bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
-      <span className="text-slate-500 font-medium">{label}</span>
-      <span className={`font-bold ${color}`}>{value}</span>
-    </div>
-  );
-}
-
-function StatTile({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className="flex flex-col items-center px-2">
-      <div className={`text-3xl font-black font-display ${color}`}>{value}</div>
-      <div className="text-[11px] text-slate-500 font-bold mt-2 uppercase tracking-wider text-center">{label}</div>
-    </div>
-  );
+function History({ size, className }: any) {
+    return <Clock size={size} className={className} />;
 }
