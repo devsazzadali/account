@@ -18,7 +18,8 @@ import {
   CheckCircle2,
   XCircle,
   Truck,
-  Package
+  Package,
+  ArrowRight
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
@@ -61,7 +62,6 @@ export function AdminOrders() {
         .select("*, products!inner(title, image, category, game)")
         .order("created_at", { ascending: false });
 
-      // Apply Main Tab Filter
       if (activeMainTab !== "All") {
         if (activeMainTab === "Preparing") {
             query = query.or('status.eq.Preparing,status.eq.PREPARING,status.eq.New Order,status.eq.Delivering');
@@ -70,12 +70,10 @@ export function AdminOrders() {
         }
       }
 
-      // Apply Sub Tab Filter (only if in Preparing main tab)
       if (activeMainTab === "Preparing" && activeSubTab !== "ISSUE") {
           query = query.eq("status", activeSubTab === "PREPARING" ? "Preparing" : activeSubTab);
       }
 
-      // Apply Form Filters
       if (filterGame !== "All") query = query.eq("products.game", filterGame);
       if (filterCategory !== "All") query = query.eq("products.category", filterCategory);
       if (filterOrderId) query = query.ilike("id", `%${filterOrderId}%`);
@@ -86,10 +84,7 @@ export function AdminOrders() {
       const { data, error } = await query;
       if (error) throw error;
       setOrders(data || []);
-      
-      // Update Counts (Simple local counting for UI tabs)
       fetchCounts();
-
     } catch (e: any) {
       console.error("Filter Error:", e.message);
     } finally {
@@ -112,14 +107,12 @@ export function AdminOrders() {
 
   useEffect(() => {
     fetchOrders();
-    // Fetch unique games/categories for dropdowns
     supabase.from('products').select('game, category').then(({ data }) => {
         if (data) {
             setGames(Array.from(new Set(data.map(p => p.game).filter(Boolean))));
             setCategories(Array.from(new Set(data.map(p => p.category).filter(Boolean))));
         }
     });
-
     const channel = supabase.channel('orders_realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchOrders()).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [fetchOrders]);
@@ -132,14 +125,8 @@ export function AdminOrders() {
     return hours;
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-      e.preventDefault();
-      fetchOrders();
-  };
-
   return (
     <div className="min-h-full bg-[#F6F6F7]">
-      {/* ── Main Navigation Tabs ── */}
       <div className="bg-white border-b border-slate-200 px-8">
         <div className="flex items-center gap-10 overflow-x-auto scrollbar-hide">
           {MAIN_TABS.map(tab => (
@@ -160,90 +147,54 @@ export function AdminOrders() {
       </div>
 
       <div className="p-6 md:p-8 space-y-6 max-w-[1600px] mx-auto">
-        
-        {/* ── Filter Matrix ── */}
-        <form onSubmit={handleSearch} className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
+        <form onSubmit={e => { e.preventDefault(); fetchOrders(); }} className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <div className="space-y-1.5">
-                    <label className="text-[12px] font-bold text-slate-500">Game:</label>
-                    <select 
-                        value={filterGame}
-                        onChange={e => setFilterGame(e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all"
-                    >
+                    <label className="text-[12px] font-bold text-slate-500 uppercase tracking-tighter">Game:</label>
+                    <select value={filterGame} onChange={e => setFilterGame(e.target.value)} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all">
                         <option value="All">All</option>
                         {games.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                 </div>
                 <div className="space-y-1.5">
-                    <label className="text-[12px] font-bold text-slate-500">category:</label>
-                    <select 
-                        value={filterCategory}
-                        onChange={e => setFilterCategory(e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all"
-                    >
+                    <label className="text-[12px] font-bold text-slate-500 uppercase tracking-tighter">category:</label>
+                    <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all">
                         <option value="All">All</option>
                         {categories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </div>
                 <div className="space-y-1.5">
-                    <label className="text-[12px] font-bold text-slate-500">Order number:</label>
-                    <input 
-                        value={filterOrderId}
-                        onChange={e => setFilterOrderId(e.target.value)}
-                        placeholder="Order number" 
-                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all" 
-                    />
+                    <label className="text-[12px] font-bold text-slate-500 uppercase tracking-tighter">Order number:</label>
+                    <input value={filterOrderId} onChange={e => setFilterOrderId(e.target.value)} placeholder="Order number" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all" />
                 </div>
                 <div className="space-y-1.5">
-                    <label className="text-[12px] font-bold text-slate-500">Product Title:</label>
-                    <input 
-                        value={filterTitle}
-                        onChange={e => setFilterTitle(e.target.value)}
-                        placeholder="Product Title" 
-                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all" 
-                    />
+                    <label className="text-[12px] font-bold text-slate-500 uppercase tracking-tighter">Product Title:</label>
+                    <input value={filterTitle} onChange={e => setFilterTitle(e.target.value)} placeholder="Product Title" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all" />
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-end">
                 <div className="space-y-1.5">
-                    <label className="text-[12px] font-bold text-slate-500">Internal remarks:</label>
-                    <input 
-                        value={filterRemarks}
-                        onChange={e => setFilterRemarks(e.target.value)}
-                        placeholder="Internal remarks" 
-                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all" 
-                    />
+                    <label className="text-[12px] font-bold text-slate-500 uppercase tracking-tighter">Internal remarks:</label>
+                    <input value={filterRemarks} onChange={e => setFilterRemarks(e.target.value)} placeholder="Internal remarks" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all" />
                 </div>
                 <div className="lg:col-span-2 flex items-center gap-2">
                     <div className="flex-1 space-y-1.5">
-                        <label className="text-[12px] font-bold text-slate-500">From</label>
-                        <input 
-                            type="date" 
-                            value={filterFrom}
-                            onChange={e => setFilterFrom(e.target.value)}
-                            className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all" 
-                        />
+                        <label className="text-[12px] font-bold text-slate-500 uppercase tracking-tighter">From</label>
+                        <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all" />
                     </div>
                     <span className="mt-6 text-slate-400">to</span>
                     <div className="flex-1 space-y-1.5">
-                        <label className="text-[12px] font-bold text-slate-500">to</label>
-                        <input 
-                            type="date" 
-                            value={filterTo}
-                            onChange={e => setFilterTo(e.target.value)}
-                            className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all" 
-                        />
+                        <label className="text-[12px] font-bold text-slate-500 uppercase tracking-tighter">to</label>
+                        <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-[13px] font-medium focus:border-red-400 outline-none transition-all" />
                     </div>
                 </div>
-                <button type="submit" className="w-full bg-[#E62E04] text-white py-2.5 rounded-lg font-bold text-[14px] hover:bg-[#c52804] transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-500/10">
+                <button type="submit" className="w-full bg-[#E62E04] text-white py-2.5 rounded-lg font-bold text-[14px] hover:bg-[#c52804] transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-500/10 uppercase tracking-widest">
                     Search
                 </button>
             </div>
         </form>
 
-        {/* ── Sub-Tabs ── */}
         <div className="flex gap-2">
             {SUB_TABS.map(tab => (
                 <button
@@ -260,7 +211,6 @@ export function AdminOrders() {
             ))}
         </div>
 
-        {/* ── Orders Table ── */}
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden min-h-[400px]">
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
@@ -348,7 +298,6 @@ export function AdminOrders() {
         </div>
       </div>
 
-      {/* Detail Modal */}
       <AnimatePresence>
         {selectedOrder && (
           <SoldDetailsModal 
@@ -399,50 +348,83 @@ function SoldDetailsModal({ order, onClose }: any) {
                 </div>
                 <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                     <div className="space-y-8">
-                        <h2 className="text-2xl font-bold text-slate-900">Sold Details</h2>
-                        <div className="bg-[#F8F9FA] rounded-xl p-8 border border-slate-100">
+                        <h2 className="text-2xl font-black text-slate-900 italic tracking-tight">Sold Details</h2>
+                        <div className="bg-[#F8F9FA] rounded-xl p-10 border border-slate-100 relative">
                             <div className="relative flex justify-between items-start max-w-4xl mx-auto">
                                 <div className="absolute top-5 left-0 right-0 h-1 bg-slate-200" />
-                                <div className="absolute top-5 left-0 h-1 bg-[#4CAF50] transition-all duration-1000" style={{ width: `${((currentStep - 1) / (STATUS_STEPS.length - 1)) * 100}%` }} />
+                                <div className="absolute top-5 left-0 h-1 bg-[#1dbf73] transition-all duration-1000 border-t-2 border-dashed border-white/30" style={{ width: `${((currentStep - 1) / (STATUS_STEPS.length - 1)) * 100}%` }} />
                                 {STATUS_STEPS.map((step, idx) => (
                                     <div key={step.id} className="relative z-10 flex flex-col items-center">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-4 transition-all ${idx + 1 <= currentStep ? "bg-[#4CAF50] border-[#E8F5E9] text-white" : "bg-white border-slate-100 text-slate-400"}`}>{step.id}</div>
-                                        <span className={`mt-3 text-[12px] font-bold uppercase tracking-tight ${idx + 1 <= currentStep ? "text-slate-900" : "text-slate-400"}`}>{step.label}</span>
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black border-4 transition-all ${idx + 1 <= currentStep ? "bg-[#1dbf73] border-[#E8F5E9] text-white shadow-lg shadow-emerald-500/20" : "bg-white border-slate-100 text-slate-400"}`}>{step.id}</div>
+                                        <span className={`mt-4 text-[10px] font-black uppercase tracking-[0.1em] text-center max-w-[80px] ${idx + 1 <= currentStep ? "text-slate-900" : "text-slate-400"}`}>{step.label}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                        <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-4">
+                        
+                        <div className="bg-white border border-slate-200 rounded-3xl p-8 space-y-6 shadow-sm">
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-2 text-[14px] font-bold text-slate-900"><Package size={18} /> Order number {order.id.split('-')[0].toUpperCase()}</div>
-                                    <div className="bg-[#FFEBEE] text-[#D32F2F] px-3 py-1 rounded text-[12px] font-bold flex items-center gap-2"><AlertCircle size={14} /> Exceeded time for {((new Date().getTime() - new Date(order.created_at).getTime())/(1000*60*60)).toFixed(2)} hours</div>
+                                    <div className="flex items-center gap-2 text-[15px] font-black text-slate-900 uppercase tracking-tighter italic">
+                                        <Package size={20} className="text-[#E62E04]" /> Order number {order.id.split('-')[0].toUpperCase()}
+                                    </div>
+                                    <div className="bg-[#FFEBEE] text-[#D32F2F] px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest flex items-center gap-2 border border-red-100">
+                                        <AlertCircle size={14} /> Exceeded time for {((new Date().getTime() - new Date(order.created_at).getTime())/(1000*60*60)).toFixed(2)} hours
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
-                                    <span>Order Date: {new Date(order.created_at).toLocaleString()}</span>
-                                    <span className="bg-[#FFF3E0] text-[#EF6C00] px-3 py-1 rounded-full text-[12px] font-bold">{order.status}</span>
+                                    <span className="text-[12px] font-bold">Order Date: {new Date(order.created_at).toLocaleString()}</span>
+                                    <span className="bg-[#FFF3E0] text-[#EF6C00] px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#FFE0B2]">{order.status}</span>
                                 </div>
                             </div>
-                            <div className="bg-[#F8F9FA] rounded-lg p-5 flex flex-wrap items-center justify-between gap-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 rounded-full border border-white shadow-sm overflow-hidden bg-white flex items-center justify-center">
+                            
+                            <div className="bg-slate-50 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-6 border border-slate-100">
+                                <div className="flex items-center gap-5">
+                                    <div className="w-16 h-16 rounded-full border-2 border-white shadow-lg overflow-hidden bg-white flex items-center justify-center">
                                         <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${order.username}`} alt="buyer" />
                                     </div>
                                     <div>
-                                        <h4 className="text-lg font-bold text-slate-900">{order.username}</h4>
-                                        <p className="text-xs font-bold text-slate-400 uppercase">buyer</p>
+                                        <h4 className="text-xl font-black text-slate-900 tracking-tight italic">{order.username}</h4>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Authorized Buyer</p>
                                     </div>
-                                    <div className="flex gap-2 ml-4">
-                                        <button className="bg-[#26D374] text-white px-5 py-2 rounded-lg font-bold text-[13px] flex items-center gap-2 hover:bg-[#1faa5b] transition-all"><MessageCircle size={16} /> Chat Now</button>
-                                        <button className="bg-white border border-slate-300 text-slate-600 px-5 py-2 rounded-lg font-bold text-[13px] flex items-center gap-2 hover:bg-slate-50 transition-all"><ShoppingBag size={16} /> Contact by mail</button>
+                                    <div className="flex gap-3 ml-6">
+                                        <button className="bg-[#26D374] text-white px-6 py-2.5 rounded-xl font-black text-[12px] uppercase tracking-widest flex items-center gap-2 hover:bg-[#1faa5b] transition-all shadow-lg shadow-emerald-500/10"><MessageCircle size={16} /> Chat Now</button>
+                                        <button className="bg-white border border-slate-200 text-slate-600 px-6 py-2.5 rounded-xl font-black text-[12px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm"><ShoppingBag size={16} /> Contact by mail</button>
+                                        <button className="bg-white border border-slate-200 text-red-500 px-6 py-2.5 rounded-xl font-black text-[12px] uppercase tracking-widest flex items-center gap-2 hover:bg-red-50 transition-all shadow-sm border-dashed"><XCircle size={16} /> Cancel Order</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-10 py-4">
+                                <div className="md:col-span-8 space-y-6">
+                                    <div className="flex items-center gap-6">
+                                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest w-24">Game</span>
+                                        <span className="text-sm font-bold text-slate-900">: {order.products?.game || "Facebook"}</span>
+                                    </div>
+                                    <div className="flex items-start gap-6">
+                                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest w-24 pt-1">Product Title</span>
+                                        <div className="flex-1">
+                                            <p className="text-[15px] font-black text-slate-900 leading-relaxed">: {order.products?.title}</p>
+                                            <div className="mt-8">
+                                                <button className="bg-[#E62E04] text-white px-12 py-4 rounded-2xl font-black text-[14px] uppercase tracking-[0.2em] shadow-2xl shadow-red-500/30 hover:bg-[#c52804] transition-all active:scale-95 flex items-center gap-3">
+                                                    START TRADING <ArrowRight size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="md:col-span-4">
+                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 h-full">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Internal Ledger</h4>
+                                        <p className="text-[13px] font-bold text-slate-700 leading-relaxed">{order.internal_remarks || "No encrypted remarks found."}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div className="p-6 border-t border-slate-100 flex justify-end gap-4 bg-slate-50/50">
-                    <button onClick={onClose} className="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-white transition-all">Close</button>
+                <div className="p-8 border-t border-slate-100 flex justify-end gap-4 bg-slate-50/50">
+                    <button onClick={onClose} className="px-10 py-3 rounded-2xl border border-slate-200 text-slate-400 font-black text-[12px] uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-all">Close Console</button>
                 </div>
             </motion.div>
         </div>
