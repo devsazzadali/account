@@ -96,7 +96,7 @@ export function AdminDashboardPage() {
   return (
     <AdminLayout activeTab={activeTab} setActiveTab={setActiveTab}>
       <div className="p-4">
-        {activeTab === "dashboard" && <AdminOverview setActiveTab={setActiveTab} />}
+        {(activeTab === "dashboard" || activeTab === "performance") && <AdminOverview setActiveTab={setActiveTab} />}
         {activeTab === "products" && <AdminProducts />}
         {activeTab === "categories" && <AdminCategories />}
         {activeTab === "orders" && <AdminOrders setActiveTab={setActiveTab} />}

@@ -144,6 +144,12 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             label="Store Management" 
             icon={<Settings size={20} />} 
             collapsed={isSidebarCollapsed}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            items={[
+                { id: "settings", label: "General Config" },
+                { id: "performance", label: "Performance Hub" }
+            ]}
           />
           
           <div className="pt-6 px-3 pb-2">
@@ -226,7 +232,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
               >
                   <MessageSquare size={20} />
                   <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#14b8a6] text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">
-                      1
+                      {unreadCount > 0 ? unreadCount : 1}
                   </span>
               </button>
 
@@ -291,7 +297,7 @@ function MenuItem({ id, label, icon, activeTab, setActiveTab, badge, collapsed }
     );
 }
 
-function CollapsibleMenu({ label, icon, collapsed }: any) {
+function CollapsibleMenu({ label, icon, collapsed, activeTab, setActiveTab, items }: any) {
     const [isOpen, setIsOpen] = useState(false);
     return (
         <div className="space-y-1">
@@ -309,8 +315,17 @@ function CollapsibleMenu({ label, icon, collapsed }: any) {
             </button>
             {!collapsed && isOpen && (
                 <div className="pl-12 pr-4 space-y-1 py-1">
-                    <button className="w-full text-left py-2 text-[12px] font-bold text-slate-400 hover:text-[#E62E04] transition-all tracking-wide uppercase">General Config</button>
-                    <button className="w-full text-left py-2 text-[12px] font-bold text-slate-400 hover:text-[#E62E04] transition-all tracking-wide uppercase">Performance Hub</button>
+                    {items.map((item: any) => (
+                        <button 
+                            key={item.id}
+                            onClick={() => setActiveTab(item.id)}
+                            className={`w-full text-left py-2 text-[12px] font-bold transition-all tracking-wide uppercase ${
+                                activeTab === item.id ? 'text-[#E62E04]' : 'text-slate-400 hover:text-slate-600'
+                            }`}
+                        >
+                            {item.label}
+                        </button>
+                    ))}
                 </div>
             )}
         </div>
