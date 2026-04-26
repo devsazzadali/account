@@ -1,7 +1,7 @@
 import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award, Plus, Minus, AlertCircle, ShieldCheck } from "lucide-react";
 import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { CATEGORIES, REVIEWS } from "../data/mockData";
+// import { CATEGORIES, REVIEWS } from "../data/mockData";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabase";
 
@@ -125,24 +125,30 @@ interface MainContentProps {
 export function MainContent({ selectedCategory, setSelectedCategory, searchQuery }: MainContentProps) {
   const [loading, setLoading] = useState(true);
   const [allProducts, setAllProducts] = useState<FeaturedItem[]>([]);
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
+  const [dbReviews, setDbReviews] = useState<any[]>([]);
 
   useEffect(() => {
-    async function fetchProducts() {
+    async function fetchData() {
         try {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('products')
-                .select('*')
-                .order('created_at', { ascending: false });
-            if (error) throw error;
-            setAllProducts(data || []);
+            const [prodRes, catRes, revRes] = await Promise.all([
+                supabase.from('products').select('*').order('created_at', { ascending: false }),
+                supabase.from('categories').select('*').order('name', { ascending: true }),
+                supabase.from('reviews').select('*').order('created_at', { ascending: false }).limit(6)
+            ]);
+
+            if (prodRes.error) throw prodRes.error;
+            setAllProducts(prodRes.data || []);
+            setDbCategories(catRes.data || []);
+            setDbReviews(revRes.data || []);
         } catch (err: any) {
-            console.error("Error fetching products:", err.message);
+            console.error("Fetch Error:", err.message);
         } finally {
             setLoading(false);
         }
     }
-    fetchProducts();
+    fetchData();
   }, []);
 
   const featuredItems = useMemo(() => {
@@ -153,8 +159,12 @@ export function MainContent({ selectedCategory, setSelectedCategory, searchQuery
     return [...allProducts].reverse().slice(0, 3);
   }, [allProducts]);
 
-  const categories = useMemo(() => CATEGORIES, []);
-  const reviews = useMemo(() => REVIEWS, []);
+  const categories = useMemo(() => {
+      if (dbCategories.length > 0) return dbCategories;
+      // Fallback if DB empty (optional, but requested to remove demo results)
+      return [];
+  }, [dbCategories]);
+  const reviews = useMemo(() => dbReviews, [dbReviews]);
 
   const products = useMemo(() => {
     let filtered = allProducts;
@@ -290,13 +300,10 @@ export function MainContent({ selectedCategory, setSelectedCategory, searchQuery
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-12">
                     {categories.map((cat, idx) => (
                         <div 
-                            key={idx} 
+                            key={cat.id || idx} 
                             onClick={() => handleCategoryClick(cat.name)}
                             className="bg-slate-50 border border-slate-100 rounded-2xl p-5 flex flex-col items-center justify-center text-center hover:bg-white hover:border-primary-500/30 hover:shadow-md transition-all duration-500 cursor-pointer relative group h-28 shadow-sm"
                         >
-                            <div className="absolute top-3 right-3 bg-primary-50 text-primary-600 text-[9px] px-2 py-0.5 rounded-full border border-primary-100 font-bold uppercase tracking-wider">
-                                {cat.offers}
-                            </div>
                             <span className="text-xs font-semibold text-slate-900 group-hover:text-primary-600 transition-colors uppercase tracking-widest">{cat.name}</span>
                         </div>
                     ))}

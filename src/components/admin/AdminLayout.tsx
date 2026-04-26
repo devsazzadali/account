@@ -147,6 +147,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             items={[
+                { id: "categories", label: "Categories" },
                 { id: "settings", label: "General Config" },
                 { id: "performance", label: "Performance Hub" }
             ]}

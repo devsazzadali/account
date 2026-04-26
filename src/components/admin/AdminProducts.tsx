@@ -40,6 +40,7 @@ export function AdminProducts() {
   // UI State for the new design
   const [sellingItemQuery, setSellingItemQuery] = useState("");
   const [sellingCategory, setSellingCategory] = useState("Accounts");
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
   const [showGamePopover, setShowGamePopover] = useState(false);
 
   useEffect(() => {
@@ -49,9 +50,13 @@ export function AdminProducts() {
   async function fetchProducts() {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
-      if (error) throw error;
-      setProducts(data || []);
+      const [prodRes, catRes] = await Promise.all([
+          supabase.from("products").select("*").order("created_at", { ascending: false }),
+          supabase.from("categories").select("*").order("name", { ascending: true })
+      ]);
+      if (prodRes.error) throw prodRes.error;
+      setProducts(prodRes.data || []);
+      setDbCategories(catRes.data || []);
     } catch (e: any) {
       console.error(e.message);
     } finally {
@@ -130,12 +135,7 @@ export function AdminProducts() {
                                     className="px-6 py-3 bg-white text-[15px] text-slate-800 outline-none cursor-pointer border-l border-slate-300 min-w-[160px]"
                                 >
                                     <option>All</option>
-                                    <option>Currency</option>
-                                    <option>Top up</option>
-                                    <option>Items</option>
-                                    <option>Boosting</option>
-                                    <option>Accounts</option>
-                                    <option>Video Games</option>
+                                    {dbCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                                 </select>
                             </div>
 
@@ -199,9 +199,7 @@ export function AdminProducts() {
                                 </FormItem>
                                 <FormItem label="Category">
                                     <select value={newProduct.category} onChange={e=>setNewProduct({...newProduct, category:e.target.value})} className="w-full bg-white border border-slate-300 rounded px-4 py-2.5 text-sm font-bold">
-                                        <option>Accounts</option>
-                                        <option>Services</option>
-                                        <option>Digital Assets</option>
+                                        {dbCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                                     </select>
                                 </FormItem>
                             </div>
