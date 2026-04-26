@@ -297,7 +297,251 @@ export function AdminProducts() {
             </div>
         </div>
 
-        {/* Section 2: Batch Release Products */}
+        {/* Section: Game Details */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm mt-8 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+                <CheckCircle2 size={24} className="text-slate-400" />
+                <h3 className="text-xl font-bold text-slate-900">Game details</h3>
+            </div>
+            
+            <div className="p-8 space-y-8 bg-slate-50/50">
+                <div className="border border-slate-300 rounded overflow-hidden shadow-sm">
+                    <div className="bg-[#333333] px-5 py-3 flex justify-between items-center text-white">
+                        <span className="text-[14px] font-bold tracking-wide">Custom Program 1</span>
+                        <div className="flex gap-4 items-center">
+                            <ChevronRight className="-rotate-90 cursor-pointer text-slate-400 hover:text-white transition-colors" size={18} />
+                            <Trash2 className="cursor-pointer text-slate-400 hover:text-red-400 transition-colors" size={16} />
+                        </div>
+                    </div>
+                    
+                    <div className="p-8 space-y-8 bg-white">
+                        {/* Title */}
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                            <div className="w-40 text-[15px] font-medium text-slate-800">Title</div>
+                            <input placeholder="Title" className="flex-1 border border-slate-300 rounded px-4 py-2.5 text-[14px] text-slate-800 outline-none focus:border-[#E62E04] transition-colors" />
+                        </div>
+
+                        {/* Description */}
+                        <div className="flex flex-col md:flex-row gap-2 md:gap-4">
+                            <div className="w-40 pt-2 text-[15px] font-medium text-slate-800">Discription</div>
+                            <textarea placeholder="Discription" rows={5} className="flex-1 border border-slate-300 rounded px-4 py-3 text-[14px] text-slate-800 outline-none focus:border-[#E62E04] transition-colors resize-y" />
+                        </div>
+
+                        {/* Add Image */}
+                        <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
+                            <div className="w-40 pt-2 text-[15px] font-medium text-slate-800">Add Image</div>
+                            <div className="flex-1 space-y-3">
+                                <div className="flex gap-4">
+                                    <input placeholder="Enter image URL" className="flex-1 border border-slate-300 rounded px-4 py-2.5 text-[14px] text-slate-800 outline-none focus:border-[#E62E04] transition-colors" />
+                                    <button className="bg-[#E62E04] text-white px-6 py-2.5 rounded font-bold text-[14px] hover:bg-[#c52804] transition-colors shadow-sm whitespace-nowrap">Add Image</button>
+                                </div>
+                                <p className="text-[14px] text-slate-800">
+                                    Third-party image hosting sites are supported. Please see <span className="text-[#E62E04] cursor-pointer hover:underline">list of supported domains and accepted URL format.</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <hr className="border-slate-100 my-8" />
+
+                        {/* Pricing Grid */}
+                        <div className="flex flex-wrap gap-4 items-end">
+                            <div className="space-y-1.5 flex-1 min-w-[120px]">
+                                <label className="text-[12px] font-bold text-slate-700">Currency</label>
+                                <select className="w-full border border-slate-300 rounded px-3 py-2.5 text-[14px] text-slate-800 outline-none focus:border-[#E62E04] bg-white">
+                                    <option>USD</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1.5 flex-1 min-w-[120px]">
+                                <label className="text-[12px] font-bold text-slate-700">Price Per Unit</label>
+                                <input className="w-full border border-slate-300 rounded px-3 py-2.5 text-[14px] outline-none focus:border-[#E62E04]" />
+                            </div>
+                            <div className="space-y-1.5 flex-1 min-w-[120px]">
+                                <label className="text-[12px] font-bold text-slate-700">Min Unit Per Order</label>
+                                <input className="w-full border border-slate-300 rounded px-3 py-2.5 text-[14px] outline-none focus:border-[#E62E04]" />
+                            </div>
+                            <div className="space-y-1.5 flex-1 min-w-[120px]">
+                                <label className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Stock <HelpCircle size={12} className="text-slate-400" /></label>
+                                <input className="w-full border border-slate-300 rounded px-3 py-2.5 text-[14px] outline-none focus:border-[#E62E04]" />
+                            </div>
+                            <div className="space-y-1.5 flex-1 min-w-[120px]">
+                                <label className="text-[12px] font-bold text-slate-700">Require Integer</label>
+                                <select className="w-full border border-slate-300 rounded px-3 py-2.5 text-[14px] text-slate-800 outline-none focus:border-[#E62E04] bg-white">
+                                    <option>No</option>
+                                    <option>Yes</option>
+                                </select>
+                            </div>
+                            <button className="bg-slate-200 text-slate-700 px-5 py-2.5 rounded text-[14px] font-medium hover:bg-slate-300 transition-colors h-[42px]">
+                                More information ...
+                            </button>
+                        </div>
+
+                        <hr className="border-slate-100 my-8" />
+
+                        {/* Product Specification */}
+                        <div className="space-y-6">
+                            <h4 className="text-[16px] font-bold text-slate-900">Product Specification</h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+                                {/* Col 1 */}
+                                <div className="flex flex-col md:flex-row md:items-start gap-2">
+                                    <div className="w-32 pt-2 text-[14px] text-slate-700 leading-tight">Registration time</div>
+                                    <div className="flex-1 space-y-2">
+                                        <input defaultValue="2000-12-31" className="w-full border border-slate-300 rounded px-3 py-2.5 text-[14px] text-slate-800 outline-none focus:border-[#E62E04]" />
+                                        <p className="text-[12px] text-[#E62E04] flex items-start gap-1 font-medium">
+                                            <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                                            If when you are not sure of the exact time, you can choose the last day of the year, such as 2000-12-31
+                                        </p>
+                                    </div>
+                                </div>
+                                {/* Col 2 */}
+                                <div className="flex flex-col md:flex-row md:items-center gap-2">
+                                    <div className="w-32 text-[14px] text-slate-700 leading-tight">Registered Country</div>
+                                    <select className="flex-1 border border-slate-300 rounded px-3 py-2.5 text-[14px] text-slate-400 outline-none focus:border-[#E62E04] bg-white">
+                                        <option>Please Select</option>
+                                    </select>
+                                </div>
+                                {/* Col 1 */}
+                                <div className="flex flex-col md:flex-row md:items-center gap-2">
+                                    <div className="w-32 text-[14px] text-slate-700 font-medium">FRIENDS</div>
+                                    <input className="flex-1 border border-slate-300 rounded px-3 py-2.5 text-[14px] outline-none focus:border-[#E62E04]" />
+                                </div>
+                                {/* Col 2 */}
+                                <div className="flex flex-col md:flex-row md:items-center gap-2">
+                                    <div className="w-32 text-[14px] text-slate-700 font-medium">FOLLOWERS</div>
+                                    <input className="flex-1 border border-slate-300 rounded px-3 py-2.5 text-[14px] outline-none focus:border-[#E62E04]" />
+                                </div>
+                                {/* Col 1 */}
+                                <div className="flex flex-col md:flex-row md:items-center gap-2">
+                                    <div className="w-32 text-[14px] text-slate-700 font-medium">Marketplace</div>
+                                    <select className="flex-1 border border-slate-300 rounded px-3 py-2.5 text-[14px] text-slate-400 outline-none focus:border-[#E62E04] bg-white">
+                                        <option>Please Select</option>
+                                    </select>
+                                </div>
+                                {/* Col 2 */}
+                                <div className="flex flex-col md:flex-row md:items-center gap-2">
+                                    <div className="w-32 text-[14px] text-slate-700 font-medium leading-tight">Two-Factor Authentication</div>
+                                    <select className="flex-1 border border-slate-300 rounded px-3 py-2.5 text-[14px] text-slate-400 outline-none focus:border-[#E62E04] bg-white">
+                                        <option>Please Select</option>
+                                    </select>
+                                </div>
+                                {/* Col 1 */}
+                                <div className="flex flex-col md:flex-row md:items-center gap-2">
+                                    <div className="w-32 text-[14px] text-slate-700 font-medium leading-tight">Business Manager</div>
+                                    <select className="flex-1 border border-slate-300 rounded px-3 py-2.5 text-[14px] text-slate-400 outline-none focus:border-[#E62E04] bg-white">
+                                        <option>Please Select</option>
+                                    </select>
+                                </div>
+                                {/* Col 2 */}
+                                <div className="flex flex-col md:flex-row md:items-center gap-2">
+                                    <div className="w-32 text-[14px] text-slate-700 font-medium leading-tight">Full Access</div>
+                                    <select className="flex-1 border border-slate-300 rounded px-3 py-2.5 text-[14px] text-slate-400 outline-none focus:border-[#E62E04] bg-white">
+                                        <option>Please Select</option>
+                                    </select>
+                                </div>
+                                {/* Col 1 */}
+                                <div className="flex flex-col md:flex-row md:items-center gap-2">
+                                    <div className="w-32 text-[14px] text-slate-700 font-medium leading-tight">Can modify account information</div>
+                                    <select className="flex-1 border border-slate-300 rounded px-3 py-2.5 text-[14px] text-slate-400 outline-none focus:border-[#E62E04] bg-white">
+                                        <option>Please Select</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                
+                <button className="bg-[#E62E04] text-white px-5 py-2.5 rounded font-bold text-[14px] flex items-center gap-2 hover:bg-[#c52804] transition-colors shadow-sm">
+                    <Plus size={16} /> Add Custom Program
+                </button>
+            </div>
+        </div>
+
+        {/* Section: Product Expiration & Delivery Option */}
+        <div className="space-y-8 mt-8">
+            {/* Expiration Date */}
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+                    <History size={24} className="text-slate-400" />
+                    <h3 className="text-xl font-bold text-slate-900">Product Expiration Date</h3>
+                </div>
+                <div className="p-8 flex gap-4 bg-slate-50/30">
+                    <button className="border border-slate-300 rounded px-8 py-2.5 text-[14px] font-medium text-slate-700 hover:border-[#E62E04] hover:text-[#E62E04] transition-colors bg-white">7Days</button>
+                    <button className="border border-slate-300 rounded px-8 py-2.5 text-[14px] font-medium text-slate-700 hover:border-[#E62E04] hover:text-[#E62E04] transition-colors bg-white">15Days</button>
+                    <button className="border border-slate-300 rounded px-8 py-2.5 text-[14px] font-medium text-slate-700 hover:border-[#E62E04] hover:text-[#E62E04] transition-colors bg-white">30Days</button>
+                </div>
+            </div>
+
+            {/* Delivery Option */}
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+                    <Package size={24} className="text-slate-400" />
+                    <h3 className="text-xl font-bold text-slate-900">Delivery Option</h3>
+                </div>
+                <div className="p-8 space-y-6 max-w-4xl bg-slate-50/30">
+                    <div className="flex flex-col md:flex-row md:items-start gap-4">
+                        <div className="w-40 pt-2 text-[14px] font-bold text-slate-800 uppercase tracking-wide">
+                            DELIVERY ETA <span className="text-[#E62E04]">*</span>
+                        </div>
+                        <div className="flex-1 space-y-3">
+                            <select className="w-full border border-[#E62E04] rounded px-4 py-3 text-[14px] text-slate-400 outline-none shadow-[0_0_0_1px_rgba(230,46,4,0.1)] bg-white">
+                                <option>Nothing selected</option>
+                            </select>
+                            <p className="text-[13px] text-[#E62E04] flex items-start gap-1 font-medium leading-relaxed">
+                                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                                Please select a reasonable delivery time according to the actual situation to ensure that the order is shipped on time. If the order is not shipped according to the selected delivery time, it may affect the delivery time of the order, causing customer dissatisfaction or order delays.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-4 items-center">
+                        <div className="w-40 hidden md:block"></div>
+                        <label className="flex items-center gap-2 cursor-pointer pt-2">
+                            <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-[#E62E04] focus:ring-[#E62E04]" />
+                            <span className="text-[14px] text-slate-800 font-medium">Order Delivery</span>
+                        </label>
+                    </div>
+                    
+                    <div className="text-right pt-4">
+                        <p className="text-[14px] text-[#E62E04] font-bold cursor-pointer hover:underline transition-all">
+                            No available trading methods? Apply to add
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Section: Publish Time */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm mt-8 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+                <SearchCode size={24} className="text-slate-400" />
+                <h3 className="text-xl font-bold text-slate-900">Publish Time</h3>
+            </div>
+            <div className="p-8 flex gap-4 bg-slate-50/30">
+                <button className="relative border-2 border-[#E62E04] rounded px-8 py-2.5 text-[14px] text-[#E62E04] font-medium bg-white">
+                    Publish Immediately
+                    <div className="absolute -top-2 -right-2 bg-[#E62E04] text-white rounded p-0.5">
+                        <CheckCircle2 size={12} strokeWidth={3} />
+                    </div>
+                </button>
+                <button className="border border-slate-300 rounded px-8 py-2.5 text-[14px] text-slate-700 font-medium bg-white hover:border-slate-400 flex items-center gap-1.5 transition-colors">
+                    Pending Publish <HelpCircle size={14} className="text-slate-400" />
+                </button>
+            </div>
+        </div>
+
+        {/* Submit Block */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm mt-8 p-12 flex flex-col items-center justify-center space-y-6">
+            <label className="flex items-center gap-2.5 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-[#E62E04] focus:ring-[#E62E04] mt-0.5" />
+                <span className="text-[14px] text-slate-800">
+                    I have read and agreed to all sellers policy and the <span className="text-[#E62E04] hover:underline cursor-pointer">Terms of service</span>
+                </span>
+            </label>
+            <button className="bg-[#E4E4E4] text-white px-16 py-3 rounded font-bold text-[15px] cursor-not-allowed transition-colors">
+                Submit
+            </button>
+        </div>
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
             <div className="p-6 border-b border-slate-100 flex items-center gap-3">
                 <LayoutGrid size={24} className="text-slate-400" />
