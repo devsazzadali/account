@@ -18,7 +18,8 @@ import {
   CheckCircle2,
   XCircle,
   FileText,
-  SearchCode
+  SearchCode,
+  HelpCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
@@ -35,6 +36,11 @@ export function AdminProducts() {
     category: "Accounts",
     game_type: "All"
   });
+
+  // UI State for the new design
+  const [sellingItemQuery, setSellingItemQuery] = useState("");
+  const [sellingCategory, setSellingCategory] = useState("Accounts");
+  const [showGamePopover, setShowGamePopover] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -73,7 +79,7 @@ export function AdminProducts() {
     <div className="min-h-full bg-[#F6F6F7]">
       {/* Header Breadcrumb */}
       <div className="px-8 py-4 flex items-center gap-2 text-slate-500 text-sm font-medium">
-          <History size={16} /> Home / Sold Details
+          <History size={16} /> Home / Create Listing
       </div>
 
       <div className="p-8 space-y-8 max-w-[1400px] mx-auto">
@@ -91,34 +97,86 @@ export function AdminProducts() {
         <h2 className="text-2xl font-bold text-slate-900">Create Listing</h2>
 
         {/* Section 1: Single Release/General Info */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-xl overflow-visible shadow-sm">
             <div className="p-6 border-b border-slate-100 flex items-center gap-3">
                 <SearchCode size={24} className="text-slate-400" />
                 <h3 className="text-xl font-bold text-slate-900">Single Release/General Info</h3>
             </div>
             
             <div className="p-10 space-y-8">
-                <div className="space-y-4">
+                <div className="space-y-4 relative">
                     <h4 className="text-[16px] font-bold text-slate-900">Selling Items</h4>
-                    <p className="text-[14px] text-slate-400 font-medium italic">Enter product name here</p>
+                    <p className="text-[14px] text-slate-400 font-medium">Enter product name here</p>
                     
-                    <div className="flex flex-wrap items-center gap-4 max-w-4xl">
-                        <div className="flex-1 flex border border-slate-300 rounded overflow-hidden">
-                            <input 
-                                placeholder="What do you want to sell?" 
-                                className="flex-1 px-4 py-3 text-[14px] font-medium outline-none"
-                            />
-                            <div className="w-px bg-slate-300 my-2" />
-                            <select className="px-6 py-3 bg-white text-[14px] font-bold outline-none cursor-pointer border-l border-slate-300">
-                                <option>All</option>
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="flex flex-col">
-                                <span className="text-[13px] font-bold text-slate-400">Can't find it?</span>
-                                <span className="text-[14px] font-black text-slate-900">name</span>
+                    <div className="flex flex-wrap items-start gap-4 max-w-4xl relative">
+                        <div className="relative flex-1">
+                            <div className="flex border border-slate-300 rounded overflow-hidden focus-within:border-slate-400 transition-colors">
+                                <input 
+                                    value={sellingItemQuery}
+                                    onChange={(e) => {
+                                        setSellingItemQuery(e.target.value);
+                                        if (e.target.value.toLowerCase().includes("facebook")) setShowGamePopover(true);
+                                        else setShowGamePopover(false);
+                                    }}
+                                    onFocus={() => { if(sellingItemQuery.toLowerCase().includes("facebook")) setShowGamePopover(true) }}
+                                    onBlur={() => setTimeout(() => setShowGamePopover(false), 200)}
+                                    placeholder="What do you want to sell?" 
+                                    className="flex-1 px-4 py-3 text-[15px] text-slate-900 outline-none"
+                                />
+                                <div className="w-px bg-slate-300 my-2" />
+                                <select 
+                                    value={sellingCategory}
+                                    onChange={(e) => setSellingCategory(e.target.value)}
+                                    className="px-6 py-3 bg-white text-[15px] text-slate-800 outline-none cursor-pointer border-l border-slate-300 min-w-[160px]"
+                                >
+                                    <option>All</option>
+                                    <option>Currency</option>
+                                    <option>Top up</option>
+                                    <option>Items</option>
+                                    <option>Boosting</option>
+                                    <option>Accounts</option>
+                                    <option>Video Games</option>
+                                </select>
                             </div>
-                            <button className="text-[14px] font-bold text-slate-900 hover:underline">Request for new</button>
+
+                            {/* Game Selection Popover */}
+                            <AnimatePresence>
+                                {showGamePopover && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: 5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 5 }}
+                                        className="absolute top-full left-0 mt-1 w-full max-w-[500px] bg-white rounded shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-200 z-50 overflow-hidden"
+                                    >
+                                        <div className="p-5 border-b border-slate-100">
+                                            <h5 className="font-bold text-slate-900 mb-4 text-[16px]">Facebook</h5>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-100 rounded-full hover:bg-slate-100 transition-colors">
+                                                    <span>🛍️</span> <span className="text-[14px] text-slate-800">Top up</span>
+                                                </button>
+                                                <button className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-100 rounded-full hover:bg-slate-100 transition-colors">
+                                                    <span>⚡</span> <span className="text-[14px] text-slate-800">Platform Engagement</span>
+                                                </button>
+                                                <button className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-100 rounded-full hover:bg-slate-100 transition-colors shadow-sm ring-1 ring-slate-200">
+                                                    <span>🔮</span> <span className="text-[14px] text-slate-800">Accounts</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="p-3 bg-[#FFF5F5] text-center">
+                                            <p className="text-[#E62E04] text-[14px]">
+                                                Unable to find desired results? <span className="underline cursor-pointer">click feedback</span> to Z2U team.
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                        <div className="flex items-center gap-4 py-3">
+                            <div className="flex flex-col">
+                                <span className="text-[13px] text-slate-900">Can't find it?</span>
+                                <span className="text-[14px] text-slate-900">name</span>
+                            </div>
+                            <button className="text-[14px] text-slate-900 hover:underline">Request for new</button>
                         </div>
                     </div>
                 </div>
@@ -149,7 +207,7 @@ export function AdminProducts() {
                             </div>
                             <div className="flex justify-end gap-4">
                                 <button onClick={()=>setShowAddForm(false)} className="px-6 py-2 text-[14px] font-bold text-slate-500 hover:text-slate-900">Cancel</button>
-                                <button onClick={handleAddProduct} className="bg-[#E62E04] text-white px-8 py-2 rounded font-bold text-[14px] shadow-lg shadow-red-500/20">Commit Asset</button>
+                                <button onClick={handleAddProduct} className="bg-[#E62E04] text-white px-8 py-2 rounded font-bold text-[14px] shadow-lg shadow-red-500/20 hover:bg-[#c52804] transition-colors">Commit Asset</button>
                             </div>
                         </motion.div>
                     )}
@@ -163,6 +221,79 @@ export function AdminProducts() {
                         <Plus size={18} /> Initialize New Listing
                     </button>
                 )}
+            </div>
+        </div>
+
+        {/* Section: Product Types (From Screenshot 1) */}
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mt-8">
+            <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+                <FileText size={24} className="text-slate-400" />
+                <h3 className="text-xl font-bold text-slate-900">Product Types</h3>
+            </div>
+            
+            <div className="p-10 space-y-8 max-w-3xl">
+                {/* Attribute */}
+                <div className="flex items-start gap-4">
+                    <div className="w-40 pt-2 text-[15px] text-slate-800 flex items-center gap-1">
+                        Attribute <span className="text-red-500">*</span> <HelpCircle size={14} className="text-slate-900 cursor-help" />
+                    </div>
+                    <div className="flex-1 flex gap-8 pt-2">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                            <input type="radio" name="attr" className="w-4 h-4 text-[#E62E04] border-slate-300 focus:ring-[#E62E04]" defaultChecked />
+                            <span className="text-[15px] text-slate-800 group-hover:text-slate-900">Account Ownership Transfer</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                            <input type="radio" name="attr" className="w-4 h-4 text-[#E62E04] border-slate-300 focus:ring-[#E62E04]" />
+                            <span className="text-[15px] text-slate-800 group-hover:text-slate-900">Account Usage Rental</span>
+                        </label>
+                    </div>
+                </div>
+
+                {/* Platform */}
+                <div className="flex items-center gap-4">
+                    <div className="w-40 text-[15px] text-slate-800">
+                        Platform<span className="text-red-500">*</span>
+                    </div>
+                    <div className="flex-1">
+                        <select className="w-full border border-slate-300 rounded px-4 py-3 text-[15px] text-slate-800 outline-none focus:border-red-400 transition-colors bg-white">
+                            <option>Please Select</option>
+                            <option>PC</option>
+                            <option>Mobile</option>
+                            <option>Console</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Device */}
+                <div className="flex items-center gap-4">
+                    <div className="w-40 text-[15px] text-slate-800">
+                        Device<span className="text-red-500">*</span>
+                    </div>
+                    <div className="flex-1">
+                        <select className="w-full border border-slate-300 rounded px-4 py-3 text-[15px] text-slate-800 outline-none focus:border-red-400 transition-colors bg-white">
+                            <option>Please Select</option>
+                            <option>Android</option>
+                            <option>iOS</option>
+                            <option>Global</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Area */}
+                <div className="flex items-center gap-4">
+                    <div className="w-40 text-[15px] text-slate-800">
+                        Area<span className="text-red-500">*</span>
+                    </div>
+                    <div className="flex-1">
+                        <select className="w-full border border-slate-300 rounded px-4 py-3 text-[15px] text-slate-800 outline-none focus:border-red-400 transition-colors bg-white">
+                            <option>Please Select</option>
+                            <option>North America</option>
+                            <option>Europe</option>
+                            <option>Asia</option>
+                            <option>Global</option>
+                        </select>
+                    </div>
+                </div>
             </div>
         </div>
 
