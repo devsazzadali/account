@@ -53,98 +53,61 @@ export function UserOrders() {
   };
 
   return (
-    <div className="space-y-6 relative">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
-            <div>
-                <h2 className="text-2xl font-display font-bold text-slate-900 italic">Order Ledger</h2>
-                <p className="text-sm text-slate-500">View and manage your digital asset acquisitions.</p>
-            </div>
-            <div className="flex items-center gap-3 w-full md:w-auto">
-                <div className="relative flex-1 md:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input 
-                        type="text" 
-                        placeholder="Search orders by ID..." 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                    />
-                </div>
-                <button className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
-                    <Download size={18} />
-                </button>
-            </div>
+    <div className="space-y-4">
+        {/* Header (My Orders text might be injected from parent, but we can assume it's here or handled) */}
+        
+        {/* Search */}
+        <div className="relative border border-slate-200 rounded">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input 
+                type="text" 
+                placeholder="Search..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-white text-sm focus:outline-none"
+            />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 relative z-10">
+        {/* Tabs */}
+        <div className="flex items-center gap-8 border-b border-slate-200 mt-2">
+            <button className="text-[14px] font-medium text-[#E62E04] border-b-2 border-[#E62E04] pb-2 px-1">All</button>
+            <button className="text-[14px] font-medium text-slate-600 hover:text-slate-900 pb-2 px-1">Success</button>
+            <button className="text-[14px] font-medium text-slate-600 hover:text-slate-900 pb-2 px-1">Processing</button>
+        </div>
+
+        {/* Orders List */}
+        <div className="space-y-4 pt-2">
             {loading ? (
-                <div className="bg-white border border-slate-200 rounded-3xl p-12 flex flex-col items-center justify-center text-slate-400">
-                    <div className="w-12 h-12 border-4 border-primary-500/20 border-t-primary-500 rounded-full animate-spin mb-4"></div>
-                    <p className="font-bold uppercase tracking-widest text-[10px]">Accessing Secure Ledger...</p>
-                </div>
+                <div className="py-12 text-center text-slate-400">Loading...</div>
             ) : filteredOrders.length === 0 ? (
-                <div className="bg-white border border-slate-200 rounded-3xl p-12 flex flex-col items-center justify-center text-slate-400 text-center">
-                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                        <ShoppingBag size={40} className="text-slate-200" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-2">No Acquisitions Found</h3>
-                    <p className="text-sm max-w-xs mx-auto">Your ledger is currently empty. Start exploring our premium assets to begin your collection.</p>
-                </div>
+                <div className="py-12 text-center text-slate-400">No orders found.</div>
             ) : (
                 filteredOrders.map((order) => (
-                    <div key={order.id} className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-primary-500/30 transition-all group shadow-sm hover:shadow-md">
-                        <div className="flex flex-col md:flex-row items-center gap-6">
-                            <div className="w-20 h-20 rounded-xl bg-slate-50 border border-slate-100 overflow-hidden flex-shrink-0">
-                                {order.products?.image ? (
-                                    <img src={order.products.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                        <ShoppingBag size={32} />
-                                    </div>
-                                )}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0 text-center md:text-left w-full">
-                                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-1">
-                                    <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest bg-primary-50 px-2 py-0.5 rounded">
-                                        {order.products?.category || 'Premium Asset'}
-                                    </span>
-                                    <button 
-                                        onClick={(e) => handleCopyId(order.id, e)}
-                                        className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-primary-600 transition-colors bg-slate-50 hover:bg-primary-50 px-2 py-0.5 rounded cursor-pointer group/copy"
-                                        title={order.id}
-                                    >
-                                        ID: #{order.id.split('-')[0].toUpperCase()}
-                                        {copiedId === order.id ? <CheckCircle2 size={10} className="text-green-500" /> : <Copy size={10} className="opacity-0 group-hover/copy:opacity-100 transition-opacity" />}
-                                    </button>
-                                </div>
-                                <h4 className="text-lg font-bold text-slate-900 truncate group-hover:text-primary-600 transition-colors">
-                                    {order.products?.title || 'Unknown Product'}
+                    <div key={order.id} className="bg-white border-b border-slate-200 pb-4">
+                        <div className="flex items-center gap-1 mb-2 cursor-pointer text-[#14b8a6] hover:text-teal-600 transition-colors">
+                            <span className="text-[12px] font-bold uppercase tracking-wide">
+                                {order.status === 'Completed' ? 'Success' : order.status === 'Paid' ? 'Processing' : order.status}
+                            </span>
+                            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-1">
+                                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                        </div>
+                        
+                        <div className="flex justify-between items-start">
+                            <div className="pr-4">
+                                <h4 className="text-[13px] text-slate-800 leading-snug mb-1">
+                                    {order.products?.title || 'Structure Facebook ads | 4 ID verified old facebook | 2 Verified Business Manager'}
                                 </h4>
-                                <div className="flex items-center justify-center md:justify-start gap-4 mt-2 text-sm text-slate-500">
-                                    <span className="flex items-center gap-1.5">
-                                        {new Date(order.created_at).toLocaleDateString()}
-                                    </span>
-                                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                                    <span className="font-bold text-slate-900">${Number(order.total_price).toFixed(2)}</span>
+                                <div className="text-[14px] text-[#E62E04] font-medium mb-3">
+                                    ${Number(order.total_price).toFixed(2)} USD
+                                </div>
+                                <div className="text-[12px] text-slate-500 space-y-0.5">
+                                    <div>Order number: <span className="bg-slate-50 border border-slate-200 px-1.5 py-0.5 text-slate-700 ml-1 rounded-[2px]">{order.id.split('-')[0].toUpperCase()}</span></div>
+                                    <div>Payment time: {new Date(order.created_at).toLocaleString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false }).replace(',', '')}</div>
                                 </div>
                             </div>
-
-                            <div className="flex flex-col items-center md:items-end gap-3 w-full md:w-auto mt-4 md:mt-0">
-                                <div className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-                                    order.status === 'Paid' || order.status === 'Completed' || order.status === 'Delivered'
-                                    ? 'bg-green-50 text-green-600 border-green-100' 
-                                    : 'bg-amber-50 text-amber-600 border-amber-100'
-                                }`}>
-                                    {order.status}
-                                </div>
-                                <Link 
-                                    to={`/order/${order.id}`}
-                                    className="flex items-center gap-2 text-[10px] font-bold text-primary-600 uppercase tracking-widest hover:text-primary-500 transition-colors group/btn"
-                                >
-                                    View Details
-                                    <ExternalLink size={12} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
-                                </Link>
+                            <div className="text-[11px] text-slate-400 shrink-0">
+                                {new Date(order.created_at).toLocaleString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false }).replace(',', '')}
                             </div>
                         </div>
                     </div>

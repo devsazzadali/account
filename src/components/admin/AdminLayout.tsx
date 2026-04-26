@@ -220,34 +220,29 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
               </div>
           </div>
 
-          <div className="flex items-center gap-4 ml-6">
-              {/* Messages */}
+          <div className="flex items-center gap-6 ml-6">
+              {/* Exit to Site */}
+              <button 
+                  onClick={() => navigate("/")}
+                  className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-900 tracking-wide mr-2 transition-colors"
+              >
+                  <ChevronLeft size={16} /> EXIT TO SITE
+              </button>
+
+              {/* Messages Icon */}
               <button 
                 onClick={() => setActiveTab("messages")}
-                className="relative p-3 rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 hover:bg-white hover:border-slate-200 hover:text-slate-900 transition-all group"
+                className="relative text-[#14b8a6] hover:text-teal-600 transition-colors flex items-center justify-center"
               >
-                  <MessageSquare size={20} className="group-hover:scale-110 transition-transform" />
-                  {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#E62E04] text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white animate-bounce">
-                          {unreadCount}
-                      </span>
-                  )}
-              </button>
-              
-              <button className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 hover:bg-white hover:border-slate-200 hover:text-slate-900 transition-all group">
-                  <Bell size={20} className="group-hover:scale-110 transition-transform" />
+                  <MessageSquare size={20} />
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#14b8a6] text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                      1
+                  </span>
               </button>
 
-              <div className="h-8 w-px bg-slate-200 mx-2" />
-
-              <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setActiveTab("settings")}>
-                  <div className="flex flex-col items-end">
-                      <span className="text-[13px] font-black text-slate-900 uppercase group-hover:text-[#E62E04] transition-colors">{username}</span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Platform Admin</span>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl border border-slate-200 bg-slate-100 overflow-hidden group-hover:border-[#E62E04] transition-all">
-                      <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="avatar" />
-                  </div>
+              {/* User Avatar */}
+              <div className="w-9 h-9 rounded-full border border-slate-200 bg-slate-100 overflow-hidden cursor-pointer hover:ring-2 hover:ring-slate-200 transition-all ml-2" onClick={() => setActiveTab("settings")}>
+                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="avatar" className="w-full h-full object-cover" />
               </div>
           </div>
         </header>
