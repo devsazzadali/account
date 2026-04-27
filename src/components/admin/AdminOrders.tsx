@@ -57,9 +57,10 @@ export function AdminOrders() {
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
+      console.log("Fetching orders for tab:", activeMainTab, "subTab:", activeSubTab);
       let query = supabase
         .from("orders")
-        .select("*, products!inner(title, image, category, game)")
+        .select("*, products(title, image, category, game)")
         .order("created_at", { ascending: false });
 
       if (activeMainTab !== "All") {
@@ -82,7 +83,11 @@ export function AdminOrders() {
       if (filterTo) query = query.lte("created_at", filterTo);
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+          console.error("Supabase Query Error:", error);
+          throw error;
+      }
+      console.log("Orders received:", data?.length);
       setOrders(data || []);
       fetchCounts();
     } catch (e: any) {
