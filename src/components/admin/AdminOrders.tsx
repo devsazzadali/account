@@ -41,6 +41,7 @@ export function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [counts, setCounts] = useState<any>({ All: 0, Preparing: 0, Delivered: 0, "Pending feedback": 0, Canceled: 0 });
+  const [error, setError] = useState<string | null>(null);
 
   // Filter Form States
   const [filterGame, setFilterGame] = useState("All");
@@ -92,6 +93,7 @@ export function AdminOrders() {
       fetchCounts();
     } catch (e: any) {
       console.error("Filter Error:", e.message);
+      setError(e.message);
     } finally {
       setLoading(false);
     }
@@ -201,6 +203,17 @@ export function AdminOrders() {
                 </button>
             </div>
         </form>
+
+        {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl flex items-center gap-3 mb-6">
+                <AlertCircle size={20} />
+                <div className="flex-1">
+                    <p className="text-xs font-black uppercase">System Linkage Error</p>
+                    <p className="text-[13px] font-bold">{error}</p>
+                </div>
+                <button onClick={() => { setError(null); fetchOrders(); }} className="px-4 py-2 bg-red-600 text-white rounded-lg text-[11px] font-black uppercase">Retry Connection</button>
+            </div>
+        )}
 
         <div className="flex gap-2">
             {SUB_TABS.map(tab => (
