@@ -351,16 +351,34 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function SoldDetailsModal({ order, onClose }: any) {
-    const STATUS_STEPS = [
-        { id: 1, label: "New Order" },
-        { id: 2, label: "PREPARING" },
-        { id: 3, label: "Delivering" },
-        { id: 4, label: "Waiting for confirmation" },
-        { id: 5, label: "Completed" },
-        { id: 6, label: "Evaluate" }
-    ];
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [localStatus, setLocalStatus] = useState(order.status);
+    const [localRemarks, setLocalRemarks] = useState(order.internal_remarks || "");
+    const [localCredentials, setLocalCredentials] = useState(order.credentials || "");
 
-    const currentStep = order.status === 'Completed' ? 5 : order.status === 'Delivering' ? 3 : 2;
+    const currentStep = localStatus === 'Completed' ? 5 : localStatus === 'Delivered' ? 3 : 2;
+
+    async function handleUpdate() {
+        setIsUpdating(true);
+        try {
+            const { error } = await supabase
+                .from('orders')
+                .update({ 
+                    status: localStatus,
+                    internal_remarks: localRemarks,
+                    credentials: localCredentials
+                })
+                .eq('id', order.id);
+            
+            if (error) throw error;
+            alert("Order registry updated successfully.");
+            // OnClose or just keep open
+        } catch (e: any) {
+            alert("Update Error: " + e.message);
+        } finally {
+            setIsUpdating(false);
+        }
+    }
 
     return (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
@@ -397,7 +415,17 @@ function SoldDetailsModal({ order, onClose }: any) {
                                 </div>
                                 <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
                                     <span className="text-[12px] font-bold">Order Date: {new Date(order.created_at).toLocaleString()}</span>
-                                    <span className="bg-[#FFF3E0] text-[#EF6C00] px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#FFE0B2]">{order.status}</span>
+                                    <select 
+                                        value={localStatus}
+                                        onChange={(e) => setLocalStatus(e.target.value)}
+                                        className="bg-[#FFF3E0] text-[#EF6C00] px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#FFE0B2] outline-none cursor-pointer"
+                                    >
+                                        <option value="Preparing">Preparing</option>
+                                        <option value="Delivering">Delivering</option>
+                                        <option value="Delivered">Delivered</option>
+                                        <option value="Completed">Completed</option>
+                                        <option value="Canceled">Canceled</option>
+                                    </select>
                                 </div>
                             </div>
                             
@@ -428,18 +456,30 @@ function SoldDetailsModal({ order, onClose }: any) {
                                         <span className="text-xs font-black text-slate-400 uppercase tracking-widest w-24 pt-1">Product Title</span>
                                         <div className="flex-1">
                                             <p className="text-[15px] font-black text-slate-900 leading-relaxed">: {order.products?.title}</p>
-                                            <div className="mt-8">
-                                                <button className="bg-[#E62E04] text-white px-12 py-4 rounded-2xl font-black text-[14px] uppercase tracking-[0.2em] shadow-2xl shadow-red-500/30 hover:bg-[#c52804] transition-all active:scale-95 flex items-center gap-3">
-                                                    START TRADING <ArrowRight size={18} />
-                                                </button>
-                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-6 pt-4 border-t border-slate-50">
+                                        <span className="text-xs font-black text-[#1dbf73] uppercase tracking-widest w-24 pt-3">Deployment Data</span>
+                                        <div className="flex-1">
+                                            <textarea 
+                                                value={localCredentials}
+                                                onChange={(e) => setLocalCredentials(e.target.value)}
+                                                placeholder="Enter account credentials or license keys here. These will be securely visible to the buyer upon 'Delivered' status."
+                                                className="w-full bg-slate-900 text-emerald-400 font-mono text-[13px] p-4 rounded-xl border border-slate-800 outline-none focus:border-emerald-500/50 transition-all min-h-[100px]"
+                                            />
+                                            <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">Only visible to buyer when status is 'Delivered'</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="md:col-span-4">
-                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 h-full">
+                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 h-full flex flex-col">
                                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Internal Ledger</h4>
-                                        <p className="text-[13px] font-bold text-slate-700 leading-relaxed">{order.internal_remarks || "No encrypted remarks found."}</p>
+                                        <textarea 
+                                            value={localRemarks}
+                                            onChange={(e) => setLocalRemarks(e.target.value)}
+                                            placeholder="Write internal administrative remarks here..."
+                                            className="flex-1 bg-transparent text-[13px] font-bold text-slate-700 leading-relaxed outline-none resize-none"
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -447,7 +487,15 @@ function SoldDetailsModal({ order, onClose }: any) {
                     </div>
                 </div>
                 <div className="p-8 border-t border-slate-100 flex justify-end gap-4 bg-slate-50/50">
-                    <button onClick={onClose} className="px-10 py-3 rounded-2xl border border-slate-200 text-slate-400 font-black text-[12px] uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-all">Close Console</button>
+                    <button onClick={onClose} className="px-10 py-4 rounded-2xl border border-slate-200 text-slate-400 font-black text-[12px] uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-all">Close Console</button>
+                    <button 
+                        onClick={handleUpdate}
+                        disabled={isUpdating}
+                        className="px-12 py-4 bg-slate-900 text-white font-black rounded-2xl text-[12px] uppercase tracking-widest hover:bg-[#1dbf73] transition-all shadow-xl shadow-slate-900/10 flex items-center gap-3 disabled:opacity-50"
+                    >
+                        {isUpdating ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                        Synchronize Ledger
+                    </button>
                 </div>
             </motion.div>
         </div>
