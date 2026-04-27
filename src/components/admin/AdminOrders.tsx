@@ -61,7 +61,10 @@ export function AdminOrders() {
       console.log("Fetching orders for tab:", activeMainTab, "subTab:", activeSubTab);
       let query = supabase
         .from("orders")
-        .select("*, products(title, image, category, game)")
+        .select(`
+            *,
+            products(title, image, category)
+        `)
         .order("created_at", { ascending: false });
 
       if (activeMainTab !== "All") {
