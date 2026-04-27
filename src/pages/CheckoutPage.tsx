@@ -81,7 +81,7 @@ export function CheckoutPage() {
                 username: username,
                 quantity: initialQuantity,
                 total_price: total,
-                status: 'Preparing'
+                status: 'New Order'
             })
             .select()
             .single();

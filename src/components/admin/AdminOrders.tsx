@@ -36,7 +36,7 @@ const SUB_TABS = ["New Order", "Delivering", "PREPARING", "ISSUE"];
 
 export function AdminOrders() {
   const [activeMainTab, setActiveMainTab] = useState("Preparing");
-  const [activeSubTab, setActiveSubTab] = useState("PREPARING");
+  const [activeSubTab, setActiveSubTab] = useState("New Order");
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
