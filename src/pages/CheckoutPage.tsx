@@ -70,14 +70,18 @@ export function CheckoutPage() {
 
         console.log("Placing order for product:", product?.id, "Email:", email);
 
+        const { data: { session } } = await supabase.auth.getSession();
+        const username = session?.user?.email?.split('@')[0] || email.split('@')[0] || "Guest";
+
         const { data, error } = await supabase
             .from('orders')
             .insert({
                 product_id: product?.id,
                 customer_email: email,
+                username: username,
                 quantity: initialQuantity,
                 total_price: total,
-                status: 'Awaiting Verification'
+                status: 'Preparing'
             })
             .select()
             .single();
