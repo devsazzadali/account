@@ -63,6 +63,8 @@ export function AdminOrders() {
         .select("*, products(title, image, category, game)")
         .order("created_at", { ascending: false });
 
+      // DEBUG: Removing all filters temporarily to force data display
+      /*
       if (activeMainTab !== "All") {
         if (activeMainTab === "Preparing") {
             query = query.or('status.eq.Preparing,status.eq.PREPARING,status.eq.New Order,status.eq.Delivering');
@@ -81,6 +83,7 @@ export function AdminOrders() {
       if (filterTitle) query = query.ilike("products.title", `%${filterTitle}%`);
       if (filterFrom) query = query.gte("created_at", filterFrom);
       if (filterTo) query = query.lte("created_at", filterTo);
+      */
 
       const { data, error } = await query;
       if (error) {
@@ -98,8 +101,10 @@ export function AdminOrders() {
   }, [activeMainTab, activeSubTab, filterGame, filterCategory, filterOrderId, filterTitle, filterFrom, filterTo]);
 
   async function fetchCounts() {
-      const { data } = await supabase.from('orders').select('status');
+      const { data, error } = await supabase.from('orders').select('status');
+      if (error) console.error("Counts Fetch Error:", error);
       if (data) {
+          console.log("Raw count data:", data);
           const c = { All: data.length, Preparing: 0, Delivered: 0, "Pending feedback": 0, Canceled: 0 };
           data.forEach((o: any) => {
               if (['Preparing', 'PREPARING', 'New Order', 'Delivering'].includes(o.status)) c.Preparing++;
