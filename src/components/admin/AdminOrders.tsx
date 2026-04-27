@@ -63,8 +63,6 @@ export function AdminOrders() {
         .select("*, products(title, image, category, game)")
         .order("created_at", { ascending: false });
 
-      // DEBUG: Removing all filters temporarily to force data display
-      /*
       if (activeMainTab !== "All") {
         if (activeMainTab === "Preparing") {
             query = query.or('status.eq.Preparing,status.eq.PREPARING,status.eq.New Order,status.eq.Delivering');
@@ -83,7 +81,6 @@ export function AdminOrders() {
       if (filterTitle) query = query.ilike("products.title", `%${filterTitle}%`);
       if (filterFrom) query = query.gte("created_at", filterFrom);
       if (filterTo) query = query.lte("created_at", filterTo);
-      */
 
       const { data, error } = await query;
       if (error) {

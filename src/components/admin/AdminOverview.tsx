@@ -141,10 +141,10 @@ export function AdminOverview({ setActiveTab }: Props) {
           
           {/* Metrics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <MetricCard label="Total Transactions" value={stats.totalOrders} sub="Marketplace volume" icon={<ShoppingCart className="text-[#1dbf73]" size={28} />} trend="+12.5%" isUp />
-              <MetricCard label="System Success" value={`${stats.successRate}%`} sub="Fulfillment accuracy" icon={<Zap className="text-amber-500" size={28} />} trend="+2.1%" isUp />
-              <MetricCard label="Awaiting Action" value={stats.processingOrders} sub="Pending verification" icon={<Clock className="text-blue-500" size={28} />} trend="-5.4%" isUp={false} />
-              <MetricCard label="Registry Density" value={stats.totalProducts} sub="Active digital assets" icon={<Package className="text-purple-500" size={28} />} trend="+0.8%" isUp />
+              <MetricCard label="Total Transactions" value={stats.totalOrders} sub="Marketplace volume" icon={<ShoppingCart className="text-[#1dbf73]" size={28} />} trend="REAL-TIME" isUp />
+              <MetricCard label="System Success" value={`${stats.successRate}%`} sub="Fulfillment accuracy" icon={<Zap className="text-amber-500" size={28} />} trend="LIVE" isUp />
+              <MetricCard label="Awaiting Action" value={stats.processingOrders} sub="Pending verification" icon={<Clock className="text-blue-500" size={28} />} trend="ACTIVE" isUp={false} />
+              <MetricCard label="Registry Density" value={stats.totalProducts} sub="Active digital assets" icon={<Package className="text-purple-500" size={28} />} trend="UPDATED" isUp />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
