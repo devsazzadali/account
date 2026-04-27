@@ -76,7 +76,13 @@ export function AdminOrders() {
       }
 
       if (activeMainTab === "Preparing" && activeSubTab !== "ISSUE") {
-          query = query.eq("status", activeSubTab === "PREPARING" ? "Preparing" : activeSubTab);
+          if (activeSubTab === "New Order") {
+              query = query.eq("status", "New Order");
+          } else if (activeSubTab === "PREPARING") {
+              query = query.or('status.eq.Preparing,status.eq.PREPARING');
+          } else {
+              query = query.eq("status", activeSubTab);
+          }
       }
 
       if (filterGame !== "All") query = query.eq("products.game", filterGame);
