@@ -69,17 +69,17 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden font-sans text-slate-900">
       {/* Left Side: Illustration / Branding (Visible on Desktop) */}
-      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-slate-900 via-slate-800 to-primary-950 relative p-16 flex-col justify-between overflow-hidden">
+      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative p-16 flex-col justify-between overflow-hidden">
         {/* Animated Background Elements */}
-        <div className="absolute top-[-20%] left-[-10%] w-[80%] h-[80%] bg-primary-500/10 blur-[120px] rounded-full animate-float"></div>
+        <div className="absolute top-[-20%] left-[-10%] w-[80%] h-[80%] bg-[#1dbf73]/10 blur-[120px] rounded-full animate-float"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-blue-500/10 blur-[100px] rounded-full animate-float" style={{ animationDelay: '2s' }}></div>
         
         <div className="relative z-10">
             <Link to="/" className="flex items-center gap-2 mb-12 group">
                 <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Zap className="w-6 h-6 text-primary-400 fill-current" />
+                    <Zap className="w-6 h-6 text-[#1dbf73] fill-current" />
                 </div>
-                <span className="text-2xl font-display font-bold text-white tracking-tight">Account<span className="text-primary-400">Store</span></span>
+                <span className="text-2xl font-display font-bold text-white tracking-tight">Account<span className="text-[#1dbf73]">Store</span></span>
             </Link>
 
             <motion.div 
@@ -89,7 +89,7 @@ export function LoginPage() {
                 className="max-w-md"
             >
                 <h1 className="text-5xl font-display font-bold text-white leading-tight mb-6">
-                    Access the World's Most <span className="bg-gradient-to-r from-primary-400 to-blue-400 bg-clip-text text-transparent">Premium</span> Accounts.
+                    Access the World's Most <span className="bg-gradient-to-r from-[#1dbf73] to-emerald-300 bg-clip-text text-transparent">Premium</span> Accounts.
                 </h1>
                 <p className="text-lg text-slate-300 font-light leading-relaxed mb-10">
                     Join thousands of elite users who trust AccountStore for their digital asset needs. Secure, instant, and reliable.
@@ -102,7 +102,7 @@ export function LoginPage() {
                         "Verified & Secure Transactions"
                     ].map((text, i) => (
                         <div key={i} className="flex items-center gap-3 text-sm text-slate-300">
-                            <CheckCircle2 className="w-5 h-5 text-primary-400" />
+                            <CheckCircle2 className="w-5 h-5 text-[#1dbf73]" />
                             <span>{text}</span>
                         </div>
                     ))}
@@ -113,10 +113,10 @@ export function LoginPage() {
         <div className="relative z-10">
             <div className="bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-2xl">
                 <div className="flex items-center gap-4 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-blue-500 flex items-center justify-center text-white font-bold shadow-lg">JD</div>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1dbf73] to-blue-500 flex items-center justify-center text-white font-bold shadow-lg">JD</div>
                     <div>
                         <div className="text-sm font-bold text-white">James Dupont</div>
-                        <div className="text-[10px] text-primary-400 uppercase tracking-widest font-bold">Elite Member</div>
+                        <div className="text-[10px] text-[#1dbf73] uppercase tracking-widest font-bold">Elite Member</div>
                     </div>
                 </div>
                 <p className="text-xs text-slate-300 italic leading-relaxed">
@@ -131,8 +131,8 @@ export function LoginPage() {
         {/* Mobile Header */}
         <div className="md:hidden absolute top-8 left-8">
             <Link to="/" className="flex items-center gap-2">
-                <Zap className="w-6 h-6 text-primary-600 fill-current" />
-                <span className="text-xl font-display font-bold text-slate-900">Account<span className="text-primary-600">Store</span></span>
+                <Zap className="w-6 h-6 text-[#1dbf73] fill-current" />
+                <span className="text-xl font-display font-bold text-slate-900">Account<span className="text-[#1dbf73]">Store</span></span>
             </Link>
         </div>
 
@@ -153,12 +153,12 @@ export function LoginPage() {
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Email / Username</label>
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <User className="h-5 w-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
+                                <User className="h-5 w-5 text-slate-300 group-focus-within:text-[#1dbf73] transition-colors" />
                             </div>
                             <input
                                 type="text"
                                 required
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all shadow-sm"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-[#1dbf73] focus:ring-4 focus:ring-[#1dbf73]/10 transition-all shadow-sm"
                                 placeholder="name@domain.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -169,16 +169,16 @@ export function LoginPage() {
                     <div>
                         <div className="flex justify-between items-center mb-2 ml-1">
                             <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Password</label>
-                            <a href="#" className="text-[10px] font-bold text-primary-600 hover:text-primary-500 transition-colors uppercase tracking-widest">Forgot?</a>
+                            <a href="#" className="text-[10px] font-bold text-[#1dbf73] hover:text-[#19a463] transition-colors uppercase tracking-widest">Forgot?</a>
                         </div>
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <Lock className="h-5 w-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
+                                <Lock className="h-5 w-5 text-slate-300 group-focus-within:text-[#1dbf73] transition-colors" />
                             </div>
                             <input
                                 type="password"
                                 required
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all shadow-sm"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-[#1dbf73] focus:ring-4 focus:ring-[#1dbf73]/10 transition-all shadow-sm"
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -188,14 +188,14 @@ export function LoginPage() {
                 </div>
 
                 <div className="flex items-center gap-3 ml-1">
-                    <input type="checkbox" id="remember" className="w-4 h-4 rounded border-slate-200 bg-slate-50 text-primary-600 focus:ring-primary-500/20" />
+                    <input type="checkbox" id="remember" className="w-4 h-4 rounded border-slate-200 bg-slate-50 text-[#1dbf73] focus:ring-[#1dbf73]/20" />
                     <label htmlFor="remember" className="text-xs text-slate-500 cursor-pointer select-none">Remember me for 30 days</label>
                 </div>
 
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary-500/20 transition-all duration-300 flex items-center justify-center gap-2 group transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none"
+                    className="w-full bg-gradient-to-r from-[#1dbf73] to-[#19a463] hover:from-[#19a463] hover:to-[#148852] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#1dbf73]/20 transition-all duration-300 flex items-center justify-center gap-2 group transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none"
                 >
                     {loading ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -246,12 +246,12 @@ export function LoginPage() {
 
             <div className="mt-12 text-center text-sm">
                 <span className="text-slate-500">Don't have an account? </span>
-                <Link to="/signup" className="text-primary-600 font-bold hover:text-primary-500 transition-colors underline underline-offset-4">Join now</Link>
+                <Link to="/signup" className="text-[#1dbf73] font-bold hover:text-[#19a463] transition-colors underline underline-offset-4">Join now</Link>
             </div>
         </motion.div>
         
         {/* Floating Background Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary-500/5 blur-[150px] rounded-full pointer-events-none"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[#1dbf73]/5 blur-[150px] rounded-full pointer-events-none"></div>
       </div>
     </div>
   );

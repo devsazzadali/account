@@ -19,7 +19,10 @@ import {
   Zap,
   DollarSign,
   AlertCircle,
-  ChevronDown
+  ChevronDown,
+  ExternalLink,
+  Palette,
+  Store
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
@@ -149,7 +152,8 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             items={[
                 { id: "categories", label: "Categories" },
                 { id: "settings", label: "General Config" },
-                { id: "performance", label: "Performance Hub" }
+                { id: "performance", label: "Performance Hub" },
+                { id: "store_customize", label: "Store Customizer" }
             ]}
           />
           
@@ -157,6 +161,15 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
               <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
           </div>
 
+          <MenuItem 
+            id="messages" 
+            label="Messages" 
+            icon={<MessageSquare size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            badge={unreadCount > 0 ? String(unreadCount) : undefined}
+            collapsed={isSidebarCollapsed}
+          />
           <MenuItem 
             id="customers" 
             label="Seller Information" 
@@ -173,6 +186,30 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             setActiveTab={setActiveTab}
             collapsed={isSidebarCollapsed}
           />
+          <MenuItem 
+            id="store_customize" 
+            label="Store Customizer" 
+            icon={<Palette size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+
+          <div className="pt-4 px-3 pb-2">
+              <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
+          </div>
+
+          <a 
+            href="/" 
+            target="_blank"
+            className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all group`}
+          >
+            <div className="shrink-0 group-hover:scale-110 transition-transform"><Store size={20} /></div>
+            {!isSidebarCollapsed && (
+                <span className="font-black text-[13px] uppercase tracking-wide whitespace-nowrap">Visit Store</span>
+            )}
+            {!isSidebarCollapsed && <ExternalLink size={14} className="ml-auto opacity-40" />}
+          </a>
         </nav>
 
         {/* Sidebar Footer */}

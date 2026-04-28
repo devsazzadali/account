@@ -5,11 +5,17 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
   
-  --color-primary-50: #f0fdfa;
-  --color-primary-100: #ccfbf1;
-  --color-primary-500: #0d9488;
-  --color-primary-600: #0f766e;
-  --color-primary-900: #134e4a;
+  --color-primary-50: #e8f9f1;
+  --color-primary-100: #ccefe0;
+  --color-primary-200: #99dfc1;
+  --color-primary-300: #66cfa3;
+  --color-primary-400: #33bf84;
+  --color-primary-500: #1dbf73;
+  --color-primary-600: #17995c;
+  --color-primary-700: #117345;
+  --color-primary-800: #0c4c2e;
+  --color-primary-900: #062617;
+  --color-primary-950: #03130b;
   
   --color-dark-50: #0f172a;
   --color-dark-800: #f8fafc;
