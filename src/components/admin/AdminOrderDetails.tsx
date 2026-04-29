@@ -138,13 +138,13 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                         <p className="text-[12px] text-slate-500">buyer</p>
                     </div>
                     <div className="flex gap-2 ml-4">
-                        <button className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1DBF73] text-white rounded text-[13px] font-bold">
+                        <button onClick={() => alert("Chat feature coming soon")} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1DBF73] text-white rounded text-[13px] font-bold">
                             <MessageCircle size={14} /> Chat Now
                         </button>
-                        <button className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold">
+                        <button onClick={() => alert("Mail feature coming soon")} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold">
                             <Mail size={14} /> Mail
                         </button>
-                        <button className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold">
+                        <button onClick={() => alert("Cancel order feature coming soon")} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold">
                             <XCircle size={14} /> Cancel
                         </button>
                     </div>
@@ -153,12 +153,12 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
 
             <div className="mt-8 space-y-4">
                 <div className="flex items-center gap-4">
-                    <span className="w-32 text-[14px] text-slate-500">Game</span>
-                    <span className="text-[14px] text-slate-900 font-medium">: {product?.game || "Game"}</span>
+                    <span className="w-32 text-[14px] text-slate-500">Category</span>
+                    <span className="text-[14px] text-slate-900 font-medium">: {product?.game || product?.category || "N/A"}</span>
                 </div>
                 <div className="flex items-start gap-4">
                     <span className="w-32 text-[14px] text-slate-500 pt-0.5">Product Title</span>
-                    <div className="flex-1 text-[14px] text-[#E62E04] font-bold leading-relaxed">: {product?.title || "Product Title"}</div>
+                    <div className="flex-1 text-[14px] text-[#E62E04] font-bold leading-relaxed">: {product?.title || "N/A"}</div>
                 </div>
 
                 <div className="pt-6">
