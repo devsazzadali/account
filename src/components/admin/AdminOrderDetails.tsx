@@ -35,7 +35,8 @@ const STEPS = [
   { id: 6, label: "Evaluate" }
 ];
 
-export default function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
+export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
+  if (!order) return null;
   const [status, setStatus] = useState(order.status || "New Order");
   const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);

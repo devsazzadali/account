@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
-import AdminOrderDetails from "./AdminOrderDetails";
+import { AdminOrderDetails } from "./AdminOrderDetails";
 
 const MAIN_TABS = [
   { id: "All", label: "All" },
