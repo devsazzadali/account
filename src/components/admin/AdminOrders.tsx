@@ -64,7 +64,7 @@ export function AdminOrders() {
         .from("orders")
         .select(`
             *,
-            products(title, image, category)
+            products(title, image, category, game)
         `)
         .order("created_at", { ascending: false });
 

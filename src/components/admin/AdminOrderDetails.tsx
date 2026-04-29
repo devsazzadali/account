@@ -69,7 +69,11 @@ export default function AdminOrderDetails({ order, onBack }: OrderDetailsProps) 
     }
   }
 
-  const exceededHours = ((new Date().getTime() - new Date(order.created_at).getTime()) / (1000 * 60 * 60)).toFixed(2);
+  const exceededHours = order.created_at 
+    ? ((new Date().getTime() - new Date(order.created_at).getTime()) / (1000 * 60 * 60)).toFixed(2)
+    : "0.00";
+
+  const orderIdShort = (order.id || "").toString().split("-")[0].toUpperCase() || "N/A";
 
   return (
     <div className="min-h-full bg-[#F0F2F5] pb-20">
@@ -124,7 +128,7 @@ export default function AdminOrderDetails({ order, onBack }: OrderDetailsProps) 
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 text-[15px] font-bold text-slate-900">
                     <Package size={18} className="text-slate-400" />
-                    Order number {order.id.split('-')[0].toUpperCase()}
+                    Order number {orderIdShort}
                 </div>
                 <div className="bg-[#FF4D4F] text-white px-3 py-1 rounded text-[11px] font-bold flex items-center gap-1.5 uppercase">
                     <Clock size={12} /> Exceeded the promised delivery time for {exceededHours} hours
