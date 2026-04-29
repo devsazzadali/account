@@ -36,12 +36,9 @@ const STEPS = [
 ];
 
 export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
-  if (!order) return null;
-  const [status, setStatus] = useState(order.status || "New Order");
+  const [status, setStatus] = useState(order?.status || "New Order");
   const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  
-  const product = Array.isArray(order.products) ? order.products[0] : order.products;
   
   // Account Info States
   const [accountInfo, setAccountInfo] = useState({
@@ -50,8 +47,12 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
     twoFactorCode: "",
     cookies: "",
     secondaryPassword: "",
-    internalRemarks: order.internal_remarks || ""
+    internalRemarks: order?.internal_remarks || ""
   });
+
+  if (!order) return null;
+
+  const product = Array.isArray(order.products) ? order.products[0] : order.products;
 
   const currentStep = STEPS.findIndex(s => s.label.toUpperCase() === status.toUpperCase()) + 1 || 1;
 
