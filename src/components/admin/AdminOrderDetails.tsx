@@ -41,6 +41,8 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   
+  const product = Array.isArray(order.products) ? order.products[0] : order.products;
+  
   // Account Info States
   const [accountInfo, setAccountInfo] = useState({
     loginAccount: "",
@@ -76,8 +78,10 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
 
   const orderIdShort = (order.id || "").toString().split("-")[0].toUpperCase() || "N/A";
 
+  const orderDate = order.created_at ? new Date(order.created_at).toLocaleString() : "N/A";
+
   return (
-    <div className="min-h-full bg-[#F0F2F5] pb-20">
+    <div className="min-h-[800px] w-full bg-[#F0F2F5] pb-20 overflow-y-auto">
       {/* Breadcrumb */}
       <div className="px-8 py-4 flex items-center gap-2 text-slate-500 text-[13px] font-medium bg-white border-b border-slate-200">
           <History size={14} /> Home / Sold Details
@@ -136,7 +140,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                 </div>
             </div>
             <div className="flex items-center gap-6 text-[13px] font-medium text-slate-500">
-                <span>Order Date: {new Date(order.created_at).toLocaleString('sv-SE').replace('T', ' ')}</span>
+                <span>Order Date: {orderDate}</span>
                 <span className="text-[#1890FF] font-bold uppercase">{status}</span>
             </div>
           </div>
@@ -173,12 +177,12 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
             <div className="mt-8 space-y-4">
                 <div className="flex items-center gap-4">
                     <span className="w-32 text-[14px] text-slate-500">Game</span>
-                    <span className="text-[14px] text-slate-900 font-medium">: {order.products?.game || "Facebook"}</span>
+                    <span className="text-[14px] text-slate-900 font-medium">: {product?.game || "Facebook"}</span>
                 </div>
                 <div className="flex items-start gap-4">
                     <span className="w-32 text-[14px] text-slate-500 pt-0.5">Product Title</span>
                     <div className="flex-1">
-                        <span className="text-[14px] text-[#E62E04] font-bold leading-relaxed">: {order.products?.title}</span>
+                        <span className="text-[14px] text-[#E62E04] font-bold leading-relaxed">: {product?.title}</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -214,7 +218,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                         <thead className="bg-[#F8F9FA] border-b border-slate-200 font-bold text-slate-600">
                             <tr>
                                 <th className="px-6 py-4">ProductID - (3015261)</th>
-                                <th className="px-6 py-4">{order.products?.title} <span className="text-blue-500 flex items-center gap-1 inline-flex cursor-pointer"><Upload size={14} /> view snapshot</span></th>
+                                <th className="px-6 py-4">{product?.title} <span className="text-blue-500 flex items-center gap-1 inline-flex cursor-pointer"><Upload size={14} /> view snapshot</span></th>
                                 <th className="px-6 py-4">Price/Unit</th>
                                 <th className="px-6 py-4 text-right">USD {order.total_price || order.amount}</th>
                             </tr>
