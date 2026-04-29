@@ -27,21 +27,21 @@ import AdminOrderDetails from "./AdminOrderDetails";
 
 const MAIN_TABS = [
   { id: "All", label: "All" },
-  { id: "Preparing", label: "Pending delivery" },
-  { id: "Delivered", label: "Delivered" },
-  { id: "Pending feedback", label: "Pending feedback" },
+  { id: "Pending Delivery", label: "Pending Delivery" },
+  { id: "Waiting Confirmation", label: "Waiting Confirmation" },
+  { id: "Completed", label: "Completed" },
   { id: "Canceled", label: "Canceled" }
 ];
 
-const SUB_TABS = ["New Order", "Delivering", "PREPARING", "ISSUE"];
+const SUB_TABS = ["New Order", "PREPARING", "Delivering"];
 
 export function AdminOrders() {
-  const [activeMainTab, setActiveMainTab] = useState("Preparing");
+  const [activeMainTab, setActiveMainTab] = useState("Pending Delivery");
   const [activeSubTab, setActiveSubTab] = useState("New Order");
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
-  const [counts, setCounts] = useState<any>({ All: 0, Preparing: 0, Delivered: 0, "Pending feedback": 0, Canceled: 0 });
+  const [counts, setCounts] = useState<any>({ All: 0, "Pending Delivery": 0, "Waiting Confirmation": 0, Completed: 0, Canceled: 0 });
   const [error, setError] = useState<string | null>(null);
 
   // Filter Form States
@@ -69,21 +69,16 @@ export function AdminOrders() {
         .order("created_at", { ascending: false });
 
       if (activeMainTab !== "All") {
-        if (activeMainTab === "Preparing") {
-            query = query.or('status.eq.Preparing,status.eq.PREPARING,status.eq.New Order,status.eq.Delivering');
+        if (activeMainTab === "Pending Delivery") {
+            query = query.or('status.eq.New Order,status.eq.PREPARING,status.eq.Delivering');
+            if (activeSubTab) {
+                query = query.eq("status", activeSubTab);
+            }
+        } else if (activeMainTab === "Waiting Confirmation") {
+            query = query.eq("status", "Waiting Confirmation");
         } else {
             query = query.eq("status", activeMainTab);
         }
-      }
-
-      if (activeMainTab === "Preparing" && activeSubTab !== "ISSUE") {
-          if (activeSubTab === "New Order") {
-              query = query.eq("status", "New Order");
-          } else if (activeSubTab === "PREPARING") {
-              query = query.or('status.eq.Preparing,status.eq.PREPARING');
-          } else {
-              query = query.eq("status", activeSubTab);
-          }
       }
 
       if (filterGame !== "All") query = query.eq("products.game", filterGame);
@@ -114,10 +109,11 @@ export function AdminOrders() {
       if (error) console.error("Counts Fetch Error:", error);
       if (data) {
           console.log("Raw count data:", data);
-          const c = { All: data.length, Preparing: 0, Delivered: 0, "Pending feedback": 0, Canceled: 0 };
+          const c = { All: data.length, "Pending Delivery": 0, "Waiting Confirmation": 0, Completed: 0, Canceled: 0 };
           data.forEach((o: any) => {
-              if (['Preparing', 'PREPARING', 'New Order', 'Delivering'].includes(o.status)) c.Preparing++;
-              else if (o.status === 'Delivered') c.Delivered++;
+              if (['New Order', 'PREPARING', 'Delivering'].includes(o.status)) c["Pending Delivery"]++;
+              else if (o.status === 'Waiting Confirmation') c["Waiting Confirmation"]++;
+              else if (o.status === 'Completed') c.Completed++;
               else if (o.status === 'Canceled') c.Canceled++;
           });
           setCounts(c);
@@ -230,7 +226,7 @@ export function AdminOrders() {
         )}
 
         <div className="flex gap-2">
-            {SUB_TABS.map(tab => (
+            {activeMainTab === "Pending Delivery" && SUB_TABS.map(tab => (
                 <button
                     key={tab}
                     onClick={() => setActiveSubTab(tab)}
@@ -264,7 +260,13 @@ export function AdminOrders() {
                         {loading ? (
                             <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-[#E62E04]" /></td></tr>
                         ) : orders.length === 0 ? (
-                            <tr><td colSpan={6} className="py-20 text-center text-slate-400 text-sm font-medium italic">No matching orders found in current protocol.</td></tr>
+                            <tr>
+                                <td colSpan={6} className="py-32 text-center bg-white">
+                                    <ShoppingBag className="mx-auto text-slate-200 mb-4" size={64} />
+                                    <h4 className="text-xl font-black text-slate-900 uppercase italic">No Active Orders</h4>
+                                    <p className="text-slate-400 mt-2 font-medium">No results found matching your current protocol filters.</p>
+                                </td>
+                            </tr>
                         ) : orders.map(order => (
                             <React.Fragment key={order.id}>
                                 <tr className="bg-[#FDFDFD] border-t-4 border-[#F6F6F7]">
