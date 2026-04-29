@@ -4,7 +4,7 @@ import {
   ShieldCheck, CheckCircle2, MessageSquare, RefreshCw, Clock, 
   Info, ExternalLink, Filter, ChevronRight, Mail, Phone,
   AlertCircle, Archive, CheckCircle, Radio, Send as SendIcon,
-  Users, UserPlus, Zap, ChevronLeft, FileText
+  Users, UserPlus, Zap, ChevronLeft, FileText, X, List
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
@@ -185,18 +185,18 @@ export function AdminMessages() {
   ];
 
   return (
-    <div className="flex h-[calc(100vh-160px)] bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-2xl relative">
+    <div className="flex h-[calc(100vh-64px)] bg-[#f0f2f5] overflow-hidden relative">
       
       {/* ── Sidebar: Inbox List ── */}
       <div className={`w-full lg:w-[320px] bg-white border-r border-slate-200 flex flex-col shrink-0 ${viewMode === 'chat' ? 'hidden lg:flex' : 'flex'}`}>
         <div className="p-5 border-b border-slate-100 bg-white">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[18px] font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" />
-              Support
+              <div className="w-2 h-2 rounded-full bg-[#E62E04] animate-pulse" />
+              Inbox
             </h2>
             <div className="flex gap-1">
-               <button onClick={() => setShowBroadcastModal(true)} className="p-2 bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100 transition-colors">
+               <button onClick={() => setShowBroadcastModal(true)} className="p-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
                 <Zap size={18} />
               </button>
               <button onClick={() => setShowNewChatModal(true)} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors text-slate-500">
@@ -208,10 +208,10 @@ export function AdminMessages() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
             <input 
               type="text" 
-              placeholder="Search inquiries..."
+              placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[12px] focus:outline-none focus:border-primary-600/30"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[12px] focus:outline-none focus:border-[#E62E04]/30"
             />
           </div>
         </div>
@@ -228,25 +228,25 @@ export function AdminMessages() {
                 key={user}
                 onClick={() => { setSelectedUser(user); setViewMode("chat"); }}
                 className={`w-full p-4 flex items-start gap-3 border-b border-slate-50 transition-all relative ${
-                  selectedUser === user ? "bg-primary-50/50" : "hover:bg-slate-50"
+                  selectedUser === user ? "bg-red-50/50" : "hover:bg-slate-50"
                 }`}
               >
-                {selectedUser === user && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-600" />}
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-[14px] ${isUnread ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20' : 'bg-slate-100 text-slate-400'}`}>
+                {selectedUser === user && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#E62E04]" />}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-[14px] ${isUnread ? 'bg-[#E62E04] text-white' : 'bg-slate-100 text-slate-400'}`}>
                   {user[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0 text-left">
                   <div className="flex justify-between items-center mb-0.5">
-                    <span className={`text-[13px] truncate ${isUnread ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>{user}</span>
+                    <span className={`text-[13px] truncate uppercase tracking-tight ${isUnread ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>{user}</span>
                     <span className="text-[10px] text-slate-400 font-medium">
                       {lastMsg.created_at ? new Date(lastMsg.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ""}
                     </span>
                   </div>
                   <div className="text-[11px] text-slate-500 truncate leading-tight">
-                    {lastMsg.message === '[ADMIN_INITIATED]' ? `Reply: ${lastMsg.reply}` : lastMsg.message}
+                    {lastMsg.message === '[ADMIN_INITIATED]' ? `You: ${lastMsg.reply}` : lastMsg.message}
                   </div>
                 </div>
-                {isUnread && <div className="w-2 h-2 bg-primary-600 rounded-full mt-2 animate-pulse" />}
+                {isUnread && <div className="w-2 h-2 bg-[#E62E04] rounded-full mt-2 animate-pulse" />}
               </button>
             )
           })}
@@ -254,67 +254,63 @@ export function AdminMessages() {
       </div>
 
       {/* ── Main: Support View ── */}
-      <div className={`flex-1 flex flex-col bg-white ${viewMode === 'list' ? 'hidden lg:flex' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col bg-[#f0f2f5] ${viewMode === 'list' ? 'hidden lg:flex' : 'flex'}`}>
         {selectedUser ? (
           <>
             {/* Thread Header */}
-            <div className="px-6 py-4 border-b border-slate-200 flex flex-col bg-white z-10 shadow-sm gap-4">
+            <div className="px-6 py-3 border-b border-slate-200 flex flex-col bg-white z-10 shadow-sm gap-3">
               <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <button onClick={() => setViewMode("list")} className="lg:hidden p-2 -ml-2 text-slate-400 hover:text-slate-900">
+                    <button onClick={() => setViewMode("list")} className="lg:hidden p-1 -ml-1 text-slate-400 hover:text-slate-900">
                        <ChevronLeft size={24} />
                     </button>
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-900 shrink-0 border border-slate-200">
-                      <User size={20} />
+                    <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-slate-200">
+                      <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=trenchkidfr" alt="avatar" className="w-full h-full object-cover" />
                     </div>
                     <div className="min-w-0 flex flex-col">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-[15px] font-bold text-slate-900 truncate">{selectedUser}</h3>
-                        <span className="text-[12px] text-[#E62E04] font-medium">ID:{selectedProfile?.id?.substring(0, 7) || '1493869'}</span>
-                        <span className="text-[12px] text-slate-500 font-medium">Offline</span>
+                        <h3 className="text-[14px] font-bold text-slate-900 truncate uppercase">{selectedUser}</h3>
+                        <span className="text-[13px] text-[#E62E04] font-medium tracking-tight">ID:{selectedProfile?.id?.substring(0, 7) || '1493869'}</span>
+                        <span className="text-[13px] text-slate-500 font-medium">Offline</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                     <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-[13px] font-bold rounded hover:bg-slate-50 transition-colors"><Archive size={16} /></button>
-                     <button className="flex items-center gap-1.5 px-4 py-1.5 bg-[#14b8a6] text-white text-[13px] font-bold rounded hover:bg-teal-600 shadow-sm transition-colors">Resolve</button>
-                  </div>
               </div>
-              <div className="flex gap-8">
-                  <button onClick={() => setViewMode('chat')} className={`flex items-center gap-2 text-[14px] font-bold pb-2 ${viewMode === 'chat' ? 'text-[#E62E04] border-b-2 border-[#E62E04]' : 'text-slate-500 hover:text-slate-700'}`}>
+              <div className="flex gap-6">
+                  <button onClick={() => setViewMode('chat')} className={`flex items-center gap-2 text-[13px] font-bold pb-2 transition-all ${viewMode === 'chat' ? 'text-slate-900 border-b-2 border-[#E62E04]' : 'text-slate-400 hover:text-slate-600'}`}>
                       <Clock size={16} /> Chat History
                   </button>
-                  <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 text-[14px] font-bold pb-2 ${viewMode !== 'chat' ? 'text-[#E62E04] border-b-2 border-[#E62E04]' : 'text-slate-500 hover:text-slate-700'}`}>
-                      <FileText size={16} /> Order History
+                  <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 text-[13px] font-bold pb-2 transition-all ${viewMode !== 'chat' ? 'text-slate-900 border-b-2 border-[#E62E04]' : 'text-slate-400 hover:text-slate-600'}`}>
+                      <List size={16} /> Order History
                   </button>
               </div>
             </div>
 
             {/* Ticket Thread Content */}
-            <div className="flex-1 overflow-y-auto p-6 bg-[#f0f2f5] custom-scrollbar">
-               <div className="max-w-4xl mx-auto space-y-6 pb-10">
+            <div className="flex-1 overflow-y-auto p-4 bg-[#f0f2f5] custom-scrollbar">
+               <div className="max-w-5xl mx-auto space-y-4 pb-10">
                   {viewMode === 'chat' && activeThread.map((msg: any) => {
                     const isAdmin = msg.message === '[ADMIN_INITIATED]';
                     const timeString = new Date(msg.replied_at || msg.created_at).toLocaleString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false }).replace(',', '');
                     
                     return (
                       <div key={msg.id} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
-                         <div className={`flex gap-3 max-w-[75%] ${isAdmin ? 'flex-row-reverse' : 'flex-row'}`}>
+                         <div className={`flex gap-2 max-w-[80%] ${isAdmin ? 'flex-row-reverse' : 'flex-row'}`}>
                              {!isAdmin && (
-                                 <div className="w-10 h-10 rounded-full bg-white shrink-0 flex items-center justify-center text-[#E62E04] shadow-sm border border-slate-200 mt-1">
-                                    <User size={20} />
+                                 <div className="w-10 h-10 rounded-xl bg-white shrink-0 overflow-hidden shadow-sm border border-slate-200 mt-1">
+                                    <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=trenchkidfr" alt="avatar" className="w-full h-full object-cover" />
                                  </div>
                              )}
-                             <div className="flex flex-col">
-                                 <div className={`px-4 py-2.5 rounded-lg shadow-sm ${isAdmin ? 'bg-[#dcf8c6] text-slate-800 rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'}`}>
+                             <div className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}>
+                                 <div className={`px-4 py-2 rounded-lg shadow-sm relative ${isAdmin ? 'bg-[#dcf8c6] text-slate-800' : 'bg-white border border-slate-200 text-slate-800'}`}>
                                     <p className="text-[14px] leading-relaxed whitespace-pre-wrap">{isAdmin ? msg.reply : msg.message}</p>
+                                    {!isAdmin && (
+                                      <button className="text-[12px] text-slate-400 hover:text-slate-600 mt-1 block">show translation</button>
+                                    )}
+                                    <div className="text-[11px] font-medium mt-1 text-right text-[#b5c49b]">
+                                        {timeString}
+                                    </div>
                                  </div>
-                                 {!isAdmin && (
-                                     <button className="text-[12px] text-slate-400 hover:text-slate-600 mt-1 text-left">show translation</button>
-                                 )}
-                                 <span className={`text-[12px] font-medium mt-1 ${isAdmin ? 'text-right text-[#86bc86]' : 'text-right text-[#a3d9a5]'}`}>
-                                     {timeString}
-                                 </span>
                              </div>
                          </div>
                       </div>
@@ -324,23 +320,23 @@ export function AdminMessages() {
                   {viewMode !== 'chat' && (
                       <div className="space-y-4">
                           {userOrders.map(order => (
-                             <div key={order.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                             <div key={order.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
                                  <div className="flex justify-between items-start mb-2">
-                                     <h4 className="font-bold text-slate-900">{order.products?.title || 'Unknown Product'}</h4>
-                                     <div className="font-bold text-[#E62E04] text-lg">${order.total_price} USD</div>
+                                     <h4 className="font-bold text-slate-900 uppercase tracking-tight">{order.products?.title || 'Unknown Product'}</h4>
                                  </div>
                                  <div className="flex justify-between items-center text-[13px] text-slate-500">
-                                     <div>Order number: <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">{order.id.split('-')[0]}</span></div>
-                                     <div>Payment time: {new Date(order.created_at).toLocaleString('en-CA')}</div>
+                                     <div>Order ID: <span className="bg-slate-50 px-2 py-0.5 rounded text-slate-700 font-mono">{order.id.split('-')[0].toUpperCase()}</span></div>
+                                     <div>Time: {new Date(order.created_at).toLocaleString('en-CA')}</div>
                                  </div>
-                                 <div className="mt-4 pt-4 border-t border-slate-100">
-                                     <span className={`text-[12px] px-2.5 py-1 rounded font-bold uppercase ${order.status === 'Delivered' || order.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                                 <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+                                     <span className={`text-[11px] px-2.5 py-1 rounded font-black uppercase tracking-widest ${order.status === 'Delivered' || order.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
                                          {order.status}
                                      </span>
+                                     <button className="text-[11px] font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest flex items-center gap-1 transition-all">Details <ExternalLink size={12} /></button>
                                  </div>
                              </div>
                           ))}
-                          {userOrders.length === 0 && <div className="text-center text-slate-500 py-10 bg-white rounded-xl border border-slate-200">No order history found for this user.</div>}
+                          {userOrders.length === 0 && <div className="text-center text-slate-500 py-10 bg-white rounded-xl border border-slate-200 uppercase tracking-widest text-[12px] font-bold">No Transaction History Found</div>}
                       </div>
                   )}
                   <div ref={chatEndRef} />
@@ -349,21 +345,21 @@ export function AdminMessages() {
 
             {/* Input Area */}
             {viewMode === 'chat' && (
-                <div className="p-4 lg:p-6 bg-[#f0f2f5] border-t border-slate-200">
-                  <form onSubmit={handleSendReply} className="relative max-w-4xl mx-auto flex gap-4">
+                <div className="p-4 lg:p-6 bg-[#f0f2f5]">
+                  <form onSubmit={handleSendReply} className="relative max-w-5xl mx-auto flex gap-4">
                     <textarea 
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendReply())}
-                      placeholder="Reply..."
-                      className="flex-1 bg-white border border-slate-200 rounded-xl px-5 py-3.5 text-[14px] shadow-sm focus:outline-none focus:border-teal-500 min-h-[50px] resize-none"
+                      placeholder="please be patient sir"
+                      className="flex-1 bg-white border border-slate-200 rounded-lg px-4 py-3 text-[14px] shadow-sm focus:outline-none focus:border-emerald-500 min-h-[50px] resize-none transition-all"
                     />
                     <button 
                         type="submit"
                         disabled={isReplying || !replyText.trim()}
-                        className="w-[50px] h-[50px] bg-[#86bc86] text-white rounded-full flex items-center justify-center hover:bg-teal-600 shadow-md transition-colors disabled:opacity-50 shrink-0"
+                        className="w-[50px] h-[50px] bg-[#dcf8c6] text-slate-700 rounded-lg flex items-center justify-center hover:bg-emerald-100 shadow-sm transition-all disabled:opacity-50 shrink-0"
                     >
-                        {isReplying ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className="-ml-1" />}
+                        {isReplying ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
                     </button>
                   </form>
                 </div>
@@ -371,48 +367,70 @@ export function AdminMessages() {
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-[#f0f2f5]">
-            <div className="w-16 h-16 rounded-[2rem] bg-white shadow-xl flex items-center justify-center text-slate-400 mb-6 border border-slate-200">
+            <div className="w-16 h-16 rounded-[2rem] bg-white shadow-xl flex items-center justify-center text-slate-200 mb-6 border border-slate-100">
               <MessageSquare size={32} />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Select a Conversation</h3>
-            <p className="text-slate-500 max-w-xs text-[14px]">Choose a user from the left sidebar to view their chat history or orders.</p>
+            <h3 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tight">Select a Conversation</h3>
+            <p className="text-slate-500 max-w-xs text-[14px] font-medium">Choose a user from the left sidebar to view their activity history.</p>
           </div>
         )}
       </div>
 
-      {/* ── Right Sidebar: Intelligence ── */}
-      {selectedUser && (
-        <div className="hidden xl:flex w-[300px] bg-[#f9fafb] border-l border-slate-200 flex-col shrink-0">
-           <div className="p-6">
-              <h5 className="text-[12px] font-bold text-slate-500 mb-6 tracking-wide">INTELLIGENCE</h5>
-              <div className="flex items-center gap-4 mb-6">
-                 <div className="w-12 h-12 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-600 font-bold text-xl">
+      {/* ── Right Sidebar: Intelligence & Orders ── */}
+      {selectedUser && userOrders.length > 0 && (
+        <div className="hidden xl:flex w-[320px] bg-white border-l border-slate-200 flex-col shrink-0">
+           <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+              <h5 className="text-[11px] font-black text-slate-400 mb-6 tracking-[0.2em] uppercase">User Analytics</h5>
+              
+              <div className="flex items-center gap-4 mb-8">
+                 <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-[#E62E04] font-black text-2xl shadow-sm">
                     {selectedUser[0].toUpperCase()}
                  </div>
                  <div>
-                    <div className="text-[15px] font-bold text-slate-900">{selectedUser}</div>
-                    <div className="text-[11px] text-[#10b981] font-bold uppercase tracking-wide mt-0.5">Verified Buyer</div>
+                    <div className="text-[16px] font-black text-slate-900 uppercase tracking-tight">{selectedUser}</div>
+                    <div className="text-[10px] text-emerald-500 font-black uppercase tracking-widest mt-0.5">Verified Buyer</div>
                  </div>
               </div>
               
-              <div className="space-y-4 text-[13px] border-t border-b border-slate-200 py-4 mb-6">
+              <div className="space-y-4 text-[12px] bg-slate-50 rounded-xl p-4 border border-slate-100 mb-8">
                  <div className="flex justify-between items-center">
-                    <span className="text-slate-500 font-medium">REGISTRATION:</span>
-                    <span className="text-slate-900 font-bold">{selectedProfile?.created_at ? new Date(selectedProfile.created_at).toLocaleDateString() : "4/25/2026"}</span>
+                    <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Registered</span>
+                    <span className="text-slate-900 font-black">{selectedProfile?.created_at ? new Date(selectedProfile.created_at).toLocaleDateString() : "4/25/2026"}</span>
                  </div>
                  <div className="flex justify-between items-center">
-                    <span className="text-slate-500 font-medium">PREMIUM STATUS:</span>
-                    <span className={selectedProfile?.is_premium ? 'text-amber-500 font-bold' : 'text-slate-900 font-bold'}>{selectedProfile?.is_premium ? 'Yes' : 'No'}</span>
+                    <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Status</span>
+                    <span className={selectedProfile?.is_premium ? 'text-amber-500 font-black' : 'text-slate-900 font-black'}>{selectedProfile?.is_premium ? 'PREMIUM' : 'REGULAR'}</span>
                  </div>
               </div>
 
-              <div className="space-y-4">
-                  <h5 className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Transactions</h5>
-                  <div className="bg-[#0f172a] rounded-xl p-5 text-white shadow-lg">
-                      <div className="text-3xl font-black mb-1">${userOrders.reduce((s,o) => s+(Number(o.total_price)||0), 0).toFixed(2)}</div>
-                      <div className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Cumulative Value</div>
-                  </div>
-              </div>
+              {userOrders.length > 0 && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h5 className="text-[11px] font-black text-slate-400 tracking-[0.2em] uppercase">Recent Orders</h5>
+                        <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase tracking-widest">{userOrders.length}</span>
+                    </div>
+                    <div className="space-y-3">
+                        {userOrders.slice(0, 5).map(order => (
+                          <div key={order.id} className="bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-[#E62E04]/20 transition-all cursor-pointer group">
+                              <div className="flex justify-between items-start mb-1.5">
+                                  <div className="text-[12px] font-black text-slate-800 truncate pr-2 uppercase tracking-tight">{order.products?.title || 'Asset'}</div>
+                              </div>
+                              <div className="flex items-center justify-between text-[9px] font-bold text-slate-400 uppercase tracking-[0.1em]">
+                                  <span>{order.status}</span>
+                                  <span className="font-mono">#{order.id.split('-')[0].substring(0, 4)}</span>
+                              </div>
+                          </div>
+                        ))}
+                    </div>
+                </div>
+              )}
+
+              {userOrders.length === 0 && (
+                <div className="mt-10 text-center py-8 border-2 border-dashed border-slate-100 rounded-2xl">
+                    <FileText className="mx-auto text-slate-200 mb-3" size={32} />
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No order records</p>
+                </div>
+              )}
            </div>
         </div>
       )}

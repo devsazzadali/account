@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { 
   Plus, 
+  PlusCircle,
   Edit, 
   Trash2, 
   Filter, 
@@ -24,7 +25,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
 
-export function AdminProducts() {
+export function AdminProducts({ activeTab }: { activeTab?: string }) {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -87,7 +88,7 @@ export function AdminProducts() {
           <History size={16} /> Home / Create Listing
       </div>
 
-      <div className="p-8 space-y-8 max-w-[1400px] mx-auto">
+      <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
         {/* Warning Banner */}
         <div className="bg-[#FFF9E6] border border-[#FDE6A6] rounded-lg p-4 flex items-start gap-4">
             <div className="bg-[#FF9800] rounded-full p-1 mt-0.5">
@@ -99,16 +100,24 @@ export function AdminProducts() {
         </div>
 
         {/* Page Title */}
-        <h2 className="text-2xl font-bold text-slate-900">Create Listing</h2>
+        <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+            {activeTab === 'active_offers' ? (
+                <><Package className="text-[#E62E04]" size={24} /> Active Listings Hub</>
+            ) : (
+                <><PlusCircle className="text-[#E62E04]" size={24} /> Create New Offering</>
+            )}
+        </h2>
 
-        {/* Section 1: Single Release/General Info */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-visible shadow-sm">
+        {activeTab !== 'active_offers' && (
+            <>
+                {/* Section 1: Single Release/General Info */}
+                <div className="bg-white border border-slate-200 rounded-xl overflow-visible shadow-sm">
             <div className="p-6 border-b border-slate-100 flex items-center gap-3">
                 <SearchCode size={24} className="text-slate-400" />
                 <h3 className="text-xl font-bold text-slate-900">Single Release/General Info</h3>
             </div>
             
-            <div className="p-10 space-y-8">
+            <div className="p-6 space-y-6">
                 <div className="space-y-4 relative">
                     <h4 className="text-[16px] font-bold text-slate-900">Selling Items</h4>
                     <p className="text-[14px] text-slate-400 font-medium">Enter product name here</p>
@@ -229,7 +238,7 @@ export function AdminProducts() {
                 <h3 className="text-xl font-bold text-slate-900">Product Types</h3>
             </div>
             
-            <div className="p-10 space-y-8 max-w-3xl">
+            <div className="p-6 space-y-6 max-w-3xl">
                 {/* Attribute */}
                 <div className="flex items-start gap-4">
                     <div className="w-40 pt-2 text-[15px] text-slate-800 flex items-center gap-1">
@@ -302,7 +311,7 @@ export function AdminProducts() {
                 <h3 className="text-xl font-bold text-slate-900">Game details</h3>
             </div>
             
-            <div className="p-8 space-y-8 bg-slate-50/50">
+            <div className="p-6 space-y-6 bg-slate-50/50">
                 <div className="border border-slate-300 rounded overflow-hidden shadow-sm">
                     <div className="bg-[#333333] px-5 py-3 flex justify-between items-center text-white">
                         <span className="text-[14px] font-bold tracking-wide">Custom Program 1</span>
@@ -529,7 +538,7 @@ export function AdminProducts() {
         </div>
 
         {/* Submit Block */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm mt-8 p-12 flex flex-col items-center justify-center space-y-6">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm mt-6 p-8 flex flex-col items-center justify-center space-y-6">
             <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-[#E62E04] focus:ring-[#E62E04] mt-0.5" />
                 <span className="text-[14px] text-slate-800">
@@ -540,23 +549,12 @@ export function AdminProducts() {
                 Submit
             </button>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-            <div className="p-6 border-b border-slate-100 flex items-center gap-3">
-                <LayoutGrid size={24} className="text-slate-400" />
-                <h3 className="text-xl font-bold text-slate-900">Batch Release Products</h3>
-            </div>
-            <div className="p-10 flex gap-4">
-                <button className="bg-[#E62E04] text-white px-10 py-3 rounded font-bold text-[14px] flex items-center gap-3 shadow-lg shadow-red-500/10 hover:bg-[#c52804] transition-all">
-                    <Upload size={18} /> Upload List
-                </button>
-                <button className="bg-[#4CAF50] text-white px-10 py-3 rounded font-bold text-[14px] flex items-center gap-3 shadow-lg shadow-green-500/10 hover:bg-[#3d8b40] transition-all">
-                    <Download size={18} /> Download List
-                </button>
-            </div>
-        </div>
+            </>
+        )}
 
         {/* Section 3: Active Listings Hub */}
-        <div className="space-y-4">
+        {(activeTab === 'active_offers' || activeTab === 'products') && (
+            <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-slate-900">Active Listings Hub</h3>
                 <div className="flex items-center gap-4">
@@ -569,14 +567,32 @@ export function AdminProducts() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {loading ? (
-                    <div className="col-span-full py-20 text-center"><Loader2 className="animate-spin mx-auto text-[#E62E04]" /></div>
+                    <div className="col-span-full py-24 text-center">
+                        <Loader2 className="animate-spin mx-auto text-[#E62E04] mb-4" size={40} />
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Synchronizing with Registry...</p>
+                    </div>
                 ) : products.length === 0 ? (
-                    <div className="col-span-full py-20 text-center text-slate-400 font-medium">No active listings found.</div>
+                    <div className="col-span-full py-32 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+                        <Package className="mx-auto text-slate-200 mb-4" size={64} />
+                        <h4 className="text-xl font-black text-slate-900 uppercase italic">No Active Assets Found</h4>
+                        <p className="text-slate-400 mt-2 mb-8 font-medium">Your marketplace registry is currently empty.</p>
+                        <button 
+                            onClick={() => {
+                                // Logic to switch to create tab would go here if needed
+                                window.location.hash = 'products'; 
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black text-[12px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20"
+                        >
+                            Initialize First Listing
+                        </button>
+                    </div>
                 ) : products.map(product => (
                     <ProductCard key={product.id} product={product} />
                 ))}
             </div>
-        </div>
+            </div>
+        )}
       </div>
     </div>
   );

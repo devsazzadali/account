@@ -82,9 +82,9 @@ export function AdminOverview({ setActiveTab }: Props) {
           <div className="absolute top-0 right-0 w-[600px] h-full bg-[#1dbf73]/5 skew-x-[-20deg] translate-x-20" />
           <div className="absolute top-10 right-20 w-32 h-32 bg-[#1dbf73]/10 rounded-full blur-[100px]" />
 
-          <div className="max-w-[1400px] mx-auto px-10 py-16 relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12">
+          <div className="max-w-[1400px] mx-auto px-8 py-10 relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
               <div className="flex items-center gap-10">
-                  <div className="w-32 h-32 rounded-[2.5rem] border-4 border-[#1dbf73]/30 overflow-hidden shadow-2xl bg-white/5 shrink-0 relative group">
+                  <div className="w-24 h-24 rounded-2xl border-2 border-[#1dbf73]/30 overflow-hidden shadow-2xl bg-white/5 shrink-0 relative group">
                       <img
                         src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}&backgroundColor=0f172a`}
                         alt="avatar"
@@ -93,7 +93,7 @@ export function AdminOverview({ setActiveTab }: Props) {
                   </div>
                   <div>
                       <div className="flex items-center gap-4">
-                          <h2 className="text-white text-4xl font-black tracking-tighter italic uppercase">{username}</h2>
+                          <h2 className="text-white text-3xl font-black tracking-tighter italic uppercase">{username}</h2>
                           <div className="bg-[#1dbf73] text-white text-[10px] uppercase font-black tracking-[0.2em] px-4 py-1.5 rounded-full shadow-lg shadow-emerald-500/20">System Administrator</div>
                       </div>
                       <div className="flex items-center gap-8 mt-6">
@@ -115,8 +115,8 @@ export function AdminOverview({ setActiveTab }: Props) {
 
               <div className="flex flex-col items-center lg:items-end gap-3">
                   <span className="text-white/40 text-[11px] font-black uppercase tracking-[0.3em]">Gross Platform Revenue</span>
-                  <div className="text-white text-6xl font-black tracking-tighter flex items-start gap-1">
-                      <span className="text-2xl mt-2 text-[#1dbf73]">$</span>
+                  <div className="text-white text-4xl font-black tracking-tighter flex items-start gap-1">
+                      <span className="text-xl mt-1 text-[#1dbf73]">$</span>
                       {loading ? "—" : fmt(stats.balance)}
                   </div>
                   <div className="flex gap-4 mt-8">
@@ -137,10 +137,10 @@ export function AdminOverview({ setActiveTab }: Props) {
           </div>
       </div>
 
-      <div className="max-w-[1400px] mx-auto p-10 space-y-10">
+      <div className="max-w-[1400px] mx-auto p-6 space-y-8">
           
           {/* Metrics Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <MetricCard label="Total Transactions" value={stats.totalOrders} sub="Marketplace volume" icon={<ShoppingCart className="text-[#1dbf73]" size={28} />} trend="REAL-TIME" isUp />
               <MetricCard label="System Success" value={`${stats.successRate}%`} sub="Fulfillment accuracy" icon={<Zap className="text-amber-500" size={28} />} trend="LIVE" isUp />
               <MetricCard label="Awaiting Action" value={stats.processingOrders} sub="Pending verification" icon={<Clock className="text-blue-500" size={28} />} trend="ACTIVE" isUp={false} />
@@ -149,7 +149,7 @@ export function AdminOverview({ setActiveTab }: Props) {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
               {/* Real Activity Ledger */}
-              <div className="lg:col-span-2 bg-white rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-200/40 overflow-hidden">
+              <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/40 overflow-hidden">
                   <div className="px-10 py-7 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                       <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic flex items-center gap-4">
                           <Activity size={24} className="text-[#1dbf73]" /> Transaction Feed
@@ -184,7 +184,7 @@ export function AdminOverview({ setActiveTab }: Props) {
               </div>
 
               {/* System Health */}
-              <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-200/40 overflow-hidden h-fit">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/40 overflow-hidden h-fit">
                   <div className="px-10 py-7 border-b border-slate-100 bg-slate-50/50">
                       <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic flex items-center gap-4">
                           <ShieldCheck size={24} className="text-[#1dbf73]" /> Console Status
@@ -228,11 +228,11 @@ export function AdminOverview({ setActiveTab }: Props) {
 
 function MetricCard({ label, value, sub, icon, trend, isUp }: any) {
     return (
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-2xl hover:border-[#1dbf73]/30 transition-all group relative overflow-hidden">
+        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-2xl hover:border-[#1dbf73]/30 transition-all group relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50" />
             <div className="relative z-10 flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-inner">
-                    {icon}
+                <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500 shadow-inner">
+                    {React.cloneElement(icon as React.ReactElement, { size: 24 })}
                 </div>
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">{label}</p>
                 <p className="text-3xl font-black text-slate-900 tracking-tighter mb-1">{value}</p>

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
+import AdminOrderDetails from "./AdminOrderDetails";
 
 const MAIN_TABS = [
   { id: "All", label: "All" },
@@ -141,6 +142,10 @@ export function AdminOrders() {
     const diff = now.getTime() - created.getTime();
     const hours = (diff / (1000 * 60 * 60)).toFixed(2);
     return hours;
+  }
+
+  if (selectedOrder) {
+      return <AdminOrderDetails order={selectedOrder} onBack={() => setSelectedOrder(null)} />;
   }
 
   return (
@@ -327,13 +332,6 @@ export function AdminOrders() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {selectedOrder && (
-          <SoldDetailsModal 
-            order={selectedOrder} 
-            onClose={() => setSelectedOrder(null)} 
-          />
-        )}
       </AnimatePresence>
     </div>
   );

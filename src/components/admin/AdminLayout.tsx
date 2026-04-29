@@ -46,6 +46,14 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (activeTab === 'messages') {
+      setIsSidebarCollapsed(true);
+    } else {
+      setIsSidebarCollapsed(false);
+    }
+  }, [activeTab]);
+
   async function fetchUnreadCount() {
     try {
       const { count, error } = await supabase

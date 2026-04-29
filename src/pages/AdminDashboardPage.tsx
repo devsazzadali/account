@@ -95,13 +95,27 @@ export function AdminDashboardPage() {
 
   return (
     <AdminLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-      <div className="p-4">
+      <div className="">
         {(activeTab === "dashboard" || activeTab === "performance") && <AdminOverview setActiveTab={setActiveTab} />}
-        {activeTab === "products" && <AdminProducts />}
+        {(activeTab === "products" || activeTab === "active_offers") && <AdminProducts activeTab={activeTab} />}
         {activeTab === "categories" && <AdminCategories />}
         {activeTab === "orders" && <AdminOrders setActiveTab={setActiveTab} />}
         {activeTab === "messages" && <AdminMessages />}
         {activeTab === "customers" && <AdminCustomers setActiveTab={setActiveTab} />}
+        {activeTab === "violation" && (
+           <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
+              <ShieldAlert size={64} className="text-red-500 mb-4" />
+              <h3 className="text-2xl font-black text-slate-900 uppercase italic">Violation Center</h3>
+              <p className="text-slate-500 mt-2 font-medium">No system violations or compliance issues detected.</p>
+           </div>
+        )}
+        {activeTab === "store_customize" && (
+           <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
+              <Plus size={64} className="text-emerald-500 mb-4" />
+              <h3 className="text-2xl font-black text-slate-900 uppercase italic">Store Customizer</h3>
+              <p className="text-slate-500 mt-2 font-medium">This module is currently being calibrated for your workspace.</p>
+           </div>
+        )}
         {activeTab === "settings" && profile?.role === "admin" && <AdminSettings />}
         {activeTab === "settings" && profile?.role !== "admin" && (
            <div className="flex flex-col items-center justify-center py-32 text-center">
