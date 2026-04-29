@@ -334,7 +334,6 @@ export function AdminOrders() {
         </div>
       </div>
 
-      </AnimatePresence>
     </div>
   );
 }
@@ -347,163 +346,12 @@ function StatusBadge({ status }: { status: string }) {
         "Completed": "bg-[#E8F5E9] text-[#2E7D32] border-[#C8E6C9]",
         "Canceled": "bg-[#FFEBEE] text-[#C62828] border-[#FFCDD2]",
         "New Order": "bg-[#F3E5F5] text-[#7B1FA2] border-[#E1BEE7]",
+        "Waiting Confirmation": "bg-blue-50 text-blue-600 border-blue-100",
     };
     const cls = map[status] || "bg-slate-100 text-slate-600 border-slate-200";
     return (
         <span className={`px-4 py-1 rounded-full border text-[11px] font-bold ${cls}`}>
             {status}
         </span>
-    );
-}
-
-function SoldDetailsModal({ order, onClose }: any) {
-    const [isUpdating, setIsUpdating] = useState(false);
-    const [localStatus, setLocalStatus] = useState(order.status);
-    const [localRemarks, setLocalRemarks] = useState(order.internal_remarks || "");
-    const [localCredentials, setLocalCredentials] = useState(order.credentials || "");
-
-    const currentStep = localStatus === 'Completed' ? 5 : localStatus === 'Delivered' ? 3 : 2;
-
-    async function handleUpdate() {
-        setIsUpdating(true);
-        try {
-            const { error } = await supabase
-                .from('orders')
-                .update({ 
-                    status: localStatus,
-                    internal_remarks: localRemarks,
-                    credentials: localCredentials
-                })
-                .eq('id', order.id);
-            
-            if (error) throw error;
-            alert("Order registry updated successfully.");
-            // OnClose or just keep open
-        } catch (e: any) {
-            alert("Update Error: " + e.message);
-        } finally {
-            setIsUpdating(false);
-        }
-    }
-
-    return (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative bg-white w-full max-w-6xl max-h-[95vh] rounded-xl shadow-2xl overflow-hidden flex flex-col">
-                <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2 text-slate-500 text-sm font-medium">
-                    <History size={16} /> Home / Sold Details
-                </div>
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                    <div className="space-y-8">
-                        <h2 className="text-2xl font-black text-slate-900 italic tracking-tight">Sold Details</h2>
-                        <div className="bg-[#F8F9FA] rounded-xl p-10 border border-slate-100 relative">
-                            <div className="relative flex justify-between items-start max-w-4xl mx-auto">
-                                <div className="absolute top-5 left-0 right-0 h-1 bg-slate-200" />
-                                <div className="absolute top-5 left-0 h-1 bg-[#1dbf73] transition-all duration-1000 border-t-2 border-dashed border-white/30" style={{ width: `${((currentStep - 1) / (STATUS_STEPS.length - 1)) * 100}%` }} />
-                                {STATUS_STEPS.map((step, idx) => (
-                                    <div key={step.id} className="relative z-10 flex flex-col items-center">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black border-4 transition-all ${idx + 1 <= currentStep ? "bg-[#1dbf73] border-[#E8F5E9] text-white shadow-lg shadow-emerald-500/20" : "bg-white border-slate-100 text-slate-400"}`}>{step.id}</div>
-                                        <span className={`mt-4 text-[10px] font-black uppercase tracking-[0.1em] text-center max-w-[80px] ${idx + 1 <= currentStep ? "text-slate-900" : "text-slate-400"}`}>{step.label}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        
-                        <div className="bg-white border border-slate-200 rounded-3xl p-8 space-y-6 shadow-sm">
-                            <div className="flex flex-wrap items-center justify-between gap-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-2 text-[15px] font-black text-slate-900 uppercase tracking-tighter italic">
-                                        <Package size={20} className="text-[#E62E04]" /> Order number {order.id.split('-')[0].toUpperCase()}
-                                    </div>
-                                    <div className="bg-[#FFEBEE] text-[#D32F2F] px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest flex items-center gap-2 border border-red-100">
-                                        <AlertCircle size={14} /> Exceeded time for {((new Date().getTime() - new Date(order.created_at).getTime())/(1000*60*60)).toFixed(2)} hours
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
-                                    <span className="text-[12px] font-bold">Order Date: {new Date(order.created_at).toLocaleString()}</span>
-                                    <select 
-                                        value={localStatus}
-                                        onChange={(e) => setLocalStatus(e.target.value)}
-                                        className="bg-[#FFF3E0] text-[#EF6C00] px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#FFE0B2] outline-none cursor-pointer"
-                                    >
-                                        <option value="Preparing">Preparing</option>
-                                        <option value="Delivering">Delivering</option>
-                                        <option value="Delivered">Delivered</option>
-                                        <option value="Completed">Completed</option>
-                                        <option value="Canceled">Canceled</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-slate-50 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-6 border border-slate-100">
-                                <div className="flex items-center gap-5">
-                                    <div className="w-16 h-16 rounded-full border-2 border-white shadow-lg overflow-hidden bg-white flex items-center justify-center">
-                                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${order.username}`} alt="buyer" />
-                                    </div>
-                                    <div>
-                                        <h4 className="text-xl font-black text-slate-900 tracking-tight italic">{order.username}</h4>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Authorized Buyer</p>
-                                    </div>
-                                    <div className="flex gap-3 ml-6">
-                                        <button className="bg-[#26D374] text-white px-6 py-2.5 rounded-xl font-black text-[12px] uppercase tracking-widest flex items-center gap-2 hover:bg-[#1faa5b] transition-all shadow-lg shadow-emerald-500/10"><MessageCircle size={16} /> Chat Now</button>
-                                        <button className="bg-white border border-slate-200 text-slate-600 px-6 py-2.5 rounded-xl font-black text-[12px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm"><ShoppingBag size={16} /> Contact by mail</button>
-                                        <button className="bg-white border border-slate-200 text-red-500 px-6 py-2.5 rounded-xl font-black text-[12px] uppercase tracking-widest flex items-center gap-2 hover:bg-red-50 transition-all shadow-sm border-dashed"><XCircle size={16} /> Cancel Order</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-12 gap-10 py-4">
-                                <div className="md:col-span-8 space-y-6">
-                                    <div className="flex items-center gap-6">
-                                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest w-24">Game</span>
-                                        <span className="text-sm font-bold text-slate-900">: {order.products?.game || "Facebook"}</span>
-                                    </div>
-                                    <div className="flex items-start gap-6">
-                                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest w-24 pt-1">Product Title</span>
-                                        <div className="flex-1">
-                                            <p className="text-[15px] font-black text-slate-900 leading-relaxed">: {order.products?.title}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-6 pt-4 border-t border-slate-50">
-                                        <span className="text-xs font-black text-[#1dbf73] uppercase tracking-widest w-24 pt-3">Deployment Data</span>
-                                        <div className="flex-1">
-                                            <textarea 
-                                                value={localCredentials}
-                                                onChange={(e) => setLocalCredentials(e.target.value)}
-                                                placeholder="Enter account credentials or license keys here. These will be securely visible to the buyer upon 'Delivered' status."
-                                                className="w-full bg-slate-900 text-emerald-400 font-mono text-[13px] p-4 rounded-xl border border-slate-800 outline-none focus:border-emerald-500/50 transition-all min-h-[100px]"
-                                            />
-                                            <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">Only visible to buyer when status is 'Delivered'</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="md:col-span-4">
-                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 h-full flex flex-col">
-                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Internal Ledger</h4>
-                                        <textarea 
-                                            value={localRemarks}
-                                            onChange={(e) => setLocalRemarks(e.target.value)}
-                                            placeholder="Write internal administrative remarks here..."
-                                            className="flex-1 bg-transparent text-[13px] font-bold text-slate-700 leading-relaxed outline-none resize-none"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="p-8 border-t border-slate-100 flex justify-end gap-4 bg-slate-50/50">
-                    <button onClick={onClose} className="px-10 py-4 rounded-2xl border border-slate-200 text-slate-400 font-black text-[12px] uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-all">Close Console</button>
-                    <button 
-                        onClick={handleUpdate}
-                        disabled={isUpdating}
-                        className="px-12 py-4 bg-slate-900 text-white font-black rounded-2xl text-[12px] uppercase tracking-widest hover:bg-[#1dbf73] transition-all shadow-xl shadow-slate-900/10 flex items-center gap-3 disabled:opacity-50"
-                    >
-                        {isUpdating ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-                        Synchronize Ledger
-                    </button>
-                </div>
-            </motion.div>
-        </div>
     );
 }

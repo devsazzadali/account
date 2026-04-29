@@ -164,7 +164,7 @@ export function AdminMessages() {
 
   const sortedUserList = useMemo(() => {
     return Array.from(groupedUsers.keys())
-      .filter(u => u && u.toLowerCase().includes(searchQuery.toLowerCase()))
+      .filter(u => u && (u as string).toLowerCase().includes(searchQuery.toLowerCase()))
       .sort((a, b) => {
           const msgsA = groupedUsers.get(a) || [];
           const msgsB = groupedUsers.get(b) || [];

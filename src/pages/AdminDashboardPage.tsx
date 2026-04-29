@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ShieldAlert, ArrowLeft, LogOut, Loader2, Mail, ArrowRight } from "lucide-react";
+import { ShieldAlert, ArrowLeft, LogOut, Loader2, Mail, ArrowRight, PlusCircle } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { motion } from "framer-motion";
 import { AdminLayout } from "../components/admin/AdminLayout";
@@ -111,7 +111,7 @@ export function AdminDashboardPage() {
         )}
         {activeTab === "store_customize" && (
            <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
-              <Plus size={64} className="text-emerald-500 mb-4" />
+              <PlusCircle size={64} className="text-emerald-500 mb-4" />
               <h3 className="text-2xl font-black text-slate-900 uppercase italic">Store Customizer</h3>
               <p className="text-slate-500 mt-2 font-medium">This module is currently being calibrated for your workspace.</p>
            </div>

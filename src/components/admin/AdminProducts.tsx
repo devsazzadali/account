@@ -607,7 +607,7 @@ function FormItem({ label, children }: any) {
     );
 }
 
-function ProductCard({ product }: { product: any }) {
+function ProductCard({ product }: any) {
     return (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm group hover:border-[#E62E04] transition-all duration-300">
             <div className="h-48 overflow-hidden relative">
