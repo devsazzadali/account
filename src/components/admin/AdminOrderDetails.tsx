@@ -138,34 +138,43 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                         <p className="text-[12px] text-slate-500">buyer</p>
                     </div>
                     <div className="flex gap-2 ml-4">
-                        <button onClick={() => alert("Chat feature coming soon")} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1DBF73] text-white rounded text-[13px] font-bold">
+                        <button onClick={() => alert("Chat feature coming soon")} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1DBF73] text-white rounded text-[13px] font-bold shadow-sm">
                             <MessageCircle size={14} /> Chat Now
                         </button>
-                        <button onClick={() => alert("Mail feature coming soon")} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold">
-                            <Mail size={14} /> Mail
+                        <button onClick={() => alert("Mail feature coming soon")} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold shadow-sm">
+                            <Mail size={14} /> Contact buyers by mail
                         </button>
-                        <button onClick={() => alert("Cancel order feature coming soon")} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold">
-                            <XCircle size={14} /> Cancel
+                        <button onClick={() => alert("Cancel order feature coming soon")} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold shadow-sm">
+                            <XCircle size={14} /> Cancel Order
                         </button>
+                        {currentStep >= 3 && (
+                            <button className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold shadow-sm">
+                                <Upload size={14} /> Upload/View
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
 
             <div className="mt-8 space-y-4">
                 <div className="flex items-center gap-4">
-                    <span className="w-32 text-[14px] text-slate-500">Category</span>
-                    <span className="text-[14px] text-slate-900 font-medium">: {product?.game || product?.category || "N/A"}</span>
+                    <span className="w-32 text-[13px] font-bold text-slate-600">Game</span>
+                    <span className="text-[13px] text-slate-900 font-bold">: {product?.game || product?.category || "N/A"}</span>
                 </div>
                 <div className="flex items-start gap-4">
-                    <span className="w-32 text-[14px] text-slate-500 pt-0.5">Product Title</span>
-                    <div className="flex-1 text-[14px] text-[#E62E04] font-bold leading-relaxed">: {product?.title || "N/A"}</div>
+                    <span className="w-32 text-[13px] font-bold text-slate-600 pt-0.5">Product Title</span>
+                    <div className="flex-1 text-[13px] text-slate-900 font-bold leading-relaxed">: {product?.title || "N/A"}</div>
+                </div>
+                <div className="flex items-start gap-4">
+                    <span className="w-32 text-[13px] font-bold text-slate-600 pt-0.5">Username</span>
+                    <div className="flex-1 text-[13px] text-slate-900 font-bold leading-relaxed">: {order?.username || "buyer"}</div>
                 </div>
 
                 <div className="pt-6">
                     {status === "New Order" && (
                         <button 
                             onClick={() => setShowConfirmModal(true)}
-                            className="bg-[#E62E04] text-white px-16 py-3 rounded font-bold text-[15px] uppercase tracking-widest"
+                            className="bg-[#D9363E] text-white px-10 py-2 rounded text-[12px] font-bold uppercase tracking-wide"
                         >
                             PREPARING
                         </button>
@@ -173,7 +182,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                     {status === "PREPARING" && (
                         <button 
                             onClick={() => updateStatus("Delivering")}
-                            className="bg-[#E62E04] text-white px-16 py-3 rounded font-bold text-[15px] uppercase tracking-widest"
+                            className="bg-[#D9363E] text-white px-10 py-2 rounded text-[12px] font-bold uppercase tracking-wide"
                         >
                             START TRADING
                         </button>
@@ -181,32 +190,62 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                 </div>
             </div>
 
-            {/* Account Info Form */}
-            <div className="mt-12 bg-white border border-slate-200 rounded overflow-hidden">
-                <div className="bg-[#333333] px-6 py-3 flex justify-between items-center text-white">
-                    <h3 className="text-[14px] font-bold">Accounts Info</h3>
-                    <PlusCircle size={18} />
+                {/* Order Information Section */}
+                <div className="pt-8 mt-6 border-t border-slate-100">
+                    <h3 className="text-[14px] font-bold text-slate-900 mb-6">Order Information</h3>
+                    <div className="grid grid-cols-12 gap-4 text-[12px]">
+                        <div className="col-span-3 space-y-6 text-slate-500">
+                            <div>ProductID - (<span className="text-[#1890FF] hover:underline cursor-pointer">{product?.id?.toString()?.substring(0,7) || "3015251"}</span>)</div>
+                            <div>Type</div>
+                            <div className="uppercase">QUANTITY</div>
+                        </div>
+                        <div className="col-span-5 space-y-6 text-slate-900 font-medium">
+                            <div><span className="text-[#1890FF] hover:underline cursor-pointer">{product?.title}</span> <span className="text-slate-500 font-normal ml-2 flex items-center gap-1 inline-flex"><Upload size={12}/> view snapshot</span></div>
+                            <div className="w-6 h-6 rounded flex items-center justify-center overflow-hidden border border-slate-200"><img src={product?.image || "https://api.dicebear.com/7.x/identicon/svg"} className="w-full h-full object-cover" /></div>
+                            <div>1</div>
+                        </div>
+                        <div className="col-span-4 space-y-4 text-right">
+                            <div className="flex justify-between"><span className="text-slate-500">Price/Unit</span><span className="font-bold text-slate-900">USD {order?.total_price || 10}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500">Amount</span><span className="font-bold text-slate-900">USD {(order?.total_price || 10).toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500">Service Fee</span><span className="font-bold text-slate-900">8%</span></div>
+                            <div className="flex justify-between pt-4 mt-2"><span className="font-bold text-slate-900">Actual Amount Received</span><span className="font-bold text-slate-900">-</span></div>
+                        </div>
+                    </div>
                 </div>
-                <div className="p-8 space-y-6">
-                    <FormRow label="Login Account" required>
-                        <input className="flex-1 border border-slate-300 rounded px-4 py-2 text-[14px] outline-none" />
-                    </FormRow>
-                    <FormRow label="Login Password" required>
-                        <input type="password" className="flex-1 border border-slate-300 rounded px-4 py-2 text-[14px] outline-none" />
-                    </FormRow>
-                    <FormRow label="2FA Code">
-                        <input className="flex-1 border border-slate-300 rounded px-4 py-2 text-[14px] outline-none" />
-                    </FormRow>
-                    <FormRow label="Secondary Password">
-                        <input className="flex-1 border border-slate-300 rounded px-4 py-2 text-[14px] outline-none" />
-                    </FormRow>
-                    <div className="pt-4">
-                        <button className="bg-[#E62E04] text-white px-10 py-2 rounded font-bold text-[13px]">
-                            Submit
-                        </button>
+
+            </div>
+
+            {/* Account Info Form */}
+            {currentStep >= 2 && (
+            <div className="mt-8 border border-slate-200 rounded overflow-hidden shadow-sm">
+                <div className="bg-[#111111] px-4 py-2.5 flex justify-between items-center text-white">
+                    <h3 className="text-[14px] font-bold">Accounts Info</h3>
+                    <span className="text-xl leading-none cursor-pointer">+</span>
+                </div>
+                <div className="p-6 bg-white space-y-5">
+                    <div className="space-y-1.5">
+                        <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> Login Account</div>
+                        <input className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> Login Password</div>
+                        <input type="password" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> 2FA Code</div>
+                        <input placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> cookies</div>
+                        <input placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Secondary Password</div>
+                        <input placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
                     </div>
                 </div>
             </div>
+            )}
           </div>
         </div>
       </div>
@@ -214,16 +253,16 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
       {showConfirmModal && (
           <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
               <div className="fixed inset-0 bg-black/40" onClick={() => setShowConfirmModal(false)} />
-              <div className="relative bg-white w-full max-w-[400px] rounded overflow-hidden shadow-2xl">
-                  <div className="bg-[#333333] px-5 py-3 flex justify-between items-center text-white font-bold">
+              <div className="relative bg-white w-full max-w-[450px] rounded shadow-2xl overflow-hidden">
+                  <div className="bg-[#111111] px-4 py-3 flex justify-between items-center text-white text-[14px] font-bold">
                       <span>Confirm</span>
-                      <XCircle size={20} className="cursor-pointer" onClick={() => setShowConfirmModal(false)} />
+                      <span className="text-xl leading-none cursor-pointer hover:text-red-500 font-normal" onClick={() => setShowConfirmModal(false)}>&times;</span>
                   </div>
-                  <div className="p-10 text-center">
-                      <p className="font-bold">Whether to confirm?</p>
-                      <div className="mt-8 flex justify-center gap-10">
-                          <button onClick={() => setShowConfirmModal(false)} className="px-6 py-2 bg-slate-100 rounded text-sm font-bold">CANCEL</button>
-                          <button onClick={() => updateStatus("PREPARING")} className="px-6 py-2 bg-[#1DBF73] text-white rounded text-sm font-bold">CONFIRM</button>
+                  <div className="p-8">
+                      <p className="text-[13px] text-slate-800 mb-10 font-bold">Whether to confirm?</p>
+                      <div className="flex justify-center gap-6">
+                          <button onClick={() => setShowConfirmModal(false)} className="px-6 py-2 bg-[#FF0000] text-white rounded text-[12px] font-bold uppercase tracking-wide">CANCEL</button>
+                          <button onClick={() => updateStatus("PREPARING")} className="px-6 py-2 bg-[#1DBF73] text-white rounded text-[12px] font-bold uppercase tracking-wide">CONFIRM</button>
                       </div>
                   </div>
               </div>
@@ -233,13 +272,4 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   );
 }
 
-function FormRow({ label, required, children }: any) {
-    return (
-        <div className="flex items-center gap-4 max-w-2xl">
-            <div className="w-48 text-[14px] text-slate-800 font-medium flex items-center gap-1">
-                <span className="text-red-500">{required ? "*" : ""}</span> {label}
-            </div>
-            {children}
-        </div>
-    );
-}
+

@@ -44,6 +44,14 @@ export function AdminOrders() {
   const [counts, setCounts] = useState<any>({ All: 0, "Pending Delivery": 0, "Waiting Confirmation": 0, Completed: 0, Canceled: 0 });
   const [error, setError] = useState<string | null>(null);
 
+  const STATUS_STEPS = [
+    { id: 1, label: "Pending" },
+    { id: 2, label: "Preparing" },
+    { id: 3, label: "Delivering" },
+    { id: 4, label: "Completed" },
+    { id: 5, label: "Canceled" },
+];
+
   // Filter Form States
   const [filterGame, setFilterGame] = useState("All");
   const [filterCategory, setFilterCategory] = useState("All");
@@ -316,7 +324,7 @@ export function AdminOrders() {
                                     <td className="px-6 py-5">
                                         <div className="flex flex-col items-center gap-1.5">
                                             <StatusBadge status={order.status} />
-                                            <button className="text-[12px] font-bold text-slate-900 hover:underline">Order Detail</button>
+                                            <button className="text-[12px] font-bold text-slate-900 hover:underline" onClick={() => setSelectedOrder(order)}>Order Detail</button>
                                         </div>
                                     </td>
                                     <td className="px-6 py-5">
