@@ -4,7 +4,7 @@ import {
   ShieldCheck, CheckCircle2, MessageSquare, RefreshCw, Clock, 
   Info, ExternalLink, Filter, ChevronRight, Mail, Phone,
   AlertCircle, Archive, CheckCircle, Radio, Send as SendIcon,
-  Users, UserPlus, Zap, ChevronLeft, FileText, X, List
+  Users, UserPlus, Zap, ChevronLeft, FileText, X, List, Image as ImageIcon
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
@@ -347,11 +347,21 @@ export function AdminMessages() {
             {viewMode === 'chat' && (
                 <div className="p-4 lg:p-6 bg-[#f0f2f5]">
                   <form onSubmit={handleSendReply} className="relative max-w-5xl mx-auto flex gap-4">
+                    <label className="w-[50px] h-[50px] bg-white border border-slate-200 text-slate-500 rounded-lg flex items-center justify-center hover:bg-slate-50 shadow-sm transition-all shrink-0 cursor-pointer group relative">
+                        <ImageIcon size={20} className="group-hover:text-emerald-500 transition-colors" />
+                        <input type="file" multiple className="hidden" accept="image/*" onChange={() => alert('Photo upload feature coming soon!')} />
+                        <span className="absolute -top-10 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-bold uppercase tracking-widest pointer-events-none">Photo</span>
+                    </label>
+                    <label className="w-[50px] h-[50px] bg-white border border-slate-200 text-slate-500 rounded-lg flex items-center justify-center hover:bg-slate-50 shadow-sm transition-all shrink-0 cursor-pointer group relative">
+                        <Paperclip size={20} className="group-hover:text-emerald-500 transition-colors" />
+                        <input type="file" multiple className="hidden" accept=".pdf,.doc,.docx,.txt" onChange={() => alert('Document upload feature coming soon!')} />
+                        <span className="absolute -top-10 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-bold uppercase tracking-widest pointer-events-none">Document</span>
+                    </label>
                     <textarea 
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendReply())}
-                      placeholder="please be patient sir"
+                      placeholder="Type your message..."
                       className="flex-1 bg-white border border-slate-200 rounded-lg px-4 py-3 text-[14px] shadow-sm focus:outline-none focus:border-emerald-500 min-h-[50px] resize-none transition-all"
                     />
                     <button 
