@@ -32,7 +32,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   
-  const [accountInfo, setAccountInfo] = useState({
+  const [accountInfo, setAccountInfo] = useState(order?.account_info || {
     loginAccount: "",
     loginPassword: "",
     twoFactorCode: "",
@@ -40,6 +40,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
     secondaryPassword: "",
     internalRemarks: order?.internal_remarks || ""
   });
+  const [isSubmittingInfo, setIsSubmittingInfo] = useState(false);
 
   if (!order) return null;
 
@@ -62,6 +63,30 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
       setShowConfirmModal(false);
     }
   }
+
+  async function handleSaveAccountInfo() {
+      setIsSubmittingInfo(true);
+      try {
+          const { error } = await supabase
+            .from('orders')
+            .update({ account_info: accountInfo })
+            .eq('id', order.id);
+          
+          if (error) throw error;
+          alert("Account Information Saved Successfully!");
+      } catch (e: any) {
+          alert("Failed to save info: " + e.message);
+      } finally {
+          setIsSubmittingInfo(false);
+      }
+  }
+
+  const handleChatNow = () => {
+      if (order.username) {
+          localStorage.setItem("selectedUserChat", order.username);
+          alert("User selected for chat! Please navigate to the Messages tab.");
+      }
+  };
 
   const exceededHours = order.created_at 
     ? ((new Date().getTime() - new Date(order.created_at).getTime()) / (1000 * 60 * 60)).toFixed(2)
@@ -138,13 +163,13 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                         <p className="text-[12px] text-slate-500">buyer</p>
                     </div>
                     <div className="flex gap-2 ml-4">
-                        <button onClick={() => alert("Chat feature coming soon")} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1DBF73] text-white rounded text-[13px] font-bold shadow-sm">
+                        <button onClick={handleChatNow} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1DBF73] text-white rounded text-[13px] font-bold shadow-sm">
                             <MessageCircle size={14} /> Chat Now
                         </button>
-                        <button onClick={() => alert("Mail feature coming soon")} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold shadow-sm">
+                        <a href={`mailto:${order.email || ''}`} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold shadow-sm">
                             <Mail size={14} /> Contact buyers by mail
-                        </button>
-                        <button onClick={() => alert("Cancel order feature coming soon")} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold shadow-sm">
+                        </a>
+                        <button onClick={() => { if(window.confirm('Are you sure you want to cancel this order?')) updateStatus('Canceled'); }} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold shadow-sm">
                             <XCircle size={14} /> Cancel Order
                         </button>
                         {currentStep >= 3 && (
@@ -225,23 +250,28 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                 <div className="p-6 bg-white space-y-5">
                     <div className="space-y-1.5">
                         <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> Login Account</div>
-                        <input className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        <input value={accountInfo.loginAccount || ""} onChange={(e) => setAccountInfo({...accountInfo, loginAccount: e.target.value})} className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
                     </div>
                     <div className="space-y-1.5">
                         <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> Login Password</div>
-                        <input type="password" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        <input value={accountInfo.loginPassword || ""} onChange={(e) => setAccountInfo({...accountInfo, loginPassword: e.target.value})} type="password" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
                     </div>
                     <div className="space-y-1.5">
                         <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> 2FA Code</div>
-                        <input placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        <input value={accountInfo.twoFactorCode || ""} onChange={(e) => setAccountInfo({...accountInfo, twoFactorCode: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
                     </div>
                     <div className="space-y-1.5">
                         <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> cookies</div>
-                        <input placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        <input value={accountInfo.cookies || ""} onChange={(e) => setAccountInfo({...accountInfo, cookies: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
                     </div>
                     <div className="space-y-1.5">
                         <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Secondary Password</div>
-                        <input placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        <input value={accountInfo.secondaryPassword || ""} onChange={(e) => setAccountInfo({...accountInfo, secondaryPassword: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                    </div>
+                    <div className="pt-4">
+                        <button onClick={handleSaveAccountInfo} disabled={isSubmittingInfo} className="bg-[#E62E04] text-white px-10 py-2 rounded font-bold text-[13px] hover:bg-[#c92503] transition-all disabled:opacity-50 flex items-center gap-2">
+                            {isSubmittingInfo && <Loader2 size={14} className="animate-spin" />} Submit
+                        </button>
                     </div>
                 </div>
             </div>
