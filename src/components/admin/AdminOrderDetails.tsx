@@ -241,7 +241,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
             </div>
 
             {/* Account Info Form */}
-            {currentStep >= 3 && (
+            {currentStep >= 2 && (
             <div className="mt-8">
                 <div className="border border-slate-200 rounded overflow-hidden shadow-sm">
                     <div className="bg-[#111111] px-4 py-2.5 flex justify-between items-center text-white">
@@ -319,22 +319,26 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                 </div>
 
                 {/* Confirm Delivered Button */}
-                <div className="flex justify-end mt-4 border border-slate-200 bg-white p-4 shadow-sm rounded">
-                    <button 
-                        onClick={() => updateStatus("Waiting for confirmation")}
-                        className="bg-[#D9363E] text-white px-8 py-2.5 rounded text-[13px] font-bold uppercase tracking-wide hover:bg-[#c92503] transition-all"
-                    >
-                        Confirm Delivered
-                    </button>
-                </div>
+                {currentStep >= 3 && (
+                    <>
+                        <div className="flex justify-end mt-4 border border-slate-200 bg-white p-4 shadow-sm rounded">
+                            <button 
+                                onClick={() => updateStatus("Waiting for confirmation")}
+                                className="bg-[#D9363E] text-white px-8 py-2.5 rounded text-[13px] font-bold uppercase tracking-wide hover:bg-[#c92503] transition-all"
+                            >
+                                Confirm Delivered
+                            </button>
+                        </div>
 
-                {/* Trading Status */}
-                <div className="mt-8">
-                    <h3 className="text-[14px] font-bold text-slate-900 mb-4">Trading Status 0/1 delivered</h3>
-                    <div className="w-full h-[1px] bg-slate-200 rounded overflow-hidden">
-                        <div className="w-0 h-full bg-[#1dbf73]"></div>
-                    </div>
-                </div>
+                        {/* Trading Status */}
+                        <div className="mt-8">
+                            <h3 className="text-[14px] font-bold text-slate-900 mb-4">Trading Status 0/1 delivered</h3>
+                            <div className="w-full h-[1px] bg-slate-200 rounded overflow-hidden">
+                                <div className="w-0 h-full bg-[#1dbf73]"></div>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
             )}
           </div>
