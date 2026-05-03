@@ -250,23 +250,23 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                 <div className="p-6 bg-white space-y-5">
                     <div className="space-y-1.5">
                         <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> Login Account</div>
-                        <input value={accountInfo.loginAccount || ""} onChange={(e) => setAccountInfo({...accountInfo, loginAccount: e.target.value})} className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        <input value={accountInfo?.loginAccount || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), loginAccount: e.target.value})} className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
                     </div>
                     <div className="space-y-1.5">
                         <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> Login Password</div>
-                        <input value={accountInfo.loginPassword || ""} onChange={(e) => setAccountInfo({...accountInfo, loginPassword: e.target.value})} type="password" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        <input value={accountInfo?.loginPassword || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), loginPassword: e.target.value})} type="password" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
                     </div>
                     <div className="space-y-1.5">
                         <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> 2FA Code</div>
-                        <input value={accountInfo.twoFactorCode || ""} onChange={(e) => setAccountInfo({...accountInfo, twoFactorCode: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        <input value={accountInfo?.twoFactorCode || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), twoFactorCode: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
                     </div>
                     <div className="space-y-1.5">
                         <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> cookies</div>
-                        <input value={accountInfo.cookies || ""} onChange={(e) => setAccountInfo({...accountInfo, cookies: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        <input value={accountInfo?.cookies || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), cookies: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
                     </div>
                     <div className="space-y-1.5">
                         <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Secondary Password</div>
-                        <input value={accountInfo.secondaryPassword || ""} onChange={(e) => setAccountInfo({...accountInfo, secondaryPassword: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        <input value={accountInfo?.secondaryPassword || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), secondaryPassword: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
                     </div>
                     <div className="pt-4">
                         <button onClick={handleSaveAccountInfo} disabled={isSubmittingInfo} className="bg-[#E62E04] text-white px-10 py-2 rounded font-bold text-[13px] hover:bg-[#c92503] transition-all disabled:opacity-50 flex items-center gap-2">
