@@ -9,7 +9,8 @@ import {
   ChevronRight,
   History,
   Zap,
-  PlusCircle
+  PlusCircle,
+  Loader2
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
