@@ -241,37 +241,98 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
             </div>
 
             {/* Account Info Form */}
-            {currentStep >= 2 && (
-            <div className="mt-8 border border-slate-200 rounded overflow-hidden shadow-sm">
-                <div className="bg-[#111111] px-4 py-2.5 flex justify-between items-center text-white">
-                    <h3 className="text-[14px] font-bold">Accounts Info</h3>
-                    <span className="text-xl leading-none cursor-pointer">+</span>
+            {currentStep >= 3 && (
+            <div className="mt-8">
+                <div className="border border-slate-200 rounded overflow-hidden shadow-sm">
+                    <div className="bg-[#111111] px-4 py-2.5 flex justify-between items-center text-white">
+                        <h3 className="text-[14px] font-bold">Accounts Info</h3>
+                        <span className="text-xl leading-none cursor-pointer">-</span>
+                    </div>
+                    <div className="p-6 bg-white space-y-5">
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> Login Account</div>
+                            <input value={accountInfo?.loginAccount || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), loginAccount: e.target.value})} className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> Login Password</div>
+                            <input value={accountInfo?.loginPassword || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), loginPassword: e.target.value})} type="password" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> 2FA Code</div>
+                            <input value={accountInfo?.twoFactorCode || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), twoFactorCode: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> cookies</div>
+                            <input value={accountInfo?.cookies || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), cookies: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Secondary Password(Security Answer)</div>
+                            <input value={accountInfo?.secondaryPassword || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), secondaryPassword: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Account registration information (Last Name)</div>
+                            <input value={accountInfo?.lastName || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), lastName: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Account registration information (First Name)</div>
+                            <input value={accountInfo?.firstName || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), firstName: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Bird mailbox Password</div>
+                            <input value={accountInfo?.birdPassword || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), birdPassword: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Bird mailbox security issue 1</div>
+                            <input value={accountInfo?.birdIssue1 || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), birdIssue1: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Secret Answer 1</div>
+                            <input value={accountInfo?.secretAnswer1 || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), secretAnswer1: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Bird mailbox security issue 2</div>
+                            <input value={accountInfo?.birdIssue2 || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), birdIssue2: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Secret Answer 2</div>
+                            <input value={accountInfo?.secretAnswer2 || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), secretAnswer2: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Bird mailbox security issue 3</div>
+                            <input value={accountInfo?.birdIssue3 || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), birdIssue3: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Secret Answer 3</div>
+                            <input value={accountInfo?.secretAnswer3 || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), secretAnswer3: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Additional information</div>
+                            <input value={accountInfo?.additionalInfo || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), additionalInfo: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
+                        </div>
+
+                        <div className="pt-4 flex items-center justify-between">
+                            <button onClick={handleSaveAccountInfo} disabled={isSubmittingInfo} className="bg-[#E62E04] text-white px-6 py-2 rounded font-bold text-[12px] hover:bg-[#c92503] transition-all disabled:opacity-50 flex items-center gap-2">
+                                {isSubmittingInfo && <Loader2 size={14} className="animate-spin" />} Submit
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div className="p-6 bg-white space-y-5">
-                    <div className="space-y-1.5">
-                        <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> Login Account</div>
-                        <input value={accountInfo?.loginAccount || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), loginAccount: e.target.value})} className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> Login Password</div>
-                        <input value={accountInfo?.loginPassword || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), loginPassword: e.target.value})} type="password" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> 2FA Code</div>
-                        <input value={accountInfo?.twoFactorCode || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), twoFactorCode: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1"><span className="text-red-500">*</span> cookies</div>
-                        <input value={accountInfo?.cookies || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), cookies: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <div className="text-[12px] font-bold text-slate-700 flex items-center gap-1">Secondary Password</div>
-                        <input value={accountInfo?.secondaryPassword || ""} onChange={(e) => setAccountInfo({...(accountInfo || {}), secondaryPassword: e.target.value})} placeholder="If not filled in (none)" className="w-full max-w-xl border border-slate-300 rounded px-3 py-2 text-[14px] outline-none focus:border-[#E62E04]" />
-                    </div>
-                    <div className="pt-4">
-                        <button onClick={handleSaveAccountInfo} disabled={isSubmittingInfo} className="bg-[#E62E04] text-white px-10 py-2 rounded font-bold text-[13px] hover:bg-[#c92503] transition-all disabled:opacity-50 flex items-center gap-2">
-                            {isSubmittingInfo && <Loader2 size={14} className="animate-spin" />} Submit
-                        </button>
+
+                {/* Confirm Delivered Button */}
+                <div className="flex justify-end mt-4 border border-slate-200 bg-white p-4 shadow-sm rounded">
+                    <button 
+                        onClick={() => updateStatus("Waiting for confirmation")}
+                        className="bg-[#D9363E] text-white px-8 py-2.5 rounded text-[13px] font-bold uppercase tracking-wide hover:bg-[#c92503] transition-all"
+                    >
+                        Confirm Delivered
+                    </button>
+                </div>
+
+                {/* Trading Status */}
+                <div className="mt-8">
+                    <h3 className="text-[14px] font-bold text-slate-900 mb-4">Trading Status 0/1 delivered</h3>
+                    <div className="w-full h-[1px] bg-slate-200 rounded overflow-hidden">
+                        <div className="w-0 h-full bg-[#1dbf73]"></div>
                     </div>
                 </div>
             </div>
