@@ -33,15 +33,9 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   
-  const [accountInfo, setAccountInfo] = useState(order?.account_info || {
-    loginAccount: "",
-    loginPassword: "",
-    twoFactorCode: "",
-    cookies: "",
-    secondaryPassword: "",
-    internalRemarks: order?.internal_remarks || ""
-  });
+  const [accountInfo, setAccountInfo] = useState(order?.account_info || {});
   const [isSubmittingInfo, setIsSubmittingInfo] = useState(false);
+  const [showDeliverModal, setShowDeliverModal] = useState(false);
 
   if (!order) return null;
 
@@ -62,21 +56,27 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
     } finally {
       setLoading(false);
       setShowConfirmModal(false);
+      setShowDeliverModal(false);
     }
   }
 
-  async function handleSaveAccountInfo() {
+  async function handleConfirmDeliver() {
       setIsSubmittingInfo(true);
       try {
           const { error } = await supabase
             .from('orders')
-            .update({ account_info: accountInfo })
+            .update({ 
+                account_info: accountInfo,
+                status: "Delivering" 
+            })
             .eq('id', order.id);
           
           if (error) throw error;
-          alert("Account Information Saved Successfully!");
+          setStatus("Delivering");
+          setShowDeliverModal(false);
+          alert("Account Information Sent to Customer!");
       } catch (e: any) {
-          alert("Failed to save info: " + e.message);
+          alert("Failed to deliver info: " + e.message);
       } finally {
           setIsSubmittingInfo(false);
       }
@@ -328,30 +328,46 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                         </div>
 
                         <div className="pt-4 flex items-center justify-between">
-                            <button onClick={handleSaveAccountInfo} disabled={isSubmittingInfo} className="bg-[#E62E04] text-white px-6 py-2 rounded font-bold text-[12px] hover:bg-[#c92503] transition-all disabled:opacity-50 flex items-center gap-2">
+                            <button onClick={() => setShowDeliverModal(true)} disabled={isSubmittingInfo} className="bg-[#E62E04] text-white px-6 py-2 rounded font-bold text-[12px] hover:bg-[#c92503] transition-all disabled:opacity-50 flex items-center gap-2">
                                 {isSubmittingInfo && <Loader2 size={14} className="animate-spin" />} Submit
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Confirm Delivered Button */}
+                {/* Confirm Delivered Button - Only show after customer verifies or in manual override */}
                 {currentStep >= 3 && (
                     <>
-                        <div className="flex justify-end mt-4 border border-slate-200 bg-white p-4 shadow-sm rounded">
-                            <button 
-                                onClick={() => updateStatus("Waiting for confirmation")}
-                                className="bg-[#D9363E] text-white px-8 py-2.5 rounded text-[13px] font-bold uppercase tracking-wide hover:bg-[#c92503] transition-all"
-                            >
-                                Confirm Delivered
-                            </button>
+                        <div className="flex justify-between items-center mt-4 border border-slate-200 bg-white p-6 shadow-sm rounded">
+                            <div>
+                                {status === "Delivering" && (
+                                    <div className="flex items-center gap-2 text-blue-600 font-bold text-sm">
+                                        <Clock size={16} /> Awaiting customer confirmation...
+                                    </div>
+                                )}
+                                {status === "Waiting for confirmation" && (
+                                    <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
+                                        <CheckCircle size={16} /> Customer has confirmed receipt! Please verify.
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex gap-4">
+                                {status === "Waiting for confirmation" && (
+                                    <button 
+                                        onClick={() => updateStatus("Completed")}
+                                        className="bg-[#1DBF73] text-white px-8 py-2.5 rounded text-[13px] font-bold uppercase tracking-wide hover:bg-[#16a363] transition-all"
+                                    >
+                                        Verify & Complete Order
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {/* Trading Status */}
                         <div className="mt-8">
-                            <h3 className="text-[14px] font-bold text-slate-900 mb-4">Trading Status 0/1 delivered</h3>
+                            <h3 className="text-[14px] font-bold text-slate-900 mb-4">Trading Status {currentStep >= 5 ? "1/1" : "0/1"} delivered</h3>
                             <div className="w-full h-[1px] bg-slate-200 rounded overflow-hidden">
-                                <div className="w-0 h-full bg-[#1dbf73]"></div>
+                                <div className={`h-full bg-[#1dbf73] transition-all duration-500 ${currentStep >= 5 ? "w-full" : "w-0"}`}></div>
                             </div>
                         </div>
                     </>
@@ -360,6 +376,8 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
             )}
           </div>
         </div>
+
+      {/* Confirm Preparing Modal */}
       {showConfirmModal && (
           <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
               <div className="fixed inset-0 bg-black/40" onClick={() => setShowConfirmModal(false)} />
@@ -369,10 +387,40 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                       <span className="text-xl leading-none cursor-pointer hover:text-red-500 font-normal" onClick={() => setShowConfirmModal(false)}>&times;</span>
                   </div>
                   <div className="p-8">
-                      <p className="text-[13px] text-slate-800 mb-10 font-bold">Whether to confirm?</p>
+                      <p className="text-[13px] text-slate-800 mb-10 font-bold">Start preparing this order?</p>
                       <div className="flex justify-center gap-6">
                           <button onClick={() => setShowConfirmModal(false)} className="px-6 py-2 bg-[#FF0000] text-white rounded text-[12px] font-bold uppercase tracking-wide">CANCEL</button>
                           <button onClick={() => updateStatus("PREPARING")} className="px-6 py-2 bg-[#1DBF73] text-white rounded text-[12px] font-bold uppercase tracking-wide">CONFIRM</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Deliver Account Info Modal */}
+      {showDeliverModal && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+              <div className="fixed inset-0 bg-black/40" onClick={() => setShowDeliverModal(false)} />
+              <div className="relative bg-white w-full max-w-[450px] rounded shadow-2xl overflow-hidden">
+                  <div className="bg-[#111111] px-4 py-3 flex justify-between items-center text-white text-[14px] font-bold">
+                      <span>Confirm Delivery</span>
+                      <span className="text-xl leading-none cursor-pointer hover:text-red-500 font-normal" onClick={() => setShowDeliverModal(false)}>&times;</span>
+                  </div>
+                  <div className="p-8 text-center">
+                      <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Zap size={32} />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 mb-2">Send Account Details?</h3>
+                      <p className="text-[13px] text-slate-500 mb-8 font-medium">This will deliver the account credentials to the customer and update the status to Delivering.</p>
+                      <div className="flex justify-center gap-4">
+                          <button onClick={() => setShowDeliverModal(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl text-[12px] font-bold uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
+                          <button 
+                            onClick={handleConfirmDeliver} 
+                            disabled={isSubmittingInfo}
+                            className="flex-1 py-3 bg-[#1DBF73] text-white rounded-xl text-[12px] font-bold uppercase tracking-widest hover:bg-[#16a363] transition-all flex items-center justify-center gap-2"
+                          >
+                              {isSubmittingInfo ? <Loader2 size={16} className="animate-spin" /> : "Deliver Now"}
+                          </button>
                       </div>
                   </div>
               </div>
