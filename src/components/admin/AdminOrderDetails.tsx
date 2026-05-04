@@ -213,6 +213,22 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                             START TRADING
                         </button>
                     )}
+                    {status === "Waiting for confirmation" && (
+                        <button 
+                            onClick={() => updateStatus("Completed")}
+                            className="bg-[#1DBF73] text-white px-10 py-2 rounded text-[12px] font-bold uppercase tracking-wide"
+                        >
+                            Finish Order
+                        </button>
+                    )}
+                    {status === "Completed" && (
+                        <button 
+                            onClick={() => updateStatus("Evaluate")}
+                            className="bg-[#1890FF] text-white px-10 py-2 rounded text-[12px] font-bold uppercase tracking-wide"
+                        >
+                            Evaluate Order
+                        </button>
+                    )}
                 </div>
             </div>
 
