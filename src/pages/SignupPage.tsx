@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { User, Lock, Mail, Shield, Zap, ArrowRight, CheckCircle2, Globe, Github, Facebook, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "../lib/supabase";
+import { toast } from "react-hot-toast";
+
 
 export function SignupPage() {
   const [email, setEmail] = useState("");
@@ -21,14 +23,14 @@ export function SignupPage() {
       });
       if (error) throw error;
     } catch (err: any) {
-      alert("Social Registration Error: " + err.message);
+      toast.error("Social Registration Error: " + err.message);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-        alert("Passwords do not match");
+        toast.error("Passwords do not match");
         return;
     }
 
@@ -48,13 +50,13 @@ export function SignupPage() {
         if (error) throw error;
 
         if (data.user) {
-            alert("Account created! Please check your email for verification if required.");
+            toast.success("Account created! Please check your email for verification if required.");
             localStorage.setItem("userRole", "user");
             localStorage.setItem("username", email.split('@')[0]);
             navigate("/dashboard");
         }
     } catch (err: any) {
-        alert("Registration Error: " + err.message);
+        toast.error("Registration Error: " + err.message);
     } finally {
         setLoading(false);
     }

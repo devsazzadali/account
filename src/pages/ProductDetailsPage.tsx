@@ -1,26 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { 
-  ShoppingCart, 
-  ShieldCheck, 
-  Zap, 
-  Clock, 
-  ThumbsUp, 
-  Star, 
-  Copy, 
-  Check, 
-  Crown, 
-  MessageSquare, 
-  Share2,
-  ChevronRight,
-  Shield,
-  BadgeCheck,
-  AlertCircle,
-  Plus,
-  Minus
+  ShoppingCart, Zap, Clock, ThumbsUp, Star, Copy, Check, Crown,
+  MessageSquare, Share2, ChevronRight, Shield, BadgeCheck, AlertCircle, Plus, Minus
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabase";
+import { SellerTrustCard, StockIntelligence, DeliveryTimeline, TrustBadges } from "../components/ProductTrustSystem";
+import { PageLoader } from "../components/SkeletonUI";
 
 interface Product {
   id: string;
@@ -71,14 +58,7 @@ export function ProductDetailsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
-        <div className="w-12 h-12 border-4 border-primary-600/20 border-t-primary-600 rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Synchronizing Asset Data...</p>
-      </div>
-    );
-  }
+  if (loading) return <PageLoader label="Synchronizing Asset Data..." />;
 
   if (error || !product) {
       return (
@@ -236,7 +216,7 @@ export function ProductDetailsPage() {
                     </div>
                 </div>
 
-                <div className="mb-10">
+                <div className="mb-6">
                     <div className="text-[10px] text-primary-600 font-bold uppercase tracking-[0.3em] mb-2">Market Settlement</div>
                     <div className="flex items-baseline gap-2">
                         <span className="text-4xl font-display font-bold text-slate-900">${product.price.toFixed(2)}</span>
@@ -244,7 +224,12 @@ export function ProductDetailsPage() {
                     </div>
                 </div>
 
-                <div className="space-y-4 mb-10">
+                {/* Stock Intelligence */}
+                <div className="mb-6">
+                  <StockIntelligence stock={product.stock || 0} />
+                </div>
+
+                <div className="space-y-4 mb-6">
                     <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-inner">
                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Quantity</span>
                         <div className="flex items-center gap-4">
@@ -253,20 +238,15 @@ export function ProductDetailsPage() {
                             <button onClick={() => setQuantity(quantity+1)} className="p-2 text-slate-400 hover:text-primary-600 transition-colors"><Plus size={16} /></button>
                         </div>
                     </div>
-
-                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-inner">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Availability</span>
-                        <span className="text-xs font-bold text-green-600 uppercase tracking-widest">{product.stock || 0} Units in Reserve</span>
-                    </div>
                 </div>
 
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 mb-6">
                     <Link 
                         to={`/checkout/${product.id}?quantity=${quantity}`}
                         className="w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:scale-[1.02] active:scale-[0.98] text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary-500/20 transition-all text-sm uppercase tracking-widest"
                     >
                         <Zap size={20} fill="currentColor" />
-                        Initialize Acquisition
+                        Buy Now — ${(product.price * quantity).toFixed(2)}
                     </Link>
                     <div className="grid grid-cols-2 gap-4">
                          <button className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-50 border border-slate-200 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-white hover:text-slate-900 transition-all shadow-sm">
@@ -277,36 +257,21 @@ export function ProductDetailsPage() {
                             className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-50 border border-slate-200 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-white hover:text-slate-900 transition-all shadow-sm"
                          >
                             {copied ? <Check size={16} className="text-green-500" /> : <Share2 size={16} />} 
-                            {copied ? "Link Copied" : "Share Protocol"}
+                            {copied ? "Copied!" : "Share"}
                          </button>
                     </div>
                 </div>
+
+                {/* Trust Badges */}
+                <TrustBadges />
               </div>
             </div>
 
-            {/* Seller Card */}
-            <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 flex items-center gap-6 shadow-sm">
-                <div className="relative">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-600 to-blue-600 p-[2px] shadow-xl shadow-primary-500/10">
-                        <div className="w-full h-full rounded-[14px] bg-white flex items-center justify-center overflow-hidden border border-slate-100">
-                            <img src="https://api.dicebear.com/7.x/shapes/svg?seed=Titan" alt="Seller" className="w-full h-full object-cover" />
-                        </div>
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary-600 rounded-lg border-4 border-white flex items-center justify-center shadow-sm">
-                        <Check size={12} className="text-white" />
-                    </div>
-                </div>
-                <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-sm font-bold text-slate-900">TitanGames_Global</h3>
-                        <BadgeCheck size={16} className="text-primary-600" />
-                    </div>
-                    <div className="flex items-center gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                        <span className="flex items-center gap-1"><Star size={10} className="text-yellow-500 fill-current" /> 4.9 Rating</span>
-                        <span>Level 100 Seller</span>
-                    </div>
-                </div>
-            </div>
+            {/* Delivery Timeline */}
+            <DeliveryTimeline />
+
+            {/* Seller Trust Card */}
+            <SellerTrustCard />
           </div>
         </div>
       </div>

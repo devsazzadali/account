@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
+import { toast } from "react-hot-toast";
+
 
 export function AdminProducts({ activeTab }: { activeTab?: string }) {
   const [products, setProducts] = useState<any[]>([]);
@@ -75,7 +77,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
       setShowAddForm(false);
       fetchProducts();
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setLoading(false);
     }

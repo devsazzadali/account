@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-hot-toast";
+
 
 export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -60,9 +62,9 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
       setProfiles(prev => prev.map(p => p.id === selectedUser.id ? { ...p, ...updatedData } : p));
       setSelectedUser({ ...selectedUser, ...updatedData });
       setIsEditing(false);
-      alert("Updated!");
+      toast.success("Updated!");
     } catch (e: any) {
-      alert("Error: " + e.message);
+      toast.error("Error: " + e.message);
     } finally {
       setEditLoading(false);
     }

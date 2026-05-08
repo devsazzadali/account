@@ -15,6 +15,7 @@ import { SoldOrdersPage } from "./pages/Seller/SoldOrdersPage";
 import { LiveSupportWidget } from "./components/LiveSupportWidget";
 import { Home, Search, ShoppingBag, User as UserIcon } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 
 function LayoutManager({ children, onSearch }: { children: React.ReactNode, onSearch: (q: string) => void }) {
   const location = useLocation();
@@ -40,6 +41,7 @@ export default function App() {
 
   return (
     <Router>
+      <Toaster position="top-right" />
       <LayoutManager onSearch={setSearchQuery}>
         <Routes>
           <Route path="/" element={<StorePage searchQuery={searchQuery} />} />

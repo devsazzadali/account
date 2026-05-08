@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { User, Shield, Bell, CreditCard, Save, CheckCircle, Smartphone, Mail, Lock, Loader2, Camera, AlertCircle, Sparkles, Zap, ShieldCheck, Fingerprint, Key, Wallet } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
+import { toast } from "react-hot-toast";
 
 export function UserSettings() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -63,9 +64,9 @@ export function UserSettings() {
       
       // Sync legacy localStorage
       localStorage.setItem("username", username);
-      alert("Identity Protocol Synchronized Successfully.");
+      toast.success("Identity Protocol Synchronized Successfully.");
     } catch (e: any) {
-      alert("Sync Error: " + e.message);
+      toast.error("Sync Error: " + e.message);
     } finally {
       setSaving(false);
     }
@@ -73,7 +74,7 @@ export function UserSettings() {
 
   async function handleChangePassword() {
     if (newPassword !== confirmPassword) {
-        alert("Security Credentials Mismatch.");
+        toast.error("Security Credentials Mismatch.");
         return;
     }
     setSaving(true);
@@ -82,9 +83,9 @@ export function UserSettings() {
         if (error) throw error;
         setNewPassword("");
         setConfirmPassword("");
-        alert("Access Key Rotated Successfully.");
+        toast.success("Access Key Rotated Successfully.");
     } catch (e: any) {
-        alert("Security Protocol Error: " + e.message);
+        toast.error("Security Protocol Error: " + e.message);
     } finally {
         setSaving(false);
     }
@@ -112,9 +113,9 @@ export function UserSettings() {
 
         setAvatarUrl(publicUrl);
         await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
-        alert("Neural Imaging Data Ingested.");
+        toast.success("Neural Imaging Data Ingested.");
     } catch (e: any) {
-        alert("Ingestion Error: " + e.message);
+        toast.error("Ingestion Error: " + e.message);
     } finally {
         setSaving(false);
     }

@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
+import { toast } from "react-hot-toast";
 
 export function UserMessages() {
   const [username, setUsername] = useState<string>(localStorage.getItem("username") || "User");
@@ -124,7 +125,7 @@ export function UserMessages() {
         setNewMessage("");
         fetchMessages();
     } catch (err: any) {
-        alert("Error: " + err.message);
+        toast.error("Error: " + err.message);
     } finally {
         setIsSending(false);
     }

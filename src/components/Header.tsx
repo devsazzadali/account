@@ -1,15 +1,33 @@
-import { Search, User, ShoppingCart, Menu, LayoutDashboard, ShoppingBag, Store, Gavel, Ticket, Megaphone, FileText, Tag, Share2, Settings, LogOut, ChevronDown, Bell, MessageSquare, Crown, ShieldCheck, MailWarning } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { Search, User, ShoppingCart, Menu, LayoutDashboard, ShoppingBag, Store, Gavel, Ticket, Megaphone, FileText, Tag, Share2, Settings, LogOut, ChevronDown, Bell, MessageSquare, Crown, ShieldCheck, MailWarning, X } from "lucide-react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { AnimatePresence, motion } from "framer-motion";
+import { GlobalSearch } from "./GlobalSearch";
+import { NotificationCenter } from "./NotificationCenter";
+import { useRealtimeNotifications } from "../lib/useRealtimeNotifications";
 
 export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
+  const [searchOpen, setSearchOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [searchValue, setSearchValue] = useState("");
   const [revenue, setRevenue] = useState(0);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { notifications, unreadCount, markAllRead, markRead } = useRealtimeNotifications(user?.id);
+
+  // Ctrl+K shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   useEffect(() => {
     // 1. Initial Session Check
@@ -80,6 +98,28 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   const isEmailConfirmed = user?.email_confirmed_at;
 
   return (
+    <>
+    {/* Global Search Modal */}
+    <AnimatePresence>
+      {searchOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[200] flex items-start justify-center pt-20 px-4"
+        >
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setSearchOpen(false)} />
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.96 }}
+            className="relative z-10 w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[70vh] flex flex-col"
+          >
+            <GlobalSearch onClose={() => setSearchOpen(false)} />
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     <header className="glass border-b border-slate-200 sticky top-0 z-50 font-sans transition-all duration-300">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-7xl gap-4">
         {/* Logo */}
@@ -94,21 +134,15 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
           </Link>
         </div>
 
-        {/* Search Bar */}
-        <div className="hidden md:flex flex-1 max-w-2xl mx-4">
-            <div className="relative w-full group">
-                <input 
-                    type="text" 
-                    placeholder="Search for premium accounts..." 
-                    value={searchValue}
-                    onChange={handleSearchChange}
-                    className="w-full bg-slate-100 border border-slate-200 rounded-full pl-5 pr-12 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:bg-white focus:ring-1 focus:ring-primary-500 transition-all duration-300"
-                />
-                <button className="absolute right-1 top-1 h-[calc(100%-8px)] px-4 bg-primary-600 hover:bg-primary-500 text-white rounded-full flex items-center justify-center transition-colors">
-                    <Search className="w-4 h-4" />
-                </button>
-            </div>
-        </div>
+        {/* Search Bar — opens modal */}
+        <button
+          onClick={() => setSearchOpen(true)}
+          className="hidden md:flex flex-1 max-w-xl mx-4 items-center gap-3 bg-slate-100 border border-slate-200 rounded-full pl-5 pr-4 py-2.5 text-sm text-slate-400 hover:bg-white hover:border-primary-300 hover:shadow-sm transition-all duration-300 group"
+        >
+          <Search className="w-4 h-4 text-slate-400 group-hover:text-primary-600 transition-colors" />
+          <span className="flex-1 text-left text-sm font-medium">Search accounts, games, subscriptions...</span>
+          <span className="text-[9px] font-black text-slate-300 border border-slate-200 rounded-lg px-2 py-1 bg-white">⌘ K</span>
+        </button>
 
         {/* Right Actions */}
         <div className="flex items-center gap-4 shrink-0">
@@ -133,11 +167,13 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                     <button className="hover:text-primary-600 transition-colors hover:animate-float">
                         <MessageSquare className="w-5 h-5" />
                     </button>
-                    <div className="relative hover:animate-float">
-                        <button className="hover:text-primary-600 transition-colors">
-                            <Bell className="w-5 h-5" />
-                        </button>
-                        <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></div>
+                    <div className="relative">
+                        <NotificationCenter
+                          notifications={notifications}
+                          unreadCount={unreadCount}
+                          onMarkAllRead={markAllRead}
+                          onMarkRead={markRead}
+                        />
                     </div>
                 </div>
 

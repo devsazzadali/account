@@ -13,6 +13,7 @@ import {
   Loader2
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
+import { toast } from "react-hot-toast";
 
 interface OrderDetailsProps {
   order: any;
@@ -36,6 +37,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   const [accountInfo, setAccountInfo] = useState(order?.account_info || {});
   const [isSubmittingInfo, setIsSubmittingInfo] = useState(false);
   const [showDeliverModal, setShowDeliverModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   if (!order) return null;
 
@@ -52,7 +54,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
       if (error) throw error;
       setStatus(newStatus);
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setLoading(false);
       setShowConfirmModal(false);
@@ -74,9 +76,9 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
           if (error) throw error;
           setStatus("Delivering");
           setShowDeliverModal(false);
-          alert("Account Information Sent to Customer!");
+          toast.success("Account Information Sent to Customer!");
       } catch (e: any) {
-          alert("Failed to deliver info: " + e.message);
+          toast.error("Failed to deliver info: " + e.message);
       } finally {
           setIsSubmittingInfo(false);
       }
@@ -85,7 +87,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   const handleChatNow = () => {
       if (order.username) {
           localStorage.setItem("selectedUserChat", order.username);
-          alert("User selected for chat! Please navigate to the Messages tab.");
+          toast.success("User selected for chat! Please navigate to the Messages tab.");
       }
   };
 
@@ -170,7 +172,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                         <a href={`mailto:${order.email || ''}`} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold shadow-sm">
                             <Mail size={14} /> Contact buyers by mail
                         </a>
-                        <button onClick={() => { if(window.confirm('Are you sure you want to cancel this order?')) updateStatus('Canceled'); }} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold shadow-sm">
+                        <button onClick={() => setShowCancelModal(true)} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-[13px] font-bold shadow-sm">
                             <XCircle size={14} /> Cancel Order
                         </button>
                         {currentStep >= 3 && (
@@ -420,6 +422,35 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                             className="flex-1 py-3 bg-[#1DBF73] text-white rounded-xl text-[12px] font-bold uppercase tracking-widest hover:bg-[#16a363] transition-all flex items-center justify-center gap-2"
                           >
                               {isSubmittingInfo ? <Loader2 size={16} className="animate-spin" /> : "Deliver Now"}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+      {/* Cancel Order Modal */}
+      {showCancelModal && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+              <div className="fixed inset-0 bg-black/40" onClick={() => setShowCancelModal(false)} />
+              <div className="relative bg-white w-full max-w-[450px] rounded shadow-2xl overflow-hidden">
+                  <div className="bg-[#111111] px-4 py-3 flex justify-between items-center text-white text-[14px] font-bold">
+                      <span>Confirm Cancellation</span>
+                      <span className="text-xl leading-none cursor-pointer hover:text-red-500 font-normal" onClick={() => setShowCancelModal(false)}>&times;</span>
+                  </div>
+                  <div className="p-8 text-center">
+                      <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <XCircle size={32} />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 mb-2">Cancel Order?</h3>
+                      <p className="text-[13px] text-slate-500 mb-8 font-medium">Are you sure you want to cancel this order? This action cannot be undone.</p>
+                      <div className="flex justify-center gap-4">
+                          <button onClick={() => setShowCancelModal(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl text-[12px] font-bold uppercase tracking-widest hover:bg-slate-200 transition-all">No, Keep It</button>
+                          <button 
+                            onClick={() => updateStatus("Canceled")} 
+                            disabled={loading}
+                            className="flex-1 py-3 bg-red-600 text-white rounded-xl text-[12px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 flex items-center justify-center gap-2"
+                          >
+                              {loading ? <Loader2 size={16} className="animate-spin" /> : "Yes, Cancel Order"}
                           </button>
                       </div>
                   </div>

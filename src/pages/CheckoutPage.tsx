@@ -1,293 +1,316 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { 
-  ShieldCheck, 
-  CreditCard, 
-  Lock, 
-  CheckCircle, 
-  Wallet, 
-  Coins, 
-  ArrowLeft, 
-  Zap, 
-  Shield, 
-  AlertCircle,
-  ChevronRight,
-  Loader2
+import {
+  ShieldCheck, CreditCard, Lock, CheckCircle, Wallet, Coins,
+  ArrowLeft, Zap, Shield, AlertCircle, ChevronRight, Loader2,
+  Package, Mail, CheckCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabase";
+import { toast } from "react-hot-toast";
+import { PageLoader } from "../components/SkeletonUI";
 
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  image: string;
-}
+interface Product { id: string; title: string; price: number; image: string; }
+
+const STEPS = [
+  { id: 1, label: "Review Order",    icon: Package },
+  { id: 2, label: "Payment",         icon: CreditCard },
+  { id: 3, label: "Confirmation",    icon: CheckCheck },
+];
 
 export function CheckoutPage() {
   const { productId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const queryParams = new URLSearchParams(location.search);
-  const initialQuantity = parseInt(queryParams.get("quantity") || "1");
+  const qty = parseInt(new URLSearchParams(location.search).get("quantity") || "1");
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("credit_card");
   const [processing, setProcessing] = useState(false);
   const [email, setEmail] = useState("");
 
   useEffect(() => {
-    async function fetchProduct() {
-        try {
-            setLoading(true);
-            const { data, error } = await supabase
-                .from('products')
-                .select('*')
-                .eq('id', productId)
-                .single();
-            if (error) throw error;
-            setProduct(data);
-        } catch (err: any) {
-            console.error("Error fetching product:", err.message);
-        } finally {
-            setLoading(false);
-        }
-    }
-    if (productId) fetchProduct();
+    if (!productId) return;
+    supabase.from("products").select("*").eq("id", productId).single()
+      .then(({ data, error }) => {
+        if (!error) setProduct(data);
+      })
+      .finally(() => setLoading(false));
   }, [productId]);
 
+  const serviceFee = 0.50;
+  const subtotal = (product?.price || 0) * qty;
+  const total = subtotal + serviceFee;
+
   const handlePlaceOrder = async () => {
-    if (!email) {
-        alert("Please enter your delivery email");
-        return;
-    }
+    if (!email.trim()) { toast.error("Please enter your delivery email"); return; }
     setProcessing(true);
-    
     try {
-        const subtotal = (product?.price || 0) * initialQuantity;
-        const total = subtotal + 0.50;
-
-        console.log("Placing order for product:", product?.id, "Email:", email);
-
-        const { data: { session } } = await supabase.auth.getSession();
-        const username = session?.user?.email?.split('@')[0] || email.split('@')[0] || "Guest";
-
-        const { data, error } = await supabase
-            .from('orders')
-            .insert({
-                product_id: product?.id,
-                customer_email: email,
-                username: username,
-                quantity: initialQuantity,
-                total_price: total,
-                status: 'New Order'
-            })
-            .select()
-            .single();
-
-        if (error) {
-            console.error("Supabase Insert Error:", error);
-            throw error;
-        }
-        
-        if (!data) {
-            throw new Error("Order created but no data returned");
-        }
-
-        console.log("Order created successfully:", data.id);
-        
-        // Success - redirect to order page
-        navigate(`/order/${data.id}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const username = session?.user?.email?.split("@")[0] || email.split("@")[0] || "Guest";
+      const { data, error } = await supabase.from("orders").insert({
+        product_id: product?.id,
+        customer_email: email,
+        username,
+        quantity: qty,
+        total_price: total,
+        status: "New Order",
+      }).select().single();
+      if (error) throw error;
+      setStep(3);
+      setTimeout(() => navigate(`/order/${data.id}`), 2500);
     } catch (err: any) {
-        console.error("Checkout Finalization Error:", err);
-        alert("Settlement Error: " + (err.message || "Unknown error occurred"));
-        setProcessing(false);
+      toast.error("Order error: " + err.message);
+      setProcessing(false);
     }
   };
 
-  if (loading) {
-    return (
-        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
-            <Loader2 className="w-12 h-12 text-primary-500 animate-spin mb-4" />
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Initializing Secure Checkout...</p>
-        </div>
-    );
-  }
-
-  if (!product) return <div className="p-8 text-center bg-slate-50 text-slate-900">Digital Asset Not Found</div>;
-
-  const serviceFee = 0.50;
-  const subtotal = product.price * initialQuantity;
-  const total = subtotal + serviceFee;
+  if (loading) return <PageLoader label="Initializing Secure Checkout..." />;
+  if (!product) return <div className="p-8 text-center">Product not found.</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 py-12 px-4 relative overflow-hidden font-sans">
-      {/* Background Glows */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/5 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/5 blur-[100px] rounded-full pointer-events-none"></div>
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+      {/* Ambient glows */}
+      <div className="fixed top-0 left-1/4 w-[600px] h-[400px] bg-primary-500/5 blur-[150px] rounded-full pointer-events-none" />
+      <div className="fixed bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/5 blur-[100px] rounded-full pointer-events-none" />
 
-      <div className="max-w-6xl mx-auto relative z-10">
+      <div className="max-w-5xl mx-auto px-4 py-10 relative z-10">
+
+        {/* Back + Title */}
         <div className="flex items-center gap-4 mb-10">
-            <button onClick={() => navigate(-1)} className="p-3 bg-white hover:bg-slate-50 rounded-2xl transition-all border border-slate-200 shadow-sm">
-                <ArrowLeft size={20} className="text-slate-600" />
-            </button>
-            <div>
-                <h1 className="text-4xl font-display font-bold text-slate-900 tracking-tight italic">Secure Checkout</h1>
-                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                    <span>Marketplace</span>
-                    <ChevronRight size={10} />
-                    <span>Cart</span>
-                    <ChevronRight size={10} />
-                    <span className="text-primary-600">Settlement</span>
-                </div>
-            </div>
+          <button onClick={() => navigate(-1)} className="p-3 bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 shadow-sm transition-all">
+            <ArrowLeft size={20} className="text-slate-600" />
+          </button>
+          <div>
+            <h1 className="text-3xl font-display font-bold text-slate-900 tracking-tight">Secure Checkout</h1>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 flex items-center gap-2">
+              <Lock size={10} className="text-primary-600" /> TitanGuard Escrow Protection Active
+            </p>
+          </div>
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            {/* Left Section: Settlement Protocol */}
-            <div className="lg:col-span-8 space-y-6">
-                
-                {/* 1. Account Selection */}
-                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm relative overflow-hidden">
-                    <div className="flex items-center gap-3 mb-8">
-                        <div className="p-2.5 bg-primary-50 rounded-xl text-primary-600 border border-primary-100 shadow-sm">
-                            <Lock size={20} />
-                        </div>
-                        <h3 className="text-lg font-bold text-slate-900 uppercase tracking-widest">Delivery Protocol</h3>
-                    </div>
-                    
-                    <div className="space-y-6">
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3 block px-1">Recipient Portal (Email)</label>
-                            <input 
-                                type="email" 
-                                placeholder="Your primary delivery address"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all shadow-sm"
-                            />
-                            <p className="text-[9px] text-slate-400 font-bold mt-3 uppercase tracking-widest flex items-center gap-2">
-                                <AlertCircle size={12} className="text-primary-600" /> Credentials will be transmitted to this address immediately.
-                            </p>
-                        </div>
-                    </div>
-                </div>
 
-                {/* 2. Payment Gateway Selection */}
+        {/* Step Indicator */}
+        <div className="flex items-center justify-between mb-10 relative">
+          <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-200 mx-10" />
+          <motion.div
+            className="absolute top-5 left-0 h-0.5 bg-primary-500 mx-10"
+            animate={{ width: `${((step - 1) / (STEPS.length - 1)) * (100 - (20 / STEPS.length))}%` }}
+            transition={{ duration: 0.5 }}
+          />
+          {STEPS.map(s => {
+            const Icon = s.icon;
+            const done = step > s.id;
+            const active = step === s.id;
+            return (
+              <div key={s.id} className="flex flex-col items-center gap-2 z-10">
+                <motion.div
+                  animate={{
+                    backgroundColor: done ? "#17995c" : active ? "#1dbf73" : "#f1f5f9",
+                    borderColor: done || active ? "#1dbf73" : "#e2e8f0",
+                  }}
+                  className="w-10 h-10 rounded-2xl border-2 flex items-center justify-center shadow-sm"
+                >
+                  {done ? (
+                    <CheckCircle size={18} className="text-white" />
+                  ) : (
+                    <Icon size={18} className={active ? "text-white" : "text-slate-400"} />
+                  )}
+                </motion.div>
+                <span className={`text-[9px] font-black uppercase tracking-widest ${active ? "text-primary-600" : done ? "text-slate-500" : "text-slate-300"}`}>
+                  {s.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Step Content */}
+        <AnimatePresence mode="wait">
+          {step === 1 && (
+            <motion.div key="s1" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
+              className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+            >
+              {/* Order Summary */}
+              <div className="lg:col-span-7 space-y-6">
                 <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
-                    <div className="flex items-center gap-3 mb-8">
-                        <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600 border border-blue-100 shadow-sm">
-                            <CreditCard size={20} />
-                        </div>
-                        <h3 className="text-lg font-bold text-slate-900 uppercase tracking-widest">Payment Gateway</h3>
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <Package size={14} className="text-primary-600" /> Order Review
+                  </h3>
+                  <div className="flex gap-5">
+                    <img src={product.image} className="w-20 h-20 rounded-2xl object-cover border border-slate-100 shrink-0 shadow-sm" />
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 leading-relaxed mb-2">{product.title}</h4>
+                      <span className="inline-block text-[10px] font-black text-primary-600 bg-primary-50 border border-primary-100 px-2.5 py-1 rounded-lg">
+                        x{qty} Unit{qty > 1 ? "s" : ""}
+                      </span>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {[
-                            { id: "credit_card", name: "Credit / Debit Card", icon: <CreditCard size={20} /> },
-                            { id: "crypto", name: "Cryptocurrency", icon: <Coins size={20} /> },
-                            { id: "wallet", name: "Digital Wallet", icon: <Wallet size={20} /> },
-                            { id: "stripe", name: "Stripe Connect", icon: <CheckCircle size={20} /> }
-                        ].map((method) => (
-                            <button 
-                                key={method.id}
-                                onClick={() => setPaymentMethod(method.id)}
-                                className={`flex items-center justify-between p-5 rounded-2xl border transition-all duration-300 ${
-                                    paymentMethod === method.id 
-                                    ? "bg-primary-50 border-primary-200 text-primary-600 shadow-md ring-1 ring-primary-500/20" 
-                                    : "bg-slate-50 border-slate-100 text-slate-400 hover:bg-white hover:border-slate-200 hover:shadow-sm"
-                                }`}
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={paymentMethod === method.id ? "text-primary-600" : ""}>{method.icon}</div>
-                                    <span className="text-xs font-bold uppercase tracking-widest">{method.name}</span>
-                                </div>
-                                {paymentMethod === method.id && <div className="w-2 h-2 rounded-full bg-primary-600 shadow-[0_0_8px_rgba(20,184,166,0.5)]"></div>}
-                            </button>
-                        ))}
-                    </div>
+                  </div>
                 </div>
 
-                {/* Security Badges */}
-                <div className="flex flex-wrap gap-4 pt-4">
-                    <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest px-4 py-2 border border-slate-200 bg-white rounded-full shadow-sm">
-                        <Shield size={12} className="text-green-500" /> SSL Encrypted
-                    </div>
-                    <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest px-4 py-2 border border-slate-200 bg-white rounded-full shadow-sm">
-                        <ShieldCheck size={12} className="text-primary-600" /> TitanGuard Protection
-                    </div>
-                    <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest px-4 py-2 border border-slate-200 bg-white rounded-full shadow-sm">
-                        <Lock size={12} className="text-blue-500" /> PCI Compliance
-                    </div>
+                {/* What You Get */}
+                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2">
+                    <CheckCheck size={14} className="text-emerald-600" /> What You Get
+                  </h3>
+                  <div className="space-y-3">
+                    {["Full account credentials (email + password)", "Instant automated delivery", "48-hour escrow buyer protection", "Lifetime warranty & replacement guarantee"].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                          <CheckCircle size={12} className="text-emerald-600" />
+                        </div>
+                        <span className="text-sm text-slate-700 font-medium">{item}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-            </div>
 
-            {/* Right Section: Order Recap */}
-            <div className="lg:col-span-4 sticky top-24">
-                <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-lg">
-                    <div className="p-8 border-b border-slate-100 bg-slate-50/50">
-                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-1">Asset Verification</h3>
-                        <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-bold">Review your acquisition</p>
-                    </div>
-                    
-                    <div className="p-8 space-y-8">
-                        <div className="flex gap-4">
-                            <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-100 shrink-0 shadow-sm">
-                                <img src={product.image || "https://picsum.photos/seed/default/200/200"} className="w-full h-full object-cover" alt={product.title} />
-                            </div>
-                            <div className="flex flex-col justify-between py-1">
-                                <h4 className="text-xs font-bold text-slate-900 leading-relaxed line-clamp-2">{product.title}</h4>
-                                <div className="text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100 w-fit">x{initialQuantity} Unit</div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 pt-4 border-t border-slate-100">
-                            <div className="flex justify-between text-xs">
-                                <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Subtotal</span>
-                                <span className="text-slate-900 font-bold">${subtotal.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between text-xs">
-                                <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Service Protocol Fee</span>
-                                <span className="text-slate-900 font-bold">${serviceFee.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between pt-4 border-t border-slate-100">
-                                <span className="text-sm font-bold text-slate-900 uppercase tracking-widest">Total Settlement</span>
-                                <div className="text-right">
-                                    <div className="text-2xl font-display font-bold text-primary-600 leading-none">${total.toFixed(2)}</div>
-                                    <div className="text-[9px] text-slate-400 font-bold uppercase mt-1">VAT Included</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button 
-                            disabled={processing}
-                            onClick={handlePlaceOrder}
-                            className="w-full py-5 bg-gradient-to-r from-primary-600 to-primary-500 hover:scale-[1.02] active:scale-[0.98] rounded-2xl text-white text-xs font-bold uppercase tracking-[0.2em] shadow-xl shadow-primary-500/20 transition-all flex items-center justify-center gap-3"
-                        >
-                            {processing ? (
-                                <>
-                                    <Loader2 size={18} className="animate-spin" />
-                                    Processing Settlement...
-                                </>
-                            ) : (
-                                <>
-                                    <Zap size={18} fill="currentColor" />
-                                    Confirm Acquisition
-                                </>
-                            )}
-                        </button>
-
-                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed text-center">
-                                By confirming this acquisition, you agree to the Digital Asset Protocol Terms and TitanGuard Secure Escrow conditions.
-                             </p>
-                        </div>
-                    </div>
+                {/* Escrow Explanation */}
+                <div className="bg-blue-50 border border-blue-200 rounded-[2rem] p-6 flex gap-4">
+                  <ShieldCheck size={24} className="text-blue-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-black text-blue-900 mb-1">Escrow Protection</h4>
+                    <p className="text-[11px] text-blue-700 leading-relaxed">
+                      Your payment is held securely for 48 hours. If the product doesn't match the description, you get a full refund automatically.
+                    </p>
+                  </div>
                 </div>
-            </div>
-        </div>
+              </div>
+
+              {/* Price Sidebar */}
+              <div className="lg:col-span-5">
+                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-lg sticky top-24 space-y-6">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Price Breakdown</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Subtotal ({qty}x)</span>
+                      <span className="font-bold text-slate-900">${subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Service Fee</span>
+                      <span className="font-bold text-slate-900">${serviceFee.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Buyer Protection</span>
+                      <span className="font-bold text-emerald-600">FREE</span>
+                    </div>
+                    <div className="pt-4 border-t border-slate-100 flex justify-between">
+                      <span className="font-black text-slate-900 text-sm uppercase tracking-wide">Total</span>
+                      <div className="text-right">
+                        <span className="text-2xl font-black text-primary-600">${total.toFixed(2)}</span>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase">USD · VAT Included</p>
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={() => setStep(2)} className="w-full py-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                    Continue to Payment <ChevronRight size={16} />
+                  </button>
+                  <div className="flex justify-center gap-4">
+                    {[<Shield size={12} />, <Lock size={12} />, <ShieldCheck size={12} />].map((icon, i) => (
+                      <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+                        <span className="text-slate-300">{icon}</span>
+                        {["SSL", "PCI", "Escrow"][i]}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 2 && (
+            <motion.div key="s2" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
+              className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+            >
+              <div className="lg:col-span-7 space-y-6">
+                {/* Delivery email */}
+                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <Mail size={14} className="text-primary-600" /> Delivery Email
+                  </h3>
+                  <input
+                    type="email"
+                    placeholder="Enter your email for delivery"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all"
+                  />
+                  <p className="text-[9px] text-slate-400 font-bold mt-3 uppercase tracking-widest flex items-center gap-2">
+                    <AlertCircle size={11} className="text-primary-600" /> Credentials will be sent here instantly after payment.
+                  </p>
+                </div>
+
+                {/* Payment methods */}
+                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <CreditCard size={14} className="text-blue-600" /> Payment Method
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { id: "credit_card", label: "Credit / Debit", icon: <CreditCard size={18} /> },
+                      { id: "crypto",      label: "Cryptocurrency", icon: <Coins size={18} /> },
+                      { id: "wallet",      label: "Digital Wallet", icon: <Wallet size={18} /> },
+                      { id: "stripe",      label: "Stripe",         icon: <ShieldCheck size={18} /> },
+                    ].map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => setPaymentMethod(m.id)}
+                        className={`flex items-center gap-3 p-4 rounded-2xl border text-xs font-bold uppercase tracking-widest transition-all ${paymentMethod === m.id ? "bg-primary-50 border-primary-300 text-primary-700 ring-1 ring-primary-400/30 shadow-md" : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-white"}`}
+                      >
+                        {m.icon} {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary sidebar */}
+              <div className="lg:col-span-5">
+                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-lg sticky top-24 space-y-6">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Order Total</h3>
+                  <div className="flex justify-between items-end">
+                    <span className="text-sm font-black text-slate-900">Total</span>
+                    <span className="text-3xl font-black text-primary-600">${total.toFixed(2)}</span>
+                  </div>
+                  <button
+                    disabled={processing}
+                    onClick={handlePlaceOrder}
+                    className="w-full py-5 bg-gradient-to-r from-primary-600 to-primary-500 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {processing ? <><Loader2 size={18} className="animate-spin" /> Processing...</> : <><Zap size={18} fill="currentColor" /> Confirm & Pay</>}
+                  </button>
+                  <button onClick={() => setStep(1)} className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-colors">
+                    ← Back to Review
+                  </button>
+                  <p className="text-[9px] text-slate-400 text-center leading-relaxed">
+                    By confirming you agree to our Terms and Escrow Protection Policy.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 3 && (
+            <motion.div key="s3" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center py-20 text-center"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className="w-24 h-24 rounded-full bg-primary-600 flex items-center justify-center shadow-2xl shadow-primary-500/30 mb-6"
+              >
+                <CheckCircle size={48} className="text-white" />
+              </motion.div>
+              <h2 className="text-3xl font-display font-bold text-slate-900 mb-2">Order Confirmed!</h2>
+              <p className="text-slate-500 text-sm mb-4">Your credentials are being prepared. Redirecting to order tracking...</p>
+              <div className="flex items-center gap-2 text-[10px] font-black text-primary-600 uppercase tracking-widest">
+                <Loader2 size={14} className="animate-spin" /> Redirecting...
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
+import { toast } from "react-hot-toast";
+
 
 export function AdminMessages() {
   const [messages, setMessages] = useState<any[]>([]);
@@ -121,7 +123,7 @@ export function AdminMessages() {
         setReplyText("");
         fetchMessages();
     } catch (err: any) {
-        alert("Error: " + err.message);
+        toast.error("Error: " + err.message);
     } finally {
         setIsReplying(false);
     }
@@ -142,12 +144,12 @@ export function AdminMessages() {
          });
        });
        await Promise.all(promises);
-       alert(`Broadcast sent to ${allProfiles.length} users!`);
+       toast.success(`Broadcast sent to ${allProfiles.length} users!`);
        setBroadcastMessage("");
        setShowBroadcastModal(false);
        fetchMessages();
     } catch (e: any) {
-      alert("Broadcast Error: " + e.message);
+      toast.error("Broadcast Error: " + e.message);
     } finally {
       setIsBroadcasting(false);
     }
@@ -349,12 +351,12 @@ export function AdminMessages() {
                   <form onSubmit={handleSendReply} className="relative max-w-5xl mx-auto flex gap-4">
                     <label className="w-[50px] h-[50px] bg-white border border-slate-200 text-slate-500 rounded-lg flex items-center justify-center hover:bg-slate-50 shadow-sm transition-all shrink-0 cursor-pointer group relative">
                         <ImageIcon size={20} className="group-hover:text-emerald-500 transition-colors" />
-                        <input type="file" multiple className="hidden" accept="image/*" onChange={() => alert('Photo upload feature coming soon!')} />
+                        <input type="file" multiple className="hidden" accept="image/*" onChange={() => toast('Photo upload feature coming soon!')} />
                         <span className="absolute -top-10 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-bold uppercase tracking-widest pointer-events-none">Photo</span>
                     </label>
                     <label className="w-[50px] h-[50px] bg-white border border-slate-200 text-slate-500 rounded-lg flex items-center justify-center hover:bg-slate-50 shadow-sm transition-all shrink-0 cursor-pointer group relative">
                         <Paperclip size={20} className="group-hover:text-emerald-500 transition-colors" />
-                        <input type="file" multiple className="hidden" accept=".pdf,.doc,.docx,.txt" onChange={() => alert('Document upload feature coming soon!')} />
+                        <input type="file" multiple className="hidden" accept=".pdf,.doc,.docx,.txt" onChange={() => toast('Document upload feature coming soon!')} />
                         <span className="absolute -top-10 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-bold uppercase tracking-widest pointer-events-none">Document</span>
                     </label>
                     <textarea 

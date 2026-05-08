@@ -7,13 +7,15 @@ import {
 import { supabase } from "../../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { toast } from "react-hot-toast";
+
 export function AdminCategories() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDrawer, setShowDrawer] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [formData, setFormData] = useState({
@@ -26,10 +28,6 @@ export function AdminCategories() {
     fetchCategories();
   }, []);
 
-  const showToast = (message: string, type: "success" | "error" = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
 
   async function fetchCategories() {
     setLoading(true);
@@ -87,31 +85,31 @@ export function AdminCategories() {
       if (editingId) {
         const { error } = await supabase.from("categories").update(payload).eq("id", editingId);
         if (error) throw error;
-        showToast("Category updated successfully");
+        toast.success("Category updated successfully");
       } else {
         const { error } = await supabase.from("categories").insert(payload);
         if (error) throw error;
-        showToast("Category created successfully");
+        toast.success("Category created successfully");
       }
 
       setShowDrawer(false);
       fetchCategories();
     } catch (e: any) {
-      showToast(e.message, "error");
+      toast.error(e.message);
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this category?")) return;
     try {
       const { error } = await supabase.from("categories").delete().eq("id", id);
       if (error) throw error;
       setCategories(categories.filter(c => c.id !== id));
-      showToast("Category removed");
+      toast.success("Category removed");
+      setShowConfirmDelete(null);
     } catch (e: any) {
-      showToast(e.message, "error");
+      toast.error(e.message);
     }
   }
 
@@ -122,22 +120,6 @@ export function AdminCategories() {
   return (
     <div className="bg-white min-h-screen font-sans">
       
-      {/* Toast */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: -20, x: "-50%" }}
-            animate={{ opacity: 1, y: 0, x: "-50%" }}
-            exit={{ opacity: 0, y: -20, x: "-50%" }}
-            className={`fixed top-4 left-1/2 z-[300] px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 text-white text-[13px] font-bold ${
-              toast.type === "success" ? "bg-emerald-500" : "bg-primary-600"
-            }`}
-          >
-            {toast.type === "success" ? <Check size={16} /> : <AlertCircle size={16} />}
-            {toast.message}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Header */}
       <div className="border-b border-slate-200 px-6 py-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50/50">
@@ -225,7 +207,7 @@ export function AdminCategories() {
                     <button onClick={() => handleOpenDrawer(cat)} className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                       <Edit size={14} />
                     </button>
-                    <button onClick={() => handleDelete(cat.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                    <button onClick={() => setShowConfirmDelete(cat.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -318,6 +300,47 @@ export function AdminCategories() {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showConfirmDelete && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setShowConfirmDelete(null)} 
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }} 
+              className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl p-8 text-center"
+            >
+              <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-red-500">
+                <AlertCircle size={32} />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 mb-2">Delete Category?</h3>
+              <p className="text-slate-500 text-[14px] mb-8">This action cannot be undone. All product associations with this category may be affected.</p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowConfirmDelete(null)} 
+                  className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-[13px] uppercase tracking-widest"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => handleDelete(showConfirmDelete)} 
+                  className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold text-[13px] uppercase tracking-widest shadow-lg shadow-red-600/20"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { User, Lock, ArrowRight, Zap, Crown, CheckCircle2, Github, Mail, Globe, Facebook, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "../lib/supabase";
+import { toast } from "react-hot-toast";
+
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -20,7 +22,7 @@ export function LoginPage() {
       });
       if (error) throw error;
     } catch (err: any) {
-      alert("Social Authentication Error: " + err.message);
+      toast.error("Social Authentication Error: " + err.message);
     }
   };
 
@@ -60,7 +62,7 @@ export function LoginPage() {
             }
         }
     } catch (err: any) {
-        alert("Access Denied: " + err.message);
+        toast.error("Access Denied: " + err.message);
     } finally {
         setLoading(false);
     }

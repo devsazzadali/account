@@ -3,13 +3,14 @@ import {
   Package, Clock, CheckCircle2, ChevronRight, MessageSquare, 
   Settings, ShoppingBag, Loader2, AlertCircle, ShieldAlert,
   Mail, ExternalLink, ArrowRight, ShieldCheck, Crown,
-  LayoutDashboard, History, MessageCircle, Shield, LogOut
+  LayoutDashboard, History, MessageCircle, Shield, LogOut, Wallet
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserMessages } from "../components/user/UserMessages";
 import { UserSettings } from "../components/user/UserSettings";
+import { WalletDashboard } from "../components/user/WalletDashboard";
 
 export function UserDashboardPage() {
   const [user, setUser] = useState<any>(null);
@@ -73,10 +74,11 @@ export function UserDashboardPage() {
   }
 
   const menuItems = [
-    { id: "dashboard", label: "Operational Hub", icon: LayoutDashboard },
-    { id: "orders",    label: "Procurement History", icon: History },
-    { id: "messages",  label: "Communication Desk", icon: MessageCircle },
-    { id: "security",  label: "Security Node", icon: Shield },
+    { id: "dashboard", label: "Operational Hub",      icon: LayoutDashboard },
+    { id: "orders",    label: "Procurement History",  icon: History },
+    { id: "wallet",    label: "Wallet & Spending",    icon: Wallet },
+    { id: "messages",  label: "Communication Desk",  icon: MessageCircle },
+    { id: "security",  label: "Security Node",        icon: Shield },
   ];
 
   return (
@@ -138,6 +140,7 @@ export function UserDashboardPage() {
               >
                 {activeTab === 'dashboard' && <OperationalOverview profile={profile} orders={orders} setActiveTab={setActiveTab} />}
                 {activeTab === 'orders' && <OrderManifest orders={orders} />}
+                {activeTab === 'wallet' && <WalletDashboard />}
                 {activeTab === 'messages' && <UserMessages />}
                 {activeTab === 'security' && <UserSettings />}
               </motion.div>

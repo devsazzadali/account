@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -22,11 +22,35 @@ import {
   ChevronDown,
   ExternalLink,
   Palette,
-  Store
+  Store,
+  ShoppingBag
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
+
+// ── Web Audio Chime ──────────────────────────────────────────
+function playOrderChime() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const start = ctx.currentTime + i * 0.12;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.18, start + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+      osc.start(start);
+      osc.stop(start + 0.36);
+    });
+  } catch {}
+}
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -34,16 +58,90 @@ interface AdminLayoutProps {
   setActiveTab: (tab: string) => void;
 }
 
+// ── Inline Order Toast ──────────────────────────────────────
+function OrderToast({ title, amount, onView, onDismiss }: { title: string; amount: number; onView: () => void; onDismiss: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -60, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -40, scale: 0.9 }}
+      transition={{ type: "spring", stiffness: 400, damping: 28 }}
+      className="fixed top-5 right-5 z-[999] w-80 bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden"
+    >
+      {/* Accent bar */}
+      <div className="h-1 w-full bg-gradient-to-r from-emerald-500 to-primary-500" />
+      <div className="p-5 flex items-start gap-4">
+        <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+          <ShoppingBag size={20} className="text-emerald-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">💰 New Order!</p>
+            <button onClick={onDismiss} className="text-slate-300 hover:text-slate-500 transition-colors">
+              <X size={14} />
+            </button>
+          </div>
+          <p className="text-sm font-black text-slate-900 truncate leading-tight">{title}</p>
+          <p className="text-[11px] font-bold text-slate-400 mt-0.5">${amount.toFixed(2)} USD</p>
+        </div>
+      </div>
+      <div className="px-5 pb-5 flex gap-3">
+        <button
+          onClick={onView}
+          className="flex-1 py-2.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+        >
+          View Order
+        </button>
+        <button
+          onClick={onDismiss}
+          className="px-4 py-2.5 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+        >
+          Dismiss
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutProps) {
   const username = localStorage.getItem("username") || "Admin";
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [newOrderAlert, setNewOrderAlert] = useState<{ title: string; amount: number; orderId: string } | null>(null);
+  const [newOrderBadge, setNewOrderBadge] = useState(0);
   const navigate = useNavigate();
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 10000);
     return () => clearInterval(interval);
+  }, []);
+
+  // ── Real-time new order watcher ──────────────────────────
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin_new_order_alert")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        (payload) => {
+          if (isFirstLoad.current) { isFirstLoad.current = false; return; }
+          const order = payload.new as any;
+          playOrderChime();
+          setNewOrderBadge(prev => prev + 1);
+          setNewOrderAlert({
+            title: order.username ? `Order by ${order.username}` : "New Customer Order",
+            amount: Number(order.total_price) || 0,
+            orderId: order.id,
+          });
+          // Auto-dismiss after 8 seconds
+          setTimeout(() => setNewOrderAlert(null), 8000);
+        }
+      )
+      .subscribe();
+    isFirstLoad.current = false;
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   useEffect(() => {
@@ -271,6 +369,27 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
                   <ChevronLeft size={16} /> EXIT TO SITE
               </button>
 
+              {/* New Order Bell */}
+              <button
+                onClick={() => { setActiveTab("orders"); setNewOrderBadge(0); }}
+                className="relative text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                <Bell size={20} />
+                <AnimatePresence>
+                  {newOrderBadge > 0 && (
+                    <motion.span
+                      key={newOrderBadge}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white"
+                    >
+                      {newOrderBadge > 9 ? "9+" : newOrderBadge}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </button>
+
               {/* Messages Icon */}
               <button 
                 onClick={() => setActiveTab("messages")}
@@ -305,6 +424,22 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             </AnimatePresence>
         </main>
       </div>
+
+      {/* ── New Order Notification Toast ── */}
+      <AnimatePresence>
+        {newOrderAlert && (
+          <OrderToast
+            title={newOrderAlert.title}
+            amount={newOrderAlert.amount}
+            onView={() => {
+              setActiveTab("orders");
+              setNewOrderBadge(0);
+              setNewOrderAlert(null);
+            }}
+            onDismiss={() => setNewOrderAlert(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

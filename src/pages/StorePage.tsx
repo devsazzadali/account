@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { MainContent } from "../components/MainContent";
 import { Banner } from "../components/Banner";
+import { ActivityFeed } from "../components/ActivityFeed";
 
 export function StorePage({ searchQuery }: { searchQuery?: string }) {
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -31,6 +32,9 @@ export function StorePage({ searchQuery }: { searchQuery?: string }) {
                </div>
            </div>
       </div>
+
+      {/* Real-time Activity Feed — shows only real orders from Supabase */}
+      <ActivityFeed />
     </div>
   );
 }

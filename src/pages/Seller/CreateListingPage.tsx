@@ -3,6 +3,7 @@ import { ChevronDown, Info, Upload, AlertCircle, ArrowRight, Loader2, CheckCircl
 import { supabase } from "../../lib/supabase";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-hot-toast";
 
 export function CreateListingPage() {
   const [step, setStep] = useState(0); // 0: Search/Select, 1: Details
@@ -47,7 +48,7 @@ export function CreateListingPage() {
       setSuccess(true);
       setTimeout(() => navigate("/admin"), 2000);
     } catch (err: any) {
-      alert("Error: " + err.message);
+      toast.error("Error: " + err.message);
     } finally {
       setLoading(false);
     }
