@@ -395,9 +395,11 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
                 className="relative text-[#14b8a6] hover:text-teal-600 transition-colors flex items-center justify-center"
               >
                   <MessageSquare size={20} />
-                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#14b8a6] text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">
-                      {unreadCount > 0 ? unreadCount : 1}
-                  </span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#14b8a6] text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                        {unreadCount}
+                    </span>
+                  )}
               </button>
 
               {/* User Avatar */}
