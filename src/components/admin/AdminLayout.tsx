@@ -225,7 +225,6 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             icon={<ShoppingCart size={20} />} 
             activeTab={activeTab} 
             setActiveTab={setActiveTab}
-            badge="2"
             collapsed={isSidebarCollapsed}
           />
           <MenuItem 

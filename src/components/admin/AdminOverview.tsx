@@ -19,8 +19,6 @@ export function AdminOverview({ setActiveTab }: Props) {
     totalOrders: 0,
     processingOrders: 0,
     totalProducts: 0,
-    fraudRate: 1.2,
-    disputes: 3,
   });
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,8 +100,6 @@ export function AdminOverview({ setActiveTab }: Props) {
               <div className="space-y-1">
                 <NavButton icon={<Activity size={16}/>} label="Dashboard" active />
                 <NavButton icon={<ShoppingCart size={16}/>} label="Orders" />
-                <NavButton icon={<AlertTriangle size={16}/>} label="Disputes" badge={stats.disputes} />
-                <NavButton icon={<UserX size={16}/>} label="Fraud Radar" />
                 <NavButton icon={<BarChart3 size={16}/>} label="Analytics" />
               </div>
             </div>
@@ -214,32 +210,6 @@ export function AdminOverview({ setActiveTab }: Props) {
                       <span className="text-lg font-black text-emerald-600">${selectedOrder.total_price} USD</span>
                     </div>
 
-                    {/* Fraud Risk Radar */}
-                    <div className="bg-red-50 p-4 rounded-2xl border border-red-100">
-                      <div className="flex items-center gap-2 mb-3">
-                        <ShieldCheck size={16} className="text-red-600" />
-                        <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">Fraud Risk Radar</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-white/60 p-2 rounded-xl text-center">
-                          <div className="text-xs font-black text-slate-900">12.4%</div>
-                          <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">IP Risk</div>
-                        </div>
-                        <div className="bg-white/60 p-2 rounded-xl text-center">
-                          <div className="text-xs font-black text-slate-900">0.02</div>
-                          <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Velocity</div>
-                        </div>
-                        <div className="bg-white/60 p-2 rounded-xl text-center">
-                          <div className="text-xs font-black text-emerald-600">PASS</div>
-                          <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Device Hash</div>
-                        </div>
-                        <div className="bg-white/60 p-2 rounded-xl text-center">
-                          <div className="text-xs font-black text-emerald-600">MATCH</div>
-                          <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Geo-Check</div>
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Fulfillment Health */}
                     <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
                       <div className="flex items-center gap-2 mb-3">
@@ -283,31 +253,10 @@ export function AdminOverview({ setActiveTab }: Props) {
             <div className="flex-1 flex flex-col p-8 space-y-8">
               {/* System Global Health */}
               <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-xl shadow-slate-200/30">
-                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-6">Global Fraud Radar</h3>
-                 
-                 <div className="flex items-center justify-center py-6 mb-4 relative">
-                    <div className="w-32 h-32 rounded-full border-[8px] border-emerald-50 flex items-center justify-center relative">
-                        <div className="absolute inset-0 rounded-full border-[8px] border-emerald-400 border-l-transparent border-b-transparent -rotate-45" />
-                        <div className="text-center">
-                            <span className="block text-3xl font-black text-slate-900">99.8%</span>
-                            <span className="block text-[8px] font-black uppercase tracking-widest text-emerald-600 mt-1">SAFE TRAFFIC</span>
-                        </div>
-                    </div>
-                 </div>
-
-                 <div className="space-y-4">
-                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest border-b border-slate-100 pb-2">
-                       <span className="text-slate-400">Threat Vectors Blocked</span>
-                       <span className="text-slate-900">1,249</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest border-b border-slate-100 pb-2">
-                       <span className="text-slate-400">Avg Fraud Score</span>
-                       <span className="text-emerald-600">0.02 (LOW)</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest pb-2">
-                       <span className="text-slate-400">High Risk IPs Flagged</span>
-                       <span className="text-amber-500">14 Active</span>
-                    </div>
+                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Operational Status</h3>
+                 <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">All Systems Functional</span>
                  </div>
               </div>
 
