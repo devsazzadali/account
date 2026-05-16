@@ -43,7 +43,6 @@ export function SoldOrdersPage() {
                     </div>
                     Sold Orders Ledger
                 </h1>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 ml-1">{orders.length} Transmission Entries Found</p>
             </div>
 
             {/* Table */}

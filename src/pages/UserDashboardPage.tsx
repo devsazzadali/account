@@ -37,6 +37,11 @@ export function UserDashboardPage() {
       supabase.from('orders').select('*, products(*)').eq('username', session.user.user_metadata.username || session.user.email.split('@')[0]).order('created_at', { ascending: false })
     ]);
 
+    if (profileRes.data?.role === 'admin' || profileRes.data?.role === 'moderator') {
+      navigate('/admin');
+      return;
+    }
+
     setProfile(profileRes.data);
     setOrders(ordersRes.data || []);
     setLoading(false);

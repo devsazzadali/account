@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, X, ShoppingBag, CreditCard, AlertTriangle, Package, CheckCircle, MarkAsUnread } from "lucide-react";
+import { Bell, X, ShoppingBag, CreditCard, AlertTriangle, Package, CheckCircle } from "lucide-react";
 import type { AppNotification } from "../lib/useRealtimeNotifications";
 import { Link } from "react-router-dom";
 

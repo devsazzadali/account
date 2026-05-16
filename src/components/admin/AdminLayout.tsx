@@ -179,16 +179,17 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
       <aside 
         className={`bg-white border-r border-slate-200 flex flex-col z-[500] relative shrink-0 transition-all duration-300 shadow-xl shadow-slate-200/50 ${isSidebarCollapsed ? 'w-[72px]' : 'w-[260px]'}`}
       >
-        {/* Sidebar Header - Seller Center Red */}
-        <div className="h-16 flex items-center px-4 bg-[#E62E04] text-white shrink-0 shadow-lg shadow-red-500/10">
-            <div className="flex items-center gap-3 overflow-hidden">
-                <div className="w-10 h-10 flex items-center justify-center shrink-0 bg-white/10 rounded-xl border border-white/20">
-                    <ShieldCheck className="text-white" size={24} />
+        {/* Sidebar Header - Premium Seller Center */}
+        <div className={`h-24 flex items-center bg-[#0A0F1C] text-white shrink-0 relative overflow-hidden transition-all duration-300 border-b border-white/5 ${isSidebarCollapsed ? 'px-4 justify-center' : 'px-8'}`}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#E62E04]/10 blur-[40px] -mr-16 -mt-16" />
+            <div className="flex items-center gap-4 relative z-10 overflow-hidden">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#E62E04] to-[#c92503] flex items-center justify-center shadow-lg shadow-red-500/20 shrink-0">
+                    <Zap size={20} className="text-white fill-white" />
                 </div>
                 {!isSidebarCollapsed && (
                     <div className="flex flex-col">
-                        <span className="font-black text-[15px] tracking-tight whitespace-nowrap uppercase leading-none">Seller Center</span>
-                        <span className="text-[10px] font-bold text-white/60 tracking-widest mt-1">OPERATIONAL NODE</span>
+                        <span className="font-black tracking-[-0.05em] text-xl uppercase italic leading-none text-white whitespace-nowrap">Seller Center</span>
+                        <span className="text-[9px] font-black text-[#E62E04] uppercase tracking-[0.3em] mt-1 italic whitespace-nowrap">Operational Hub</span>
                     </div>
                 )}
             </div>
@@ -196,14 +197,15 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
 
         {/* User Quick Info */}
         {!isSidebarCollapsed && (
-            <div className="p-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/50">
-                <div className="w-10 h-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-slate-200 shrink-0">
+            <div className="p-6 border-b border-slate-100 flex items-center gap-4 bg-slate-50/30">
+                <div className="w-12 h-12 rounded-[1.25rem] border-2 border-white shadow-sm overflow-hidden bg-white shrink-0">
                     <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="avatar" />
                 </div>
                 <div className="min-w-0">
-                    <div className="text-[13px] font-black text-slate-900 truncate uppercase">{username}</div>
-                    <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-tighter flex items-center gap-1">
-                        <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" /> Certified Seller
+                    <div className="text-[13px] font-black text-slate-900 truncate uppercase tracking-tight">{username}</div>
+                    <div className="text-[9px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1.5 mt-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" /> 
+                        Verified Admin
                     </div>
                 </div>
             </div>
@@ -450,29 +452,29 @@ function MenuItem({ id, label, icon, activeTab, setActiveTab, badge, collapsed }
     return (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all duration-300 relative group ${
+            className={`flex items-center gap-3.5 w-full px-4 py-2.5 rounded-xl transition-all duration-300 relative group ${
                 isActive 
-                ? "bg-red-50 text-[#E62E04] shadow-sm shadow-red-500/5" 
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                ? "text-slate-900" 
+                : "text-slate-400 hover:bg-slate-50/80 hover:text-slate-600"
             }`}
         >
-            <div className={`shrink-0 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+            <div className={`shrink-0 p-1.5 rounded-lg transition-all duration-300 ${isActive ? 'bg-red-50 text-[#E62E04] shadow-sm' : 'group-hover:scale-105'}`}>
                 {icon}
             </div>
             {!collapsed && (
-                <span className={`font-black text-[13px] uppercase tracking-wide whitespace-nowrap transition-all ${isActive ? 'translate-x-1' : ''}`}>
+                <span className={`font-black text-[10px] uppercase tracking-[0.15em] whitespace-nowrap transition-all ${isActive ? 'translate-x-1' : ''}`}>
                     {label}
                 </span>
             )}
             {badge && !collapsed && (
-                <span className="ml-auto px-2 py-0.5 bg-[#E62E04] text-white text-[10px] font-black rounded-full shadow-lg shadow-red-500/30">
+                <span className="ml-auto px-2 py-0.5 bg-[#E62E04] text-white text-[9px] font-black rounded-lg shadow-lg shadow-red-500/30">
                     {badge}
                 </span>
             )}
-            {isActive && !collapsed && (
+            {isActive && (
                 <motion.div 
                     layoutId="activePill"
-                    className="absolute left-0 w-1.5 h-6 bg-[#E62E04] rounded-r-full"
+                    className={`absolute bg-[#E62E04] rounded-full shadow-[0_0_10px_rgba(230,46,4,0.4)] ${collapsed ? 'right-1 w-1 h-10' : 'right-0 w-1.5 h-8 rounded-l-full'}`}
                 />
             )}
         </button>

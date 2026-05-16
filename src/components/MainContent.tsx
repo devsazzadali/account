@@ -1,6 +1,6 @@
 import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award, Plus, Minus, AlertCircle, ShieldCheck } from "lucide-react";
 import React, { useEffect, useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 // import { CATEGORIES, REVIEWS } from "../data/mockData";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabase";
@@ -18,6 +18,7 @@ interface FeaturedItem {
 
 const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
     const [quantity, setQuantity] = useState(1);
+    const navigate = useNavigate();
 
     const handleQuantityChange = (e: React.MouseEvent, change: number) => {
         e.preventDefault();
@@ -25,10 +26,17 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
         setQuantity(Math.max(1, quantity + change));
     };
 
+    const handleCardClick = (e: React.MouseEvent) => {
+        // Prevent navigation if the user clicked the quantity buttons or the buy button
+        const target = e.target as HTMLElement;
+        if (target.closest('button') || target.closest('a')) return;
+        navigate(`/product/${item.id}`);
+    };
+
     return (
-    <Link 
-      to={`/product/${item.id}`} 
-      className="group ios-card p-4 hover:border-[#1dbf73]/50 transition-all duration-500 hover:shadow-xl hover:-translate-y-1 block h-full relative overflow-hidden flex flex-col"
+    <div 
+      onClick={handleCardClick}
+      className="group ios-card p-4 hover:border-[#1dbf73]/50 transition-all duration-500 hover:shadow-xl hover:-translate-y-1 block h-full relative overflow-hidden flex flex-col cursor-pointer"
     >
       <div className="flex gap-4 flex-1">
         {/* Left Side: Content */}
@@ -112,7 +120,7 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
             <Zap className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform fill-current" />
           </Link>
       </div>
-    </Link>
+    </div>
   );
 };
 

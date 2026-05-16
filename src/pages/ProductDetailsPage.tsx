@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { 
   ShoppingCart, Zap, Clock, ThumbsUp, Star, Copy, Check, Crown,
-  MessageSquare, Share2, ChevronRight, Shield, BadgeCheck, AlertCircle, Plus, Minus
+  MessageSquare, Share2, ChevronRight, Shield, ShieldCheck, BadgeCheck, AlertCircle, Plus, Minus
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabase";

@@ -47,6 +47,7 @@ export default function App() {
           <Route path="/" element={<StorePage searchQuery={searchQuery} />} />
           <Route path="/dashboard" element={<UserDashboardPage />} />
           <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/:tab" element={<AdminDashboardPage />} />
           <Route path="/seller/create-listing" element={<CreateListingPage />} />
           <Route path="/seller/orders" element={<SoldOrdersPage />} />
           <Route path="/product/:id" element={<ProductDetailsPage />} />

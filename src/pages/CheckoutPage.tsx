@@ -33,11 +33,12 @@ export function CheckoutPage() {
 
   useEffect(() => {
     if (!productId) return;
-    supabase.from("products").select("*").eq("id", productId).single()
-      .then(({ data, error }) => {
-        if (!error) setProduct(data);
-      })
-      .finally(() => setLoading(false));
+    const fetchProduct = async () => {
+      const { data, error } = await supabase.from("products").select("*").eq("id", productId).single();
+      if (!error) setProduct(data);
+      setLoading(false);
+    };
+    fetchProduct();
   }, [productId]);
 
   const serviceFee = 0.50;

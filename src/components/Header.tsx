@@ -215,15 +215,15 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                         </div>
 
                         <div className="p-2 space-y-1 bg-white">
-                            <DropdownItem to="/dashboard" icon={<LayoutDashboard size={18} />} label="Operational Hub" />
-                            {profile?.role === "admin" ? (
+                            {profile?.role === "admin" || profile?.role === "moderator" ? (
                                 <>
                                     <DropdownItem to="/admin" icon={<Store size={18} className="text-primary-600" />} label="Store Console" />
-                                    <DropdownItem to="/admin" icon={<Gavel size={18} className="text-orange-500" />} label="Dispute Matrix" />
-                                    <DropdownItem to="/admin" icon={<Ticket size={18} className="text-blue-500" />} label="Service Grid" />
+                                    <DropdownItem to="/admin/orders" icon={<ShoppingBag size={18} className="text-amber-500" />} label="Order Registry" />
+                                    <DropdownItem to="/admin/settings" icon={<Settings size={18} className="text-slate-500" />} label="System Config" />
                                 </>
                             ) : (
                                 <>
+                                    <DropdownItem to="/dashboard" icon={<LayoutDashboard size={18} />} label="Operational Hub" />
                                     <DropdownItem to="/dashboard" icon={<ShoppingBag size={18} className="text-primary-600" />} label="Procurement History" />
                                     <DropdownItem to="/dashboard" icon={<MessageSquare size={18} className="text-blue-500" />} label="Communication Desk" />
                                 </>
@@ -260,6 +260,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
         </div>
       </div>
     </header>
+    </>
   );
 }
 
