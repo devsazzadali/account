@@ -1,8 +1,10 @@
+"use client";
+
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, X, ShoppingBag, CreditCard, AlertTriangle, Package, CheckCircle } from "lucide-react";
 import type { AppNotification } from "../lib/useRealtimeNotifications";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 
 const iconMap = {
   order:    { icon: ShoppingBag,   color: "text-blue-600",    bg: "bg-blue-50",    border: "border-blue-100" },
@@ -115,7 +117,7 @@ export function NotificationCenter({ notifications, unreadCount, onMarkAllRead, 
                           </p>
                           {notif.orderId && (
                             <Link
-                              to={`/order/${notif.orderId}`}
+                              href={`/order/${notif.orderId}`}
                               onClick={() => setOpen(false)}
                               className="inline-block mt-2 text-[9px] font-black text-primary-600 uppercase tracking-widest hover:underline"
                             >

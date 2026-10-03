@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from "react";
 import { 
   MessageSquare, X, Send, User, LifeBuoy, 
@@ -12,7 +14,7 @@ export function LiveSupportWidget() {
   const [messages, setMessages] = useState<any[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [newMessage, setNewMessage] = useState("");
-  const username = localStorage.getItem("username") || "Guest";
+  const username = (typeof window !== "undefined" ? localStorage.getItem : () => null)("username") || "Guest";
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -198,3 +200,4 @@ export function LiveSupportWidget() {
     </div>
   );
 }
+

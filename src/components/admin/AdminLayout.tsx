@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   LayoutDashboard,
@@ -26,8 +28,8 @@ import {
   ShoppingBag
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
 // ── Web Audio Chime ──────────────────────────────────────────
@@ -104,12 +106,12 @@ function OrderToast({ title, amount, onView, onDismiss }: { title: string; amoun
 }
 
 export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutProps) {
-  const username = localStorage.getItem("username") || "Admin";
+  const username = (typeof window !== "undefined" ? localStorage.getItem : () => null)("username") || "Admin";
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [newOrderAlert, setNewOrderAlert] = useState<{ title: string; amount: number; orderId: string } | null>(null);
   const [newOrderBadge, setNewOrderBadge] = useState(0);
-  const navigate = useNavigate();
+  const router = useRouter();
   const isFirstLoad = useRef(true);
 
   useEffect(() => {
@@ -167,8 +169,8 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
 
   function handleLogout() {
     supabase.auth.signOut().then(() => {
-      localStorage.clear();
-      navigate("/login");
+      (typeof window !== "undefined" ? localStorage.clear : () => {})();
+      router.push("/login");
     });
   }
 
@@ -364,7 +366,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
           <div className="flex items-center gap-6 ml-6">
               {/* Exit to Site */}
               <button 
-                  onClick={() => navigate("/")}
+                  onClick={() => router.push("/")}
                   className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-900 tracking-wide mr-2 transition-colors"
               >
                   <ChevronLeft size={16} /> EXIT TO SITE
@@ -515,3 +517,4 @@ function CollapsibleMenu({ label, icon, collapsed, activeTab, setActiveTab, item
         </div>
     );
 }
+

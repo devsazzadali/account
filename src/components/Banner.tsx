@@ -1,3 +1,5 @@
+"use client";
+
 import { Sparkles, Crown } from "lucide-react";
 
 export function Banner() {

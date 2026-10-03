@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { 
   Search, User, Send, CheckCheck, Loader2, MoreVertical, Paperclip, 
@@ -37,11 +39,11 @@ export function AdminMessages() {
     fetchMessages();
     fetchProfiles();
     
-    const preSelected = localStorage.getItem("selectedUserChat");
+    const preSelected = (typeof window !== "undefined" ? localStorage.getItem : () => null)("selectedUserChat");
     if (preSelected) {
       setSelectedUser(preSelected);
       setViewMode("chat");
-      localStorage.removeItem("selectedUserChat");
+      (typeof window !== "undefined" ? localStorage.removeItem : () => {})("selectedUserChat");
     }
 
     const channel = supabase
@@ -508,3 +510,4 @@ export function AdminMessages() {
     </div>
   );
 }
+

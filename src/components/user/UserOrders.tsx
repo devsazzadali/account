@@ -1,7 +1,9 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import { Download, Search, ShoppingBag, ExternalLink, Copy, CheckCircle2, Package, Clock, ShieldCheck, AlertCircle, RefreshCw } from "lucide-react";
 import { supabase } from "../../lib/supabase";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function UserOrders() {
@@ -23,7 +25,7 @@ export function UserOrders() {
         let query = supabase
             .from('orders')
             .select('*, products(title, image, category)')
-            .eq('username', localStorage.getItem('username') || '') // More reliable than email prefix
+            .eq('username', (typeof window !== "undefined" ? localStorage.getItem : () => null)('username') || '') // More reliable than email prefix
             .order('created_at', { ascending: false });
         
         if (activeFilter === "Success") {
@@ -170,7 +172,7 @@ export function UserOrders() {
                                     <button className="p-3 bg-slate-50 text-slate-400 hover:text-[#1dbf73] hover:bg-emerald-50 rounded-2xl transition-all border border-slate-100">
                                         <Download size={18} />
                                     </button>
-                                    <Link to={`/checkout?order=${order.id}`} className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-[#1dbf73] transition-all shadow-xl shadow-slate-900/10 active:scale-95 flex items-center gap-2">
+                                    <Link href={`/checkout?order=${order.id}`} className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-[#1dbf73] transition-all shadow-xl shadow-slate-900/10 active:scale-95 flex items-center gap-2">
                                         Details <ExternalLink size={14} />
                                     </Link>
                                 </div>
@@ -190,3 +192,4 @@ export function UserOrders() {
     </div>
   );
 }
+

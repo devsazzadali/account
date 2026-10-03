@@ -1,7 +1,9 @@
+"use client";
+
 import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award, Plus, Minus, AlertCircle, ShieldCheck } from "lucide-react";
 import React, { useEffect, useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
-// import { CATEGORIES, REVIEWS } from "../data/mockData";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabase";
 
@@ -18,7 +20,7 @@ interface FeaturedItem {
 
 const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
     const [quantity, setQuantity] = useState(1);
-    const navigate = useNavigate();
+    const router = useRouter();
 
     const handleQuantityChange = (e: React.MouseEvent, change: number) => {
         e.preventDefault();
@@ -30,7 +32,7 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
         // Prevent navigation if the user clicked the quantity buttons or the buy button
         const target = e.target as HTMLElement;
         if (target.closest('button') || target.closest('a')) return;
-        navigate(`/product/${item.id}`);
+        router.push(`/product/${item.id}`);
     };
 
     return (
@@ -113,7 +115,7 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
               </button>
           </div>
           <Link 
-            to={`/checkout/${item.id}?quantity=${quantity}`}
+            href={`/checkout/${item.id}?quantity=${quantity}`}
             className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white text-[11px] font-bold uppercase tracking-widest py-3 rounded-xl shadow-lg shadow-primary-500/20 transition-all flex items-center justify-center gap-2 group/btn"
           >
             Buy Now
@@ -127,10 +129,12 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
 interface MainContentProps {
   selectedCategory: string;
   setSelectedCategory: (category: string) => void;
-  searchQuery?: string;
 }
 
-export function MainContent({ selectedCategory, setSelectedCategory, searchQuery }: MainContentProps) {
+import { useSearch } from "./SearchContext";
+
+export function MainContent({ selectedCategory, setSelectedCategory }: MainContentProps) {
+  const { searchQuery } = useSearch();
   const [loading, setLoading] = useState(true);
   const [allProducts, setAllProducts] = useState<FeaturedItem[]>([]);
   const [dbCategories, setDbCategories] = useState<any[]>([]);

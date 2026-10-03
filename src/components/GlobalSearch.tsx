@@ -1,8 +1,10 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from "react";
 import { Search, X, Clock, TrendingUp, ArrowRight, Package } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabase";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 
 interface SearchResult {
   id: string;
@@ -32,7 +34,7 @@ export function GlobalSearch({ onClose }: { onClose?: () => void }) {
 
   useEffect(() => {
     inputRef.current?.focus();
-    const saved = localStorage.getItem(HISTORY_KEY);
+    const saved = (typeof window !== "undefined" ? localStorage.getItem : () => null)(HISTORY_KEY);
     if (saved) setHistory(JSON.parse(saved));
   }, []);
 
@@ -55,12 +57,12 @@ export function GlobalSearch({ onClose }: { onClose?: () => void }) {
   const saveHistory = (term: string) => {
     const updated = [term, ...history.filter(h => h !== term)].slice(0, 5);
     setHistory(updated);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+    (typeof window !== "undefined" ? localStorage.setItem : () => {})(HISTORY_KEY, JSON.stringify(updated));
   };
 
   const clearHistory = () => {
     setHistory([]);
-    localStorage.removeItem(HISTORY_KEY);
+    (typeof window !== "undefined" ? localStorage.removeItem : () => {})(HISTORY_KEY);
   };
 
   return (
@@ -111,7 +113,7 @@ export function GlobalSearch({ onClose }: { onClose?: () => void }) {
                     {results.map(r => (
                       <Link
                         key={r.id}
-                        to={`/product/${r.id}`}
+                        href={`/product/${r.id}`}
                         onClick={() => { saveHistory(r.title); onClose?.(); }}
                         className="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 transition-all group"
                       >
@@ -128,7 +130,7 @@ export function GlobalSearch({ onClose }: { onClose?: () => void }) {
               ) : (
                 <div className="text-center py-12">
                   <Package size={40} className="mx-auto text-slate-200 mb-3" />
-                  <p className="text-sm font-bold text-slate-400">No results for "{query}"</p>
+                  <p className="text-sm font-bold text-slate-400">No results for &quot;{query}&quot;</p>
                   <p className="text-[10px] text-slate-300 mt-1">Try a different keyword</p>
                 </div>
               )}
@@ -178,3 +180,4 @@ export function GlobalSearch({ onClose }: { onClose?: () => void }) {
     </div>
   );
 }
+

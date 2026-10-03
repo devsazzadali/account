@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { 
   MessageCircle, 
@@ -128,7 +130,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
 
   const handleChatNow = () => {
       if (order.username) {
-          localStorage.setItem("selectedUserChat", order.username);
+          (typeof window !== "undefined" ? localStorage.setItem : () => {})("selectedUserChat", order.username);
           toast.success("User selected for chat! Please navigate to the Messages tab.");
       }
   };
@@ -430,3 +432,4 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
     </div>
   );
 }
+

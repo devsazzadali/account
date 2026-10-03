@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState, useCallback } from "react";
 import { 
   ShoppingBag, 
@@ -36,7 +38,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
   });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const username = localStorage.getItem("username") || "ACCCOUNTSTOREONE";
+  const username = (typeof window !== "undefined" ? localStorage.getItem : () => null)("username") || "ACCCOUNTSTOREONE";
 
   const fetchStats = useCallback(async () => {
     try {
@@ -364,3 +366,4 @@ function StatusMetric({ icon, label, value, badge, badgeColor }: any) {
     </div>
   );
 }
+

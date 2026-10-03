@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { User, Shield, Bell, CreditCard, Save, CheckCircle, Smartphone, Mail, Lock, Loader2, Camera, AlertCircle, Sparkles, Zap, ShieldCheck, Fingerprint, Key, Wallet } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -63,7 +65,7 @@ export function UserSettings() {
       if (error) throw error;
       
       // Sync legacy localStorage
-      localStorage.setItem("username", username);
+      (typeof window !== "undefined" ? localStorage.setItem : () => {})("username", username);
       toast.success("Identity Protocol Synchronized Successfully.");
     } catch (e: any) {
       toast.error("Sync Error: " + e.message);
@@ -346,3 +348,4 @@ export function UserSettings() {
     </div>
   );
 }
+

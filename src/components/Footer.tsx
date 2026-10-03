@@ -1,3 +1,5 @@
+"use client";
+
 import { Facebook, Instagram, Mail, Globe, ArrowUp, Zap, ShieldCheck } from "lucide-react";
 
 export function Footer() {

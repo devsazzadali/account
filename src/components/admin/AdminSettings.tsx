@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { Shield, CreditCard, Bell, Save, Lock, Globe, Eye, EyeOff, Check } from "lucide-react";
 

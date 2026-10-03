@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from "react";
 import { 
   Send, 
@@ -32,7 +34,7 @@ import { supabase } from "../../lib/supabase";
 import { toast } from "react-hot-toast";
 
 export function UserMessages() {
-  const [username, setUsername] = useState<string>(localStorage.getItem("username") || "User");
+  const [username, setUsername] = useState<string>((typeof window !== "undefined" ? localStorage.getItem : () => null)("username") || "User");
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -345,3 +347,4 @@ export function UserMessages() {
     </div>
   );
 }
+

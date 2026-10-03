@@ -1,6 +1,9 @@
+"use client";
+
 import { Search, User, ShoppingCart, Menu, LayoutDashboard, ShoppingBag, Store, Gavel, Ticket, Megaphone, FileText, Tag, Share2, Settings, LogOut, ChevronDown, Bell, MessageSquare, Crown, ShieldCheck, MailWarning, X } from "lucide-react";
 import React, { useEffect, useState, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
 import { GlobalSearch } from "./GlobalSearch";
@@ -14,7 +17,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   const [searchValue, setSearchValue] = useState("");
   const [revenue, setRevenue] = useState(0);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const router = useRouter();
   const { notifications, unreadCount, markAllRead, markRead } = useRealtimeNotifications(user?.id);
 
   // Ctrl+K shortcut
@@ -48,8 +51,8 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
       } else if (event === 'SIGNED_OUT') {
         // ONLY clear on explicit sign out, not on initial load transients
         setProfile(null);
-        localStorage.removeItem("userRole");
-        localStorage.removeItem("username");
+        (typeof window !== "undefined" ? localStorage.removeItem : () => {})("userRole");
+        (typeof window !== "undefined" ? localStorage.removeItem : () => {})("username");
       }
     });
 
@@ -60,8 +63,8 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
     if (data) {
       setProfile(data);
-      localStorage.setItem("userRole", data.role || "user");
-      localStorage.setItem("username", data.username || "User");
+      (typeof window !== "undefined" ? localStorage.setItem : () => {})("userRole", data.role || "user");
+      (typeof window !== "undefined" ? localStorage.setItem : () => {})("username", data.username || "User");
     }
   }
 
@@ -90,9 +93,9 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("username");
-    navigate("/login");
+    (typeof window !== "undefined" ? localStorage.removeItem : () => {})("userRole");
+    (typeof window !== "undefined" ? localStorage.removeItem : () => {})("username");
+    router.push("/login");
   };
 
   const isEmailConfirmed = user?.email_confirmed_at;
@@ -124,7 +127,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-7xl gap-4">
         {/* Logo */}
         <div className="flex items-center gap-2 shrink-0">
-          <Link to="/" className="flex items-center gap-2 group">
+          <Link href="/" className="flex items-center gap-2 group">
             <span className="bg-primary-500/10 p-1.5 rounded-lg border border-primary-500/20 group-hover:bg-primary-500/20 transition-colors">
                <Crown className="w-5 h-5 text-primary-600" />
             </span>
@@ -217,15 +220,15 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                         <div className="p-2 space-y-1 bg-white">
                             {profile?.role === "admin" || profile?.role === "moderator" ? (
                                 <>
-                                    <DropdownItem to="/admin" icon={<Store size={18} className="text-primary-600" />} label="Store Console" />
-                                    <DropdownItem to="/admin/orders" icon={<ShoppingBag size={18} className="text-amber-500" />} label="Order Registry" />
-                                    <DropdownItem to="/admin/settings" icon={<Settings size={18} className="text-slate-500" />} label="System Config" />
+                                    <DropdownItem href="/admin" icon={<Store size={18} className="text-primary-600" />} label="Store Console" />
+                                    <DropdownItem href="/admin/orders" icon={<ShoppingBag size={18} className="text-amber-500" />} label="Order Registry" />
+                                    <DropdownItem href="/admin/settings" icon={<Settings size={18} className="text-slate-500" />} label="System Config" />
                                 </>
                             ) : (
                                 <>
-                                    <DropdownItem to="/dashboard" icon={<LayoutDashboard size={18} />} label="Operational Hub" />
-                                    <DropdownItem to="/dashboard" icon={<ShoppingBag size={18} className="text-primary-600" />} label="Procurement History" />
-                                    <DropdownItem to="/dashboard" icon={<MessageSquare size={18} className="text-blue-500" />} label="Communication Desk" />
+                                    <DropdownItem href="/dashboard" icon={<LayoutDashboard size={18} />} label="Operational Hub" />
+                                    <DropdownItem href="/dashboard" icon={<ShoppingBag size={18} className="text-primary-600" />} label="Procurement History" />
+                                    <DropdownItem href="/dashboard" icon={<MessageSquare size={18} className="text-blue-500" />} label="Communication Desk" />
                                 </>
                             )}
                         </div>
@@ -244,12 +247,12 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
             </>
           ) : !loading && (
             <div className="flex items-center gap-2">
-               <Link to="/login" className="hidden lg:block text-slate-600 hover:text-primary-600 font-bold text-sm px-4 py-2 transition-colors">
-                  Login
+               <Link href="/login" className="hidden lg:block text-slate-600 hover:text-primary-600 font-bold text-sm px-4 py-2 transition-colors">
+                 Login
                </Link>
-               <Link to="/signup" className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-slate-900/20 active:scale-95">
-                  <User className="w-4 h-4" />
-                  Initialize Account
+               <Link href="/signup" className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-slate-900/20 active:scale-95">
+                 <User className="w-4 h-4" />
+                 Initialize Account
                </Link>
             </div>
           )}
@@ -264,9 +267,9 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   );
 }
 
-function DropdownItem({ to, icon, label }: { to: string, icon: React.ReactNode, label: string }) {
+function DropdownItem({ href, icon, label }: { href: string, icon: React.ReactNode, label: string }) {
     return (
-        <Link to={to} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all group">
+        <Link href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all group">
             <span className="w-6 flex justify-center text-slate-400 group-hover:text-primary-600 transition-colors">
                 {icon}
             </span>
@@ -274,3 +277,4 @@ function DropdownItem({ to, icon, label }: { to: string, icon: React.ReactNode, 
         </Link>
     )
 }
+

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -36,7 +38,7 @@ export function WalletDashboard() {
 
   async function fetchData() {
     setLoading(true);
-    const username = localStorage.getItem("username") || "";
+    const username = (typeof window !== "undefined" ? localStorage.getItem : () => null)("username") || "";
 
     const { data: orders } = await supabase
       .from("orders")
@@ -219,3 +221,4 @@ export function WalletDashboard() {
     </div>
   );
 }
+

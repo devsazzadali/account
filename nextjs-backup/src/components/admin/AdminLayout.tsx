@@ -1,0 +1,517 @@
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Settings,
+  LogOut,
+  Bell,
+  MessageSquare,
+  Users,
+  Tag,
+  Search,
+  Menu,
+  X,
+  ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Zap,
+  DollarSign,
+  AlertCircle,
+  ChevronDown,
+  ExternalLink,
+  Palette,
+  Store,
+  ShoppingBag
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "../../lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
+
+// ── Web Audio Chime ──────────────────────────────────────────
+function playOrderChime() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const start = ctx.currentTime + i * 0.12;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.18, start + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+      osc.start(start);
+      osc.stop(start + 0.36);
+    });
+  } catch {}
+}
+
+interface AdminLayoutProps {
+  children: React.ReactNode;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+}
+
+// ── Inline Order Toast ──────────────────────────────────────
+function OrderToast({ title, amount, onView, onDismiss }: { title: string; amount: number; onView: () => void; onDismiss: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -60, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -40, scale: 0.9 }}
+      transition={{ type: "spring", stiffness: 400, damping: 28 }}
+      className="fixed top-5 right-5 z-[999] w-80 bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden"
+    >
+      {/* Accent bar */}
+      <div className="h-1 w-full bg-gradient-to-r from-emerald-500 to-primary-500" />
+      <div className="p-5 flex items-start gap-4">
+        <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+          <ShoppingBag size={20} className="text-emerald-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">💰 New Order!</p>
+            <button onClick={onDismiss} className="text-slate-300 hover:text-slate-500 transition-colors">
+              <X size={14} />
+            </button>
+          </div>
+          <p className="text-sm font-black text-slate-900 truncate leading-tight">{title}</p>
+          <p className="text-[11px] font-bold text-slate-400 mt-0.5">${amount.toFixed(2)} USD</p>
+        </div>
+      </div>
+      <div className="px-5 pb-5 flex gap-3">
+        <button
+          onClick={onView}
+          className="flex-1 py-2.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+        >
+          View Order
+        </button>
+        <button
+          onClick={onDismiss}
+          className="px-4 py-2.5 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+        >
+          Dismiss
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutProps) {
+  const username = localStorage.getItem("username") || "Admin";
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [newOrderAlert, setNewOrderAlert] = useState<{ title: string; amount: number; orderId: string } | null>(null);
+  const [newOrderBadge, setNewOrderBadge] = useState(0);
+  const navigate = useNavigate();
+  const isFirstLoad = useRef(true);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ── Real-time new order watcher ──────────────────────────
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin_new_order_alert")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        (payload) => {
+          if (isFirstLoad.current) { isFirstLoad.current = false; return; }
+          const order = payload.new as any;
+          playOrderChime();
+          setNewOrderBadge(prev => prev + 1);
+          setNewOrderAlert({
+            title: order.username ? `Order by ${order.username}` : "New Customer Order",
+            amount: Number(order.total_price) || 0,
+            orderId: order.id,
+          });
+          // Auto-dismiss after 8 seconds
+          setTimeout(() => setNewOrderAlert(null), 8000);
+        }
+      )
+      .subscribe();
+    isFirstLoad.current = false;
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'messages') {
+      setIsSidebarCollapsed(true);
+    } else {
+      setIsSidebarCollapsed(false);
+    }
+  }, [activeTab]);
+
+  async function fetchUnreadCount() {
+    try {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'unread');
+      
+      if (!error) setUnreadCount(count || 0);
+    } catch (e) {
+      console.error("Error fetching unread count:", e);
+    }
+  }
+
+  function handleLogout() {
+    supabase.auth.signOut().then(() => {
+      localStorage.clear();
+      navigate("/login");
+    });
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F6F6F7] text-slate-900 flex font-sans selection:bg-red-100 selection:text-red-900">
+      
+      {/* ── Sidebar - Seller Center Red Theme ── */}
+      <aside 
+        className={`bg-white border-r border-slate-200 flex flex-col z-[500] relative shrink-0 transition-all duration-300 shadow-xl shadow-slate-200/50 ${isSidebarCollapsed ? 'w-[72px]' : 'w-[260px]'}`}
+      >
+        {/* Sidebar Header - Premium Seller Center */}
+        <div className={`h-24 flex items-center bg-[#0A0F1C] text-white shrink-0 relative overflow-hidden transition-all duration-300 border-b border-white/5 ${isSidebarCollapsed ? 'px-4 justify-center' : 'px-8'}`}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#E62E04]/10 blur-[40px] -mr-16 -mt-16" />
+            <div className="flex items-center gap-4 relative z-10 overflow-hidden">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#E62E04] to-[#c92503] flex items-center justify-center shadow-lg shadow-red-500/20 shrink-0">
+                    <Zap size={20} className="text-white fill-white" />
+                </div>
+                {!isSidebarCollapsed && (
+                    <div className="flex flex-col">
+                        <span className="font-black tracking-[-0.05em] text-xl uppercase italic leading-none text-white whitespace-nowrap">Seller Center</span>
+                        <span className="text-[9px] font-black text-[#E62E04] uppercase tracking-[0.3em] mt-1 italic whitespace-nowrap">Operational Hub</span>
+                    </div>
+                )}
+            </div>
+        </div>
+
+        {/* User Quick Info */}
+        {!isSidebarCollapsed && (
+            <div className="p-6 border-b border-slate-100 flex items-center gap-4 bg-slate-50/30">
+                <div className="w-12 h-12 rounded-[1.25rem] border-2 border-white shadow-sm overflow-hidden bg-white shrink-0">
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="avatar" />
+                </div>
+                <div className="min-w-0">
+                    <div className="text-[13px] font-black text-slate-900 truncate uppercase tracking-tight">{username}</div>
+                    <div className="text-[9px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1.5 mt-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" /> 
+                        Verified Admin
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Menu Items */}
+        <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto custom-scrollbar">
+          <MenuItem 
+            id="dashboard" 
+            label="Home" 
+            icon={<LayoutDashboard size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem 
+            id="orders" 
+            label="Sold Orders" 
+            icon={<ShoppingCart size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem 
+            id="products" 
+            label="Create New Offers" 
+            icon={<Plus size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem 
+            id="active_offers" 
+            label="Active Offers" 
+            icon={<Package size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          
+          <div className="pt-6 px-3 pb-2">
+              <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
+          </div>
+
+          <CollapsibleMenu 
+            label="Store Management" 
+            icon={<Settings size={20} />} 
+            collapsed={isSidebarCollapsed}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            items={[
+                { id: "categories", label: "Categories" },
+                { id: "settings", label: "General Config" },
+                { id: "performance", label: "Performance Hub" },
+                { id: "store_customize", label: "Store Customizer" }
+            ]}
+          />
+          
+          <div className="pt-6 px-3 pb-2">
+              <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
+          </div>
+
+          <MenuItem 
+            id="messages" 
+            label="Messages" 
+            icon={<MessageSquare size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            badge={unreadCount > 0 ? String(unreadCount) : undefined}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem 
+            id="customers" 
+            label="Seller Information" 
+            icon={<Users size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem 
+            id="violation" 
+            label="Violation Center" 
+            icon={<AlertCircle size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem 
+            id="store_customize" 
+            label="Store Customizer" 
+            icon={<Palette size={20} />} 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+
+          <div className="pt-4 px-3 pb-2">
+              <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
+          </div>
+
+          <a 
+            href="/" 
+            target="_blank"
+            className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all group`}
+          >
+            <div className="shrink-0 group-hover:scale-110 transition-transform"><Store size={20} /></div>
+            {!isSidebarCollapsed && (
+                <span className="font-black text-[13px] uppercase tracking-wide whitespace-nowrap">Visit Store</span>
+            )}
+            {!isSidebarCollapsed && <ExternalLink size={14} className="ml-auto opacity-40" />}
+          </a>
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-slate-100 space-y-1 bg-slate-50/30">
+            <button 
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition-all group"
+            >
+                <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                    {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+                </div>
+                {!isSidebarCollapsed && <span className="text-[12px] font-black uppercase tracking-widest group-hover:text-slate-900 transition-colors">Collapse menu</span>}
+            </button>
+            <button 
+                onClick={handleLogout}
+                className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-400 hover:bg-red-50 hover:text-[#E62E04] transition-all group"
+            >
+                <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                    <LogOut size={18} />
+                </div>
+                {!isSidebarCollapsed && <span className="text-[12px] font-black uppercase tracking-widest">Terminate Session</span>}
+            </button>
+        </div>
+      </aside>
+
+      {/* ── Main Workspace ── */}
+      <div className="flex-1 flex flex-col relative z-10 overflow-hidden">
+        {/* Topbar */}
+        <header className="h-16 bg-white border-b border-slate-200 px-8 flex justify-between items-center shrink-0 shadow-sm z-40">
+          <div className="flex items-center gap-6 flex-1">
+              <div className="relative w-full max-w-xl group">
+                  <input 
+                    type="text" 
+                    placeholder="Scan ledgers by ID, product name, or seller hash..." 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-2.5 text-[13px] font-bold text-slate-900 focus:outline-none focus:border-red-300 focus:bg-white focus:ring-4 focus:ring-red-50 transition-all"
+                  />
+                  <Search className="absolute left-4 top-3 text-slate-400 group-focus-within:text-[#E62E04] transition-colors" size={18} />
+                  <div className="absolute right-3 top-2.5 flex items-center gap-1 opacity-20 group-focus-within:opacity-40 transition-opacity">
+                      <kbd className="text-[10px] font-sans border border-slate-400 rounded px-1.5 py-0.5">Ctrl</kbd>
+                      <kbd className="text-[10px] font-sans border border-slate-400 rounded px-1.5 py-0.5">K</kbd>
+                  </div>
+              </div>
+          </div>
+
+          <div className="flex items-center gap-6 ml-6">
+              {/* Exit to Site */}
+              <button 
+                  onClick={() => navigate("/")}
+                  className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-900 tracking-wide mr-2 transition-colors"
+              >
+                  <ChevronLeft size={16} /> EXIT TO SITE
+              </button>
+
+              {/* New Order Bell */}
+              <button
+                onClick={() => { setActiveTab("orders"); setNewOrderBadge(0); }}
+                className="relative text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                <Bell size={20} />
+                <AnimatePresence>
+                  {newOrderBadge > 0 && (
+                    <motion.span
+                      key={newOrderBadge}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white"
+                    >
+                      {newOrderBadge > 9 ? "9+" : newOrderBadge}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </button>
+
+              {/* Messages Icon */}
+              <button 
+                onClick={() => setActiveTab("messages")}
+                className="relative text-[#14b8a6] hover:text-teal-600 transition-colors flex items-center justify-center"
+              >
+                  <MessageSquare size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#14b8a6] text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                        {unreadCount}
+                    </span>
+                  )}
+              </button>
+
+              {/* User Avatar */}
+              <div className="w-9 h-9 rounded-full border border-slate-200 bg-slate-100 overflow-hidden cursor-pointer hover:ring-2 hover:ring-slate-200 transition-all ml-2" onClick={() => setActiveTab("settings")}>
+                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="avatar" className="w-full h-full object-cover" />
+              </div>
+          </div>
+        </header>
+
+        {/* Content Area */}
+        <main className="flex-1 overflow-y-auto p-0 custom-scrollbar">
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className="h-full"
+                >
+                    {children}
+                </motion.div>
+            </AnimatePresence>
+        </main>
+      </div>
+
+      {/* ── New Order Notification Toast ── */}
+      <AnimatePresence>
+        {newOrderAlert && (
+          <OrderToast
+            title={newOrderAlert.title}
+            amount={newOrderAlert.amount}
+            onView={() => {
+              setActiveTab("orders");
+              setNewOrderBadge(0);
+              setNewOrderAlert(null);
+            }}
+            onDismiss={() => setNewOrderAlert(null)}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function MenuItem({ id, label, icon, activeTab, setActiveTab, badge, collapsed }: any) {
+    const isActive = activeTab === id;
+    return (
+        <button
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-3.5 w-full px-4 py-2.5 rounded-xl transition-all duration-300 relative group ${
+                isActive 
+                ? "text-slate-900" 
+                : "text-slate-400 hover:bg-slate-50/80 hover:text-slate-600"
+            }`}
+        >
+            <div className={`shrink-0 p-1.5 rounded-lg transition-all duration-300 ${isActive ? 'bg-red-50 text-[#E62E04] shadow-sm' : 'group-hover:scale-105'}`}>
+                {icon}
+            </div>
+            {!collapsed && (
+                <span className={`font-black text-[10px] uppercase tracking-[0.15em] whitespace-nowrap transition-all ${isActive ? 'translate-x-1' : ''}`}>
+                    {label}
+                </span>
+            )}
+            {badge && !collapsed && (
+                <span className="ml-auto px-2 py-0.5 bg-[#E62E04] text-white text-[9px] font-black rounded-lg shadow-lg shadow-red-500/30">
+                    {badge}
+                </span>
+            )}
+            {isActive && (
+                <motion.div 
+                    layoutId="activePill"
+                    className={`absolute bg-[#E62E04] rounded-full shadow-[0_0_10px_rgba(230,46,4,0.4)] ${collapsed ? 'right-1 w-1 h-10' : 'right-0 w-1.5 h-8 rounded-l-full'}`}
+                />
+            )}
+        </button>
+    );
+}
+
+function CollapsibleMenu({ label, icon, collapsed, activeTab, setActiveTab, items }: any) {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <div className="space-y-1">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all group`}
+            >
+                <div className="shrink-0 group-hover:scale-110 transition-transform">{icon}</div>
+                {!collapsed && (
+                    <>
+                        <span className="font-black text-[13px] uppercase tracking-wide whitespace-nowrap flex-1 text-left">{label}</span>
+                        <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                    </>
+                )}
+            </button>
+            {!collapsed && isOpen && (
+                <div className="pl-12 pr-4 space-y-1 py-1">
+                    {items.map((item: any) => (
+                        <button 
+                            key={item.id}
+                            onClick={() => setActiveTab(item.id)}
+                            className={`w-full text-left py-2 text-[12px] font-bold transition-all tracking-wide uppercase ${
+                                activeTab === item.id ? 'text-[#E62E04]' : 'text-slate-400 hover:text-slate-600'
+                            }`}
+                        >
+                            {item.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}

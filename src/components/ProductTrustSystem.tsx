@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { ShieldCheck, Star, Zap, TrendingUp, Award, BadgeCheck, AlertTriangle, Clock } from "lucide-react";
 import { motion } from "framer-motion";

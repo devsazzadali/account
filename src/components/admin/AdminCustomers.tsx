@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import {
   User, Mail, Calendar, ShieldCheck, Search, Loader2,
@@ -164,7 +166,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
                     </td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={(e) => { e.stopPropagation(); localStorage.setItem("selectedUserChat", profile.username); setActiveTab?.("messages"); }} className="p-2 text-slate-400 hover:text-primary-600"><MessageSquare size={18} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); (typeof window !== "undefined" ? localStorage.setItem : () => {})("selectedUserChat", profile.username); setActiveTab?.("messages"); }} className="p-2 text-slate-400 hover:text-primary-600"><MessageSquare size={18} /></button>
                         <button onClick={(e) => { e.stopPropagation(); setSelectedUser(profile); setIsEditing(true); }} className="p-2 text-slate-400 hover:text-amber-600"><Edit2 size={18} /></button>
                       </div>
                     </td>
@@ -196,7 +198,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
                   <div className="flex justify-between items-center">
                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{new Date(profile.created_at).toLocaleDateString()}</span>
                      <div className="flex gap-2">
-                        <button onClick={(e) => { e.stopPropagation(); localStorage.setItem("selectedUserChat", profile.username); setActiveTab?.("messages"); }} className="p-2.5 bg-slate-100 text-slate-600 rounded-lg"><MessageSquare size={16} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); (typeof window !== "undefined" ? localStorage.setItem : () => {})("selectedUserChat", profile.username); setActiveTab?.("messages"); }} className="p-2.5 bg-slate-100 text-slate-600 rounded-lg"><MessageSquare size={16} /></button>
                         <button onClick={(e) => { e.stopPropagation(); setSelectedUser(profile); setIsEditing(true); }} className="p-2.5 bg-slate-100 text-slate-600 rounded-lg"><Edit2 size={16} /></button>
                      </div>
                   </div>
@@ -246,7 +248,8 @@ function RoleBadge({ role, isPremium }: { role?: string, isPremium?: boolean }) 
     "moderator": { cls: "bg-amber-50 text-amber-600", label: "Mod" },
     "user": { cls: "bg-slate-100 text-slate-600", label: "User" },
   };
-  const config = map[role?.toLowerCase()] || map["user"];
+  const normalizedRole = role ? role.toLowerCase() : "user";
+  const config = map[normalizedRole as keyof typeof map] || map["user"];
   return (
     <div className="flex flex-col items-start gap-1">
        <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${config.cls}`}>
@@ -282,7 +285,7 @@ function UserDetailsView({ user, onEdit, setActiveTab, onClose }: any) {
         <button onClick={onEdit} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
           <Edit2 size={16} /> Edit Profile
         </button>
-        <button onClick={() => { localStorage.setItem("selectedUserChat", user.username); setActiveTab?.("messages"); onClose(); }} className="flex-1 py-4 bg-primary-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center justify-center gap-2">
+        <button onClick={() => { (typeof window !== "undefined" ? localStorage.setItem : () => {})("selectedUserChat", user.username); setActiveTab?.("messages"); onClose(); }} className="flex-1 py-4 bg-primary-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center justify-center gap-2">
           <MessageSquare size={16} /> Send Message
         </button>
       </div>
@@ -334,3 +337,4 @@ function UserEditForm({ user, onSave, onCancel, loading }: any) {
     </div>
   );
 }
+

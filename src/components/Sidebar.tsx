@@ -1,3 +1,5 @@
+"use client";
+
 import { MessageCircle, ThumbsUp, Crown, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { STORE_PROFILE } from "../data/mockData";
