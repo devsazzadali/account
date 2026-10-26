@@ -4,14 +4,17 @@
 // Real payment state machine (completion build):
 //   1. The order is created server-side via POST /api/orders, which checks
 //      and reserves stock. The order starts UNPAID.
-//   2a. Manual rail (bKash/Nagad): the buyer sends money to the store
+//   2a. Stripe rail (PRIMARY — this is an international store): card
+//       payment via Stripe Checkout, offered first and selected by
+//       default whenever the store has configured Stripe keys; without
+//       keys the option is shown as unavailable, never faked.
+//   2b. Wallet rail: balance is debited in the same transaction; the
+//       order is paid immediately and auto-delivery runs.
+//   2c. Manual rail (bKash/Nagad — regional fallback): only listed when
+//       a number is configured. The buyer sends money to the store
 //       number shown here, then submits TrxID + sender number. The order
 //       becomes "pending_verification" until an admin approves it in the
 //       Payment Verification queue — only then is it paid and delivered.
-//   2b. Wallet rail: balance is debited in the same transaction; the
-//       order is paid immediately and auto-delivery runs.
-//   2c. Stripe rail: only offered when the store has configured Stripe
-//       keys; otherwise the option is shown as unavailable, never faked.
 // An unpaid order NEVER displays as paid anywhere in the app.
 
 import React, { useEffect, useState } from "react";
@@ -54,7 +57,7 @@ export function CheckoutPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<string>("bkash");
+  const [paymentMethod, setPaymentMethod] = useState<string>("stripe");
   const [processing, setProcessing] = useState(false);
   const [email, setEmail] = useState("");
   const [payConfig, setPayConfig] = useState<PaymentConfig | null>(null);
@@ -77,7 +80,14 @@ export function CheckoutPage() {
       if (row) setProduct(row);
       if (cfgRes) {
         setPayConfig(cfgRes);
-        if (!cfgRes.manual?.bkashNumber && cfgRes.manual?.nagadNumber) setPaymentMethod("nagad");
+        // Default selection: Stripe (card) first whenever it is enabled;
+        // otherwise the first manual rail that is actually configured;
+        // otherwise the store wallet. The selection must always be a
+        // method that exists in the rendered list.
+        if (cfgRes.stripe?.enabled) setPaymentMethod("stripe");
+        else if (cfgRes.manual?.bkashNumber) setPaymentMethod("bkash");
+        else if (cfgRes.manual?.nagadNumber) setPaymentMethod("nagad");
+        else setPaymentMethod("wallet");
       }
       const session = (meRes as any)?.data?.session;
       if (session?.user?.email) setEmail(session.user.email);
@@ -159,11 +169,13 @@ export function CheckoutPage() {
   if (loading) return <PageLoader label="Initializing Secure Checkout..." />;
   if (!product) return <div className="p-8 text-center">Product not found.</div>;
 
+  // Stripe-first: card, then wallet, then the manual rails (regional
+  // fallback, listed only when a payment number is configured).
   const methods: { id: string; label: string; icon: React.ReactNode; disabled?: boolean; note?: string }[] = [
+    { id: "stripe", label: "Card (Stripe)", icon: <CreditCard size={18} />, disabled: !payConfig?.stripe.enabled, note: payConfig?.stripe.enabled ? undefined : "Not configured yet" },
+    { id: "wallet", label: "Store Wallet", icon: <Wallet size={18} />, note: walletBalance === null ? "Sign in to use" : `Balance $${walletBalance.toFixed(2)}` },
     ...(payConfig?.manual.bkashNumber ? [{ id: "bkash", label: "bKash", icon: <Smartphone size={18} /> }] : []),
     ...(payConfig?.manual.nagadNumber ? [{ id: "nagad", label: "Nagad", icon: <Smartphone size={18} /> }] : []),
-    { id: "wallet", label: "Store Wallet", icon: <Wallet size={18} />, note: walletBalance === null ? "Sign in to use" : `Balance $${walletBalance.toFixed(2)}` },
-    { id: "stripe", label: "Card (Stripe)", icon: <CreditCard size={18} />, disabled: !payConfig?.stripe.enabled, note: payConfig?.stripe.enabled ? undefined : "Not configured yet" },
   ];
 
   return (
@@ -418,7 +430,7 @@ export function CheckoutPage() {
                       <p className="text-xs font-bold text-slate-500 leading-relaxed">
                         {payConfig?.stripe.enabled
                           ? "You will be redirected to Stripe's secure checkout to pay by card."
-                          : "Card payments are not configured for this store yet. Please use bKash/Nagad or your store wallet."}
+                          : "Card payments are being activated for this store. In the meantime you can pay with your store wallet balance, or contact support for help completing your order."}
                       </p>
                     </div>
                   )}

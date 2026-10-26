@@ -85,6 +85,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           username: String(body.credential_username || body.username || ""),
           password: String(body.credential_password || body.password || ""),
           notes: body.credential_notes || body.notes,
+          twoFactorSecret: body.two_factor_secret || body.twoFactorSecret || undefined,
+          recoveryEmail: body.recovery_email || body.recoveryEmail || undefined,
         });
         break;
       case "complete":

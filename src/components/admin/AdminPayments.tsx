@@ -72,7 +72,7 @@ export function AdminPayments() {
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">Payment Verification</h2>
           <p className="text-sm text-slate-500 font-medium mt-1">
-            Buyers pay the store bKash/Nagad number and submit a Transaction ID. Verify the money arrived, then approve — delivery and wallet credit happen automatically.
+            Buyers who pay manually (bKash/Nagad) submit a Transaction ID here. Verify the money arrived, then approve — delivery and wallet credit happen automatically.
           </p>
         </div>
         <div className="flex items-center gap-2">

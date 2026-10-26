@@ -81,6 +81,8 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   const [credUsername, setCredUsername] = useState(order?.credential_username || "");
   const [credPassword, setCredPassword] = useState(order?.credential_password || "");
   const [credNotes, setCredNotes] = useState(order?.credential_notes || "");
+  const [cred2fa, setCred2fa] = useState(order?.two_factor_secret || "");
+  const [credRecovery, setCredRecovery] = useState(order?.recovery_email || "");
   const [isSubmittingInfo, setIsSubmittingInfo] = useState(false);
   const [showDeliverModal, setShowDeliverModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -123,7 +125,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
             method: "POST",
             credentials: "same-origin",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "deliver", username: credUsername, password: credPassword, notes: credNotes }),
+            body: JSON.stringify({ action: "deliver", username: credUsername, password: credPassword, notes: credNotes, two_factor_secret: cred2fa, recovery_email: credRecovery }),
           });
           const json = await res.json();
           if (!res.ok) throw new Error(json.error || "Delivery failed");
@@ -351,6 +353,8 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                     <div className="p-10 bg-white grid grid-cols-1 md:grid-cols-2 gap-10">
                         <FormInput label="Credential Username / Email" value={credUsername} onChange={setCredUsername} required />
                         <FormInput label="Credential Password" value={credPassword} onChange={setCredPassword} required />
+                        <FormInput label="2FA Secret (optional)" value={cred2fa} onChange={setCred2fa} placeholder="Base32 secret — the buyer's vault generates live codes from it" />
+                        <FormInput label="Recovery Email (optional)" value={credRecovery} onChange={setCredRecovery} placeholder="Recovery email for the delivered account" />
                         <FormInput label="Delivery Notes (optional)" value={credNotes} onChange={setCredNotes} placeholder="Anything the buyer should know..." />
                         <div className="col-span-2 pt-6">
                             <button onClick={() => setShowDeliverModal(true)} disabled={isSubmittingInfo} className="px-12 py-4 bg-[#E62E04] text-white rounded-2xl font-black text-[12px] uppercase tracking-[0.3em] shadow-2xl shadow-red-500/30 hover:bg-red-700 transition-all disabled:opacity-50 flex items-center gap-3">

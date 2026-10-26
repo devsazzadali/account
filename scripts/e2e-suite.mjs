@@ -67,7 +67,8 @@ async function main() {
   step("missing product = 404", missing.status === 404, `got ${missing.status}`);
   const migrated = await call(null, "GET", "/product/f88d7c6b-fe26-4c1c-8e59-14152c4a749b");
   step("migrated product page = 200", migrated.status === 200, `got ${migrated.status}`);
-  step("migrated product uses branded cover", (migrated.text || "").includes("/covers/f88d7c6b-fe26-4c1c-8e59-14152c4a749b.jpg"));
+  // Covers are SVG since the deploy moved to git-pushed assets (no binaries).
+  step("migrated product uses branded cover", (migrated.text || "").includes("/covers/f88d7c6b-fe26-4c1c-8e59-14152c4a749b.svg"));
 
   // ── authz: unauthenticated ────────────────────────────────────
   const unauth = await call(null, "POST", "/api/orders", { product_id: "x", quantity: 1 });
@@ -86,10 +87,14 @@ async function main() {
   const product = prod.json?.data?.[0];
   step("admin creates product", prod.status === 200 && !!product?.id, `status ${prod.status}`);
   const invLogins = [];
+  const twoFactorSecret = "JBSWY3DPEHPK3PXP";
+  const recoveryEmail = `recover-${uniq}@vault.test`;
   for (let i = 0; i < 3; i++) {
     const login = `cred-${uniq}-${i}@vault.test`;
     invLogins.push(login);
-    const inv = await call(admin, "POST", "/api/db/inventory", { product_id: product.id, account_login: login, account_password: `pw-${uniq}-${i}`, status: "available" });
+    // The first (oldest) unit carries 2FA — auto-delivery assigns it to order 1.
+    const extra = i === 0 ? { two_factor_secret: twoFactorSecret, recovery_email: recoveryEmail } : {};
+    const inv = await call(admin, "POST", "/api/db/inventory", { product_id: product.id, account_login: login, account_password: `pw-${uniq}-${i}`, status: "available", ...extra });
     if (inv.status !== 200) step(`inventory item ${i} added`, false, `status ${inv.status}`);
   }
   step("inventory stocked (3)", invLogins.length === 3);
@@ -128,6 +133,8 @@ async function main() {
   step("order 1 paid after approval", after?.payment_status === "paid", `ps=${after?.payment_status}`);
   step("order 1 escrow = in_escrow", after?.escrow_state === "in_escrow", after?.escrow_state);
   step("order 1 auto-delivered with REAL inventory credentials", invLogins.includes(after?.credential_username) && /^pw-/.test(after?.credential_password || ""), `vault user=${after?.credential_username}`);
+  step("order 1 vault carries the DEDICATED 2FA secret field", after?.two_factor_secret === twoFactorSecret, `2fa=${after?.two_factor_secret}`);
+  step("order 1 vault carries the DEDICATED recovery email field", after?.recovery_email === recoveryEmail, `recovery=${after?.recovery_email}`);
   step("order 1 status = Delivering", after?.status === "Delivering", after?.status);
 
   const prodAfter = await call(admin, "GET", `/api/db/products?id=eq.${product.id}`);

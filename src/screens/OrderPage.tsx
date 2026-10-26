@@ -20,6 +20,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { PageLoader } from "../components/SkeletonUI";
+import { TotpVault } from "../components/TotpVault";
 
 interface Order {
   id: string;
@@ -36,6 +37,8 @@ interface Order {
   credential_username?: string | null;
   credential_password?: string | null;
   credential_notes?: string | null;
+  two_factor_secret?: string | null;
+  recovery_email?: string | null;
 }
 
 const STATUS_TIMELINE = ["New Order", "PREPARING", "Delivering", "Completed"];
@@ -310,6 +313,9 @@ export function OrderPage() {
                       </div>
                     </div>
                   ))}
+                  {order.two_factor_secret && (
+                    <TotpVault secret={order.two_factor_secret} recoveryEmail={order.recovery_email} />
+                  )}
                   {order.credential_notes && (
                     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
                       <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1">Notes</p>

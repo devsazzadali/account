@@ -726,6 +726,8 @@ function InventoryManager({ productId }: { productId: string }) {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [info, setInfo] = useState("");
+  const [twoFactor, setTwoFactor] = useState("");
+  const [recovery, setRecovery] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function load() {
@@ -743,10 +745,12 @@ function InventoryManager({ productId }: { productId: string }) {
         account_login: login.trim(),
         account_password: password,
         additional_info: info.trim() || null,
+        two_factor_secret: twoFactor.trim() || null,
+        recovery_email: recovery.trim() || null,
         status: "available",
       });
       if (error) throw error;
-      setLogin(""); setPassword(""); setInfo("");
+      setLogin(""); setPassword(""); setInfo(""); setTwoFactor(""); setRecovery("");
       toast.success("Inventory item added — it will auto-deliver on the next verified payment (keep the product stock count in sync).");
       load();
     } catch (e: any) {
@@ -777,6 +781,8 @@ function InventoryManager({ productId }: { productId: string }) {
         <input value={login} onChange={(e) => setLogin(e.target.value)} placeholder="Account login / email" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
         <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Account password" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
         <input value={info} onChange={(e) => setInfo(e.target.value)} placeholder="Notes (optional)" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
+        <input value={twoFactor} onChange={(e) => setTwoFactor(e.target.value)} placeholder="2FA secret (optional, base32)" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
+        <input value={recovery} onChange={(e) => setRecovery(e.target.value)} placeholder="Recovery email (optional)" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
       </div>
       <button onClick={addItem} disabled={busy} className="px-6 py-3 bg-[#0C2254] text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2">
         <Plus size={14} /> Add Credential to Inventory
@@ -788,6 +794,12 @@ function InventoryManager({ productId }: { productId: string }) {
           <div key={item.id} className="flex items-center gap-4 px-5 py-3 bg-white">
             <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${item.status === "available" ? "bg-emerald-50 text-emerald-600" : item.status === "assigned" ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-500"}`}>{item.status}</span>
             <span className="text-sm font-bold text-slate-800 truncate flex-1">{item.account_login}</span>
+            {item.two_factor_secret && (
+              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-violet-50 text-violet-600 border border-violet-100 shrink-0">2FA</span>
+            )}
+            {item.recovery_email && (
+              <span className="text-[11px] text-slate-400 font-medium hidden lg:block shrink-0">{item.recovery_email}</span>
+            )}
             <span className="text-[11px] text-slate-400 font-medium hidden md:block">{item.order_id ? `Order #${String(item.order_id).slice(0, 8).toUpperCase()}` : "—"}</span>
             {item.status === "available" && (
               <button onClick={() => removeItem(item)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={15} /></button>

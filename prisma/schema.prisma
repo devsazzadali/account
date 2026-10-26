@@ -107,6 +107,8 @@ model Order {
   credentialUsername String?     @map("credential_username")
   credentialPassword String?     @map("credential_password")
   credentialNotes    String?     @map("credential_notes")
+  twoFactorSecret    String?     @map("two_factor_secret")
+  recoveryEmail      String?     @map("recovery_email")
   stripeSessionId    String?     @unique @map("stripe_session_id")
   paymentIntentId    String?     @map("payment_intent_id")
   idempotencyKey     String?     @unique @map("idempotency_key") @db.Uuid

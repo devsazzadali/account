@@ -123,6 +123,9 @@ async function autoDeliver(tx: Tx, order: { id: string; productId: string | null
       credentialUsername: first.accountLogin,
       credentialPassword: first.accountPassword,
       credentialNotes: notesParts.join("\n") || null,
+      // Dedicated 2FA vault fields (the notes text above stays as a fallback record).
+      twoFactorSecret: first.twoFactorSecret || null,
+      recoveryEmail: first.recoveryEmail || null,
       ...(fullyAssigned ? { status: "Delivering" } : {}),
     },
   });
@@ -327,7 +330,7 @@ export async function cancelOrder(orderId: string, actor: { userId: string; isAd
   });
 }
 
-export async function deliverManually(orderId: string, creds: { username: string; password: string; notes?: string }) {
+export async function deliverManually(orderId: string, creds: { username: string; password: string; notes?: string; twoFactorSecret?: string; recoveryEmail?: string }) {
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
@@ -339,6 +342,8 @@ export async function deliverManually(orderId: string, creds: { username: string
         credentialUsername: creds.username.trim(),
         credentialPassword: creds.password.trim(),
         credentialNotes: creds.notes?.trim() || null,
+        twoFactorSecret: creds.twoFactorSecret?.trim() || null,
+        recoveryEmail: creds.recoveryEmail?.trim() || null,
         status: "Delivering",
       },
     });
@@ -419,7 +424,7 @@ export async function resolveDispute(orderId: string, resolution: "refunded" | "
       await releaseAssignedInventory(tx, order.id, "flagged");
       const fresh = await tx.order.update({
         where: { id: orderId },
-        data: { credentialUsername: null, credentialPassword: null, credentialNotes: null, status: "PREPARING", escrowState: "in_escrow" },
+        data: { credentialUsername: null, credentialPassword: null, credentialNotes: null, twoFactorSecret: null, recoveryEmail: null, status: "PREPARING", escrowState: "in_escrow" },
       });
       const assigned = await autoDeliver(tx, fresh);
       if (assigned < order.quantity) throw new ServiceError("No replacement stock available for this product", 409);
