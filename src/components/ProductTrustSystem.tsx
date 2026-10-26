@@ -4,94 +4,72 @@ import React from "react";
 import { ShieldCheck, Star, Zap, TrendingUp, Award, BadgeCheck, AlertTriangle, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 
-// ── Seller Trust Card ──────────────────────────────────────────
-interface SellerTrustProps {
-  successRate?: number; // 0-100
-  refundRate?: number;
-  totalSales?: number;
-  responseTime?: string;
-  level?: string;
-  name?: string;
-  avatar?: string;
-  verified?: boolean;
-}
+// ── Store Trust Card ───────────────────────────────────────────
+// Real aggregates from /api/store/stats only. (The previous version
+// shipped hard-coded fiction: a fake seller name with 11,240 sales and a
+// 98.4% success rate.)
+export function SellerTrustCard() {
+  const [stats, setStats] = React.useState<any>(null);
+  React.useEffect(() => {
+    fetch("/api/store/stats").then((r) => r.json()).then((j) => setStats(j.stats || null)).catch(() => {});
+  }, []);
 
-export function SellerTrustCard({
-  successRate = 98.4,
-  refundRate = 0.8,
-  totalSales = 11240,
-  responseTime = "< 2 min",
-  level = "Legendary",
-  name = "TitanGames_Global",
-  avatar,
-  verified = true,
-}: SellerTrustProps) {
-  const levelColors: Record<string, string> = {
-    Legendary: "from-amber-500 to-orange-500",
-    Elite: "from-purple-500 to-blue-600",
-    Pro: "from-primary-500 to-teal-500",
-    Standard: "from-slate-400 to-slate-600",
-  };
-  const gradient = levelColors[level] || levelColors.Standard;
+  const name = stats?.store_name || "Account Store One";
+  const rating: number | null = stats?.average_rating ?? null;
+  const ratingPct = rating !== null ? Math.round((rating / 5) * 100) : null;
 
   return (
     <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br ${gradient} p-[2px] shadow-lg`}>
+          <div className="relative w-14 h-14 rounded-2xl bg-[#0C2254] p-[2px] shadow-lg">
             <div className="w-full h-full rounded-[14px] bg-white flex items-center justify-center overflow-hidden">
-              <img
-                src={avatar || `https://api.dicebear.com/7.x/shapes/svg?seed=${name}`}
-                alt={name}
-                className="w-full h-full object-cover"
-              />
+              <span className="text-lg font-black text-[#0C2254]">AS</span>
             </div>
-            {verified && (
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary-600 rounded-lg border-2 border-white flex items-center justify-center">
-                <BadgeCheck size={11} className="text-white" />
-              </div>
-            )}
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary-600 rounded-lg border-2 border-white flex items-center justify-center">
+              <BadgeCheck size={11} className="text-white" />
+            </div>
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <h4 className="text-sm font-black text-slate-900">{name}</h4>
-              {verified && <BadgeCheck size={15} className="text-primary-600" />}
+              <BadgeCheck size={15} className="text-primary-600" />
             </div>
-            <span className={`inline-block bg-gradient-to-r ${gradient} text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full`}>
-              {level} Seller
+            <span className="inline-block bg-[#0C2254] text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">
+              Verified Store
             </span>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-black text-slate-900">{successRate}%</div>
-          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Success Rate</div>
+          <div className="text-2xl font-black text-slate-900">{rating !== null ? rating.toFixed(1) : "—"}</div>
+          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Avg. Rating</div>
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-3">
-        <StatPill icon={<TrendingUp size={13} />} label="Total Sales" value={totalSales.toLocaleString()} color="blue" />
-        <StatPill icon={<Clock size={13} />} label="Response" value={responseTime} color="emerald" />
-        <StatPill icon={<AlertTriangle size={13} />} label="Refund Rate" value={`${refundRate}%`} color={refundRate > 2 ? "red" : "slate"} />
+        <StatPill icon={<TrendingUp size={13} />} label="Orders Done" value={String(stats?.completed_orders ?? 0)} color="blue" />
+        <StatPill icon={<Star size={13} />} label="Reviews" value={String(stats?.total_reviews ?? 0)} color="emerald" />
+        <StatPill icon={<AlertTriangle size={13} />} label="Disputes 90d" value={stats?.dispute_rate_90d === null || stats?.dispute_rate_90d === undefined ? "—" : `${stats.dispute_rate_90d}%`} color="slate" />
       </div>
 
-      {/* Trust Bar */}
-      <div className="mt-4 space-y-1.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-            <Award size={11} /> Trust Score
-          </span>
-          <span className="text-[9px] font-black text-primary-600">{successRate}/100</span>
+      {ratingPct !== null && (
+        <div className="mt-4 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+              <Award size={11} /> Buyer Rating
+            </span>
+            <span className="text-[9px] font-black text-primary-600">{rating !== null ? rating.toFixed(1) : "—"} / 5</span>
+          </div>
+          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${ratingPct}%` }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
+              className="h-full bg-gradient-to-r from-primary-500 to-emerald-500 rounded-full"
+            />
+          </div>
         </div>
-        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${successRate}%` }}
-            transition={{ duration: 1.2, ease: "easeOut" }}
-            className="h-full bg-gradient-to-r from-primary-500 to-emerald-500 rounded-full"
-          />
-        </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -164,9 +142,9 @@ export function StockIntelligence({ stock, totalCapacity = 100 }: StockProps) {
 // ── Delivery Timeline ──────────────────────────────────────────
 export function DeliveryTimeline() {
   const steps = [
-    { icon: <ShieldCheck size={16} />, label: "Payment Verified",  sub: "Instant" },
-    { icon: <Zap size={16} />,         label: "Auto Assignment",   sub: "< 1 sec" },
-    { icon: <BadgeCheck size={16} />,  label: "Credentials Ready", sub: "Instant" },
+    { icon: <ShieldCheck size={16} />, label: "Payment Verified",  sub: "Manual check" },
+    { icon: <Zap size={16} />,         label: "Auto Assignment",   sub: "When in stock" },
+    { icon: <BadgeCheck size={16} />,  label: "Credentials Ready", sub: "In your vault" },
   ];
 
   return (
@@ -205,7 +183,7 @@ export function TrustBadges() {
     { icon: <ShieldCheck size={16} />, label: "Escrow Protected" },
     { icon: <Zap size={16} />,         label: "Instant Delivery" },
     { icon: <Award size={16} />,       label: "Verified Stock" },
-    { icon: <Star size={16} />,        label: "5-Star Seller" },
+    { icon: <Star size={16} />,        label: "Rated by Buyers" },
   ];
   return (
     <div className="grid grid-cols-2 gap-3">

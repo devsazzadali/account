@@ -1,0 +1,447 @@
+// AccountStoreOne — Prisma schema (Boss, 2026-10-26)
+// Backend migration: Supabase → Prisma + Neon Postgres.
+// Modeled from (1) MASTER_PRODUCTION_SCHEMA.sql (the designed model) and
+// (2) the columns the app code actually reads/writes (code wins on conflicts —
+// e.g. products.category is a category NAME in code, orders carry
+// customer_email/username + credential_* fields from checkout/OrderPage).
+// Auth is Neon Auth: profiles.id stores the Neon Auth user id (no FK).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum EscrowState {
+  pending_payment
+  paid
+  in_escrow
+  processing
+  delivered
+  completed
+  disputed
+  refunded
+}
+
+/// Per-product fulfilment model. instant = credentials auto-deliver from
+/// the delivery inventory when payment verifies; manual = the store types
+/// the credentials into the order panel; service = the buyer provides
+/// intake details at checkout (category intake schema) and the store
+/// performs the work, proving completion with a proof on the order.
+enum FulfilmentType {
+  instant
+  manual
+  service
+}
+
+model Profile {
+  id                String   @id // Neon Auth user id
+  username          String?  @unique
+  email             String?
+  fullName          String?  @map("full_name")
+  bio               String?
+  isPremium         Boolean  @default(false) @map("is_premium")
+  avatarUrl         String?  @map("avatar_url")
+  role              String   @default("user") // user | moderator | admin (single-seller: no seller role in use)
+  mustResetPassword Boolean  @default(false) @map("must_reset_password")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  orders            Order[]
+  wallet            Wallet?
+  disputes          Dispute[]
+  riskProfile       UserRiskProfile?
+  notifications     Notification[]
+
+  @@map("profiles")
+}
+
+model Category {
+  id             String   @id @default(uuid())
+  name           String
+  slug           String?  @unique
+  description    String?
+  seoTitle       String?  @map("seo_title")
+  seoDescription String?  @map("seo_description")
+  h1Title        String?  @map("h1_title")
+  contentBody    String?  @map("content_body")
+  faqData        Json     @default("[]") @map("faq_data")
+  // Per-category specification attribute schema (Z2U alignment P2):
+  // [{ key, label, type: "text"|"number"|"select"|"boolean", options?: string[] }]
+  attributeSchema Json    @default("[]") @map("attribute_schema")
+  // Per-category SERVICE intake schema (fulfilment types): same field
+  // shape plus `required`. For SERVICE products the buyer fills these in
+  // at checkout BEFORE paying; answers are stored on orders.intake_data.
+  // [{ key, label, type, required?: boolean, options?: string[] }]
+  intakeSchema    Json    @default("[]") @map("intake_schema")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("categories")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  title       String
+  price       Decimal  @db.Decimal(10, 2)
+  image       String?
+  originalImage String? @map("original_image")
+  stock       Int      @default(0)
+  category    String? // category name, as the code uses it
+  game        String?
+  gameType    String?  @map("game_type")
+  badge       String?
+  sold        Int      @default(0)
+  description String?
+  seoKeywords String?  @map("seo_keywords")
+  // Z2U alignment (P1/P2): listing visibility, minimum order quantity,
+  // delivery-time promise, per-category spec values, sellable variants
+  // ("Custom Programs": [{ label, priceDelta, stock? }]) and the stock
+  // source-of-truth switch. When useInventoryStock is true, `stock` is a
+  // derived cache of deliverable inventory (see order-service
+  // syncDerivedStock) and is never hand-edited.
+  isActive         Boolean @default(true) @map("is_active")
+  minQuantity      Int     @default(1) @map("min_quantity")
+  deliveryEtaHours Int?    @map("delivery_eta_hours")
+  specs            Json    @default("{}")
+  variants         Json    @default("[]")
+  useInventoryStock Boolean @default(false) @map("use_inventory_stock")
+  // Fulfilment types: how this product is delivered (see the enum).
+  // Backfilled from useInventoryStock (true → instant) at migration;
+  // warrantyDays renders as an "X-day warranty" badge on the product page.
+  fulfilmentType   FulfilmentType @default(manual) @map("fulfilment_type")
+  warrantyDays     Int?           @map("warranty_days")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  orders    Order[]
+  inventory Inventory[]
+  reviews   Review[]
+
+  @@map("products")
+}
+
+model Order {
+  id                 String      @id @default(uuid())
+  productId          String?     @map("product_id")
+  product            Product?    @relation(fields: [productId], references: [id])
+  userId             String?     @map("user_id")
+  user               Profile?    @relation(fields: [userId], references: [id])
+  username           String?
+  customerEmail      String?     @map("customer_email")
+  quantity           Int         @default(1)
+  totalPrice         Decimal     @map("total_price") @db.Decimal(10, 2)
+  status             String      @default("New Order") // UI state machine (code truth)
+  paymentStatus      String      @default("pending") @map("payment_status")
+  paymentMethod      String?     @map("payment_method")
+  escrowState        EscrowState @default(pending_payment) @map("escrow_state")
+  escrowHoldUntil    DateTime?   @map("escrow_hold_until")
+  fundsReleasedAt    DateTime?   @map("funds_released_at")
+  disputedAt         DateTime?   @map("disputed_at")
+  credentialUsername String?     @map("credential_username")
+  credentialPassword String?     @map("credential_password")
+  credentialNotes    String?     @map("credential_notes")
+  twoFactorSecret    String?     @map("two_factor_secret")
+  recoveryEmail      String?     @map("recovery_email")
+  // Z2U alignment: seller-private remarks (searchable in the admin list),
+  // the purchased variant, coupon redemption + lifecycle timestamps for
+  // the audit timeline.
+  internalRemarks    String?     @map("internal_remarks")
+  variantLabel       String?     @map("variant_label")
+  // Fulfilment types: SERVICE orders carry the buyer's checkout intake
+  // answers here ({ fieldKey: value }); deliveredQuantity tracks partial
+  // delivery (units the buyer has actually received, 0..quantity).
+  intakeData         Json?       @map("intake_data")
+  deliveredQuantity  Int         @default(0) @map("delivered_quantity")
+  couponCode         String?     @map("coupon_code")
+  discountAmount     Decimal     @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  paidAt             DateTime?   @map("paid_at")
+  deliveredAt        DateTime?   @map("delivered_at")
+  stripeSessionId    String?     @unique @map("stripe_session_id")
+  paymentIntentId    String?     @map("payment_intent_id")
+  idempotencyKey     String?     @unique @map("idempotency_key") @db.Uuid
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+
+  inventory Inventory[]
+  dispute   Dispute?
+  events    OrderEvent[]
+  review    Review?
+  proofs    DeliveryProof[]
+
+  @@index([userId])
+  @@map("orders")
+}
+
+/// Append-only per-order audit trail (Z2U alignment P1). Written inside
+/// the same transaction as every state transition in order-service, so
+/// the trail can never disagree with the order's actual state.
+model OrderEvent {
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actor     String // buyer | admin | system | stripe
+  event     String // created | payment_submitted | payment_verified | payment_rejected | delivered | completed | canceled | refunded | dispute_opened | dispute_resolved
+  detail    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderId, createdAt])
+  @@map("order_events")
+}
+
+/// Delivery proofs attached to an order (fulfilment types). Files go
+/// through the existing /api/upload adapter (bucket "proofs"); a written
+/// note alone is also a valid proof. A SERVICE order can only be marked
+/// delivered once at least one kind="completion" proof exists.
+model DeliveryProof {
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fileUrl   String?  @map("file_url")
+  note      String?
+  kind      String   @default("completion") // progress | completion
+  createdBy String?  @map("created_by") // profile id of the admin who attached it
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderId, createdAt])
+  @@map("delivery_proofs")
+}
+
+model Inventory {
+  id                String    @id @default(uuid())
+  productId         String?   @map("product_id")
+  product           Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  accountLogin      String    @map("account_login")
+  accountPassword   String    @map("account_password")
+  twoFactorSecret   String?   @map("two_factor_secret")
+  cookies           String?
+  recoveryEmail     String?   @map("recovery_email")
+  additionalInfo    String?   @map("additional_info")
+  status            String    @default("available") // available | assigned | used | failed | flagged | sold
+  isHealthy         Boolean   @default(true) @map("is_healthy")
+  lastVerifiedAt    DateTime  @default(now()) @map("last_verified_at")
+  orderId           String?   @map("order_id")
+  order             Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  assignedAt        DateTime? @map("assigned_at")
+  reservedUntil     DateTime? @map("reserved_until")
+  reservedBySession String?   @map("reserved_by_session_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  @@index([productId, status])
+  @@map("inventory")
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Decimal  @default(0) @db.Decimal(12, 2)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  transactions WalletTransaction[]
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id          String   @id @default(uuid())
+  walletId    String?  @map("wallet_id")
+  wallet      Wallet?  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount      Decimal  @db.Decimal(12, 2)
+  type        String // deposit | purchase | refund | withdrawal | bonus
+  status      String   @default("completed")
+  method      String? // bkash | nagad | wallet | stripe
+  trxId       String?  @map("trx_id")
+  note        String?
+  referenceId String?  @map("reference_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("wallet_transactions")
+}
+
+model Dispute {
+  id         String   @id @default(uuid())
+  orderId    String?  @unique @map("order_id")
+  order      Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId     String?  @map("user_id")
+  user       Profile? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason     String
+  status     String   @default("open") // open | under_review | mediation | resolved | closed
+  resolution String? // refunded | replaced | rejected | canceled
+  prevStatus String?  @map("prev_status")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("disputes")
+}
+
+model UserRiskProfile {
+  userId              String   @id @map("user_id")
+  user                Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentScore        Int      @default(0) @map("current_score")
+  isBlocked           Boolean  @default(false) @map("is_blocked")
+  totalFailedPayments Int      @default(0) @map("total_failed_payments")
+  lastDetectedIp      String?  @map("last_detected_ip")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("user_risk_profiles")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorId     String?  @map("actor_id")
+  action      String
+  targetTable String?  @map("target_table")
+  targetId    String?  @map("target_id") @db.Uuid
+  oldData     Json?    @map("old_data")
+  newData     Json?    @map("new_data")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  user      Profile? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  username  String
+  subject   String?
+  message   String
+  reply     String?
+  status    String   @default("unread") // unread | replied
+  // Support-ticket state for the whole thread (kept in sync on every row
+  // of the thread by the messages write path): open = the buyer is
+  // waiting on the store; awaiting_reply = the store answered last;
+  // closed = resolved/archived.
+  ticketStatus String @default("open") @map("ticket_status")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("messages")
+}
+
+/// Manual payment submissions (bKash/Nagad) awaiting admin verification.
+/// Used both for order payments (orderId set) and wallet top-ups (orderId null).
+model PaymentRequest {
+  id           String    @id @default(uuid())
+  userId       String?   @map("user_id")
+  orderId      String?   @map("order_id")
+  purpose      String // order | topup
+  method       String // bkash | nagad
+  amount       Decimal   @db.Decimal(12, 2)
+  trxId        String    @map("trx_id")
+  senderNumber String?   @map("sender_number")
+  status       String    @default("pending") // pending | approved | rejected
+  adminNote    String?   @map("admin_note")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  reviewedAt   DateTime? @map("reviewed_at")
+
+  @@index([status])
+  @@index([orderId])
+  @@map("payment_requests")
+}
+
+/// Key/value store settings, editable from the admin Settings screen.
+/// Secrets (Stripe keys, DB URLs) are NEVER stored here — env only.
+model StoreSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("store_settings")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  productId String?  @map("product_id")
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // Z2U alignment P3: a review is bound to one COMPLETED order owned by
+  // the reviewer (one review per order). Legacy rows keep orderId null.
+  orderId   String?  @unique @map("order_id")
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  userId    String?  @map("user_id")
+  username  String?
+  rating    Int      @default(5)
+  // Z2U dimension scores (optional, 1–5): delivery speed / service / match.
+  deliveryRating    Int? @map("delivery_rating")
+  serviceRating     Int? @map("service_rating")
+  descriptionRating Int? @map("description_rating")
+  comment   String?
+  // Admin Feedback desk: seller reply + moderation.
+  adminReply String?  @map("admin_reply")
+  replyAt    DateTime? @map("reply_at")
+  isHidden   Boolean  @default(false) @map("is_hidden")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("reviews")
+}
+
+/// Discount codes (Z2U alignment P5). Redemption is validated and priced
+/// server-side in order-service; usedCount is incremented when an order
+/// is created with the code and released again if that order is
+/// canceled/refunded before delivery.
+model Coupon {
+  id           String    @id @default(uuid())
+  code         String    @unique
+  type         String // percent | fixed
+  value        Decimal   @db.Decimal(10, 2)
+  scope        String    @default("store") // store | product | category
+  productId    String?   @map("product_id")
+  category     String?
+  minSpend     Decimal?  @map("min_spend") @db.Decimal(10, 2)
+  maxUses      Int?      @map("max_uses")
+  perUserLimit Int       @default(1) @map("per_user_limit")
+  usedCount    Int       @default(0) @map("used_count")
+  isPublic     Boolean   @default(true) @map("is_public")
+  isActive     Boolean   @default(true) @map("is_active")
+  expiresAt    DateTime? @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("coupons")
+}
+
+/// Transactional email outbox (Z2U alignment P4). order-service queues a
+/// row in the SAME transaction as the state change; the API layer then
+/// flushes pending rows through Resend when RESEND_API_KEY is set. With
+/// no provider configured rows stay "pending" — the queue is the honest
+/// record that an email was due, never a fake "sent".
+model EmailOutbox {
+  id        String    @id @default(uuid())
+  toEmail   String    @map("to_email")
+  subject   String
+  html      String
+  text      String
+  status    String    @default("pending") // pending | sent | failed
+  error     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  sentAt    DateTime? @map("sent_at")
+
+  @@index([status, createdAt])
+  @@map("email_outbox")
+}
+
+/// Store announcements (Z2U alignment P4 — restores the lost /api/broadcast
+/// capability): an admin composes one announcement; it fans out to buyer
+/// notifications (and email, when a provider is configured).
+model Announcement {
+  id        String   @id @default(uuid())
+  title     String
+  body      String
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("announcements")
+}

@@ -21,7 +21,8 @@ import {
   User,
   Loader2
 } from "lucide-react";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import { motion } from "framer-motion";
 
 interface AdminOverviewProps {
@@ -34,7 +35,14 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
     transactions: 0,
     successRate: 0,
     awaitingAction: 0,
-    registryDensity: 0
+    registryDensity: 0,
+    paidCount: 0,
+    openDisputes: 0,
+    lowStock: 0,
+    inventoryAvailable: 0,
+    storeOpen: true,
+    reviewAverage: null as number | null,
+    reviewCount: 0
   });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,28 +51,50 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
-      const [ordersRes, productsRes, recentRes] = await Promise.all([
-        supabase.from("orders").select("total_amount, status"),
-        supabase.from("products").select("id", { count: "exact" }),
-        supabase.from("orders")
+      const [ordersRes, productsRes, recentRes, disputesRes, inventoryRes, storeStats] = await Promise.all([
+        db.from("orders").select("total_price, status, payment_status"),
+        db.from("products").select("id, stock, is_active"),
+        db.from("orders")
           .select("*")
           .order("created_at", { ascending: false })
-          .limit(5)
+          .limit(5),
+        db.from("disputes").select("id").eq("status", "open"),
+        db.from("inventory").select("id").eq("status", "available"),
+        fetch("/api/store/stats").then((r) => r.json()).catch(() => null)
       ]);
 
       const orders = ordersRes.data || [];
-      const totalRevenue = orders.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+      // Money truth: revenue counts PAID orders only — an unpaid order is
+      // not revenue. total_price is the one canonical amount field.
+      const paidOrders = orders.filter(o => o.payment_status === 'paid');
+      const totalRevenue = paidOrders.reduce((acc, curr) => acc + (Number(curr.total_price) || 0), 0);
       const totalOrders = orders.length;
       const completedOrders = orders.filter(o => o.status?.toLowerCase() === 'completed').length;
-      const awaitingAction = orders.filter(o => ['pending', 'preparing', 'waiting'].includes(o.status?.toLowerCase())).length;
-      const successRate = totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 100;
+      const canceledOrders = orders.filter(o => o.status === 'Canceled').length;
+      const awaitingAction = orders.filter(o =>
+        o.payment_status === 'pending_verification' ||
+        o.status === 'Disputed' ||
+        (o.payment_status === 'paid' && o.status === 'PREPARING')
+      ).length;
+      // Completion = completed ÷ non-canceled — the same definition the
+      // Seller Information scoreboard uses. No orders → no rate (shown 0%).
+      const denom = totalOrders - canceledOrders;
+      const successRate = denom > 0 ? Math.round((completedOrders / denom) * 100) : 0;
+      const products = productsRes.data || [];
 
       setStats({
         revenue: totalRevenue,
         transactions: totalOrders,
         successRate: successRate,
         awaitingAction: awaitingAction,
-        registryDensity: productsRes.count || 0
+        registryDensity: products.filter((p: any) => p.is_active !== false).length,
+        paidCount: paidOrders.length,
+        openDisputes: (disputesRes.data || []).length,
+        lowStock: products.filter((p: any) => p.is_active !== false && (p.stock || 0) <= 3).length,
+        inventoryAvailable: (inventoryRes.data || []).length,
+        storeOpen: storeStats?.store_open !== false,
+        reviewAverage: storeStats?.average_rating ?? null,
+        reviewCount: storeStats?.total_reviews ?? 0
       });
 
       setRecentOrders(recentRes.data || []);
@@ -110,22 +140,24 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
 
               <div className="flex flex-wrap justify-center lg:justify-start items-center gap-8">
                 <div className="flex flex-col">
-                  <span className="text-white/40 text-[9px] font-black uppercase tracking-[0.3em] mb-1.5">Platform Integrity</span>
+                  <span className="text-white/40 text-[9px] font-black uppercase tracking-[0.3em] mb-1.5">Review Average</span>
                   <div className="flex items-center gap-1.5">
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <Star key={i} size={14} className="text-amber-400 fill-amber-400" />
+                      <Star key={i} size={14} className={stats.reviewAverage !== null && i <= Math.round(stats.reviewAverage) ? "text-amber-400 fill-amber-400" : "text-white/20"} />
                     ))}
-                    <span className="ml-2 text-[12px] font-black text-white uppercase tracking-tighter">99.9% SECURE</span>
+                    <span className="ml-2 text-[12px] font-black text-white uppercase tracking-tighter">
+                      {stats.reviewAverage === null ? "No reviews yet" : `${stats.reviewAverage} / 5 · ${stats.reviewCount} review${stats.reviewCount === 1 ? "" : "s"}`}
+                    </span>
                   </div>
                 </div>
 
                 <div className="w-[1px] h-8 bg-white/10 hidden lg:block" />
 
                 <div className="flex flex-col">
-                  <span className="text-white/40 text-[9px] font-black uppercase tracking-[0.3em] mb-1.5">Operational Hub</span>
+                  <span className="text-white/40 text-[9px] font-black uppercase tracking-[0.3em] mb-1.5">Store Status</span>
                   <div className="flex items-center gap-2.5">
-                    <Activity size={16} className="text-[#E62E04]" />
-                    <span className="text-[14px] font-black text-[#E62E04] uppercase italic tracking-widest">Red Console v2.0</span>
+                    <span className={`w-2.5 h-2.5 rounded-full ${stats.storeOpen ? "bg-emerald-400" : "bg-red-400"}`} />
+                    <span className="text-[14px] font-black text-white uppercase italic tracking-widest">{stats.storeOpen ? "Open for orders" : "Hidden (closed)"}</span>
                   </div>
                 </div>
               </div>
@@ -133,7 +165,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
           </div>
 
           <div className="flex flex-col items-center lg:items-end gap-1">
-            <span className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">Global Platform Revenue</span>
+            <span className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">Total Paid Revenue</span>
             <div className="text-5xl lg:text-6xl font-black tracking-tighter text-white flex items-start">
               <span className="text-xl mt-2 mr-1 text-[#E62E04]">$</span>
               {loading ? "---" : stats.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -161,41 +193,41 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
       <div className="max-w-[1400px] mx-auto px-8 lg:px-10 -mt-12 relative z-20">
         {/* Top Metrics Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          <MetricCard 
+          <MetricCard
             icon={<ShoppingBag size={22} className="text-[#E62E04]" />}
             iconBg="bg-red-50"
-            label="Transactions"
+            label="Total Orders"
             value={stats.transactions}
-            badge="Live Feed"
+            badge={`${stats.paidCount} paid`}
             badgeColor="bg-red-50 text-[#E62E04]"
-            subText="Registry Volume"
+            subText="All orders ever placed"
           />
-          <MetricCard 
+          <MetricCard
             icon={<Zap size={22} className="text-amber-500" />}
             iconBg="bg-amber-50"
-            label="Sync Accuracy"
+            label="Completion Rate"
             value={`${stats.successRate}%`}
-            badge="Stable"
+            badge="Real"
             badgeColor="bg-emerald-50 text-emerald-600"
-            subText="Protocol Success"
+            subText="Completed ÷ non-canceled"
           />
-          <MetricCard 
+          <MetricCard
             icon={<Clock size={22} className="text-blue-500" />}
             iconBg="bg-blue-50"
             label="Pending Action"
             value={stats.awaitingAction}
             badge="Priority"
             badgeColor="bg-blue-50 text-blue-600"
-            subText="Awaiting Verify"
+            subText="Verify / deliver / dispute"
           />
-          <MetricCard 
+          <MetricCard
             icon={<Package size={22} className="text-purple-500" />}
             iconBg="bg-purple-50"
-            label="Registry Size"
+            label="Live Products"
             value={stats.registryDensity}
-            badge="Updated"
+            badge={`${stats.inventoryAvailable} in stock pool`}
             badgeColor="bg-purple-50 text-purple-600"
-            subText="Active Assets"
+            subText="Active offers"
           />
         </div>
 
@@ -230,7 +262,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
                     key={order.id}
                     title={order.product_title || "Unknown Asset"}
                     buyer={order.customer_name || order.username || "Anonymous"}
-                    price={`$${(Number(order.total_amount) || 0).toFixed(2)}`}
+                    price={`$${(Number(order.total_price) || 0).toFixed(2)}`}
                     status={order.status || "Pending"}
                     time={new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   />
@@ -239,54 +271,43 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
             </div>
           </div>
 
-          {/* Console Status */}
+          {/* Needs attention — every count below is a live query result,
+              not a status decoration. */}
           <div className="lg:col-span-4 space-y-8">
             <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.02)] p-8">
               <div className="w-full flex items-center gap-3 mb-8">
                 <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
                   <ShieldCheck size={18} />
                 </div>
-                <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-widest italic">System Integrity</h3>
+                <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-widest italic">Needs Attention</h3>
               </div>
 
-              {/* Indicator */}
-              <div className="relative w-48 h-48 flex items-center justify-center mx-auto mb-10">
-                <svg className="w-full h-full -rotate-90">
-                  <circle cx="96" cy="96" r="86" fill="none" stroke="#F1F5F9" strokeWidth="12" />
-                  <circle 
-                    cx="96" cy="96" r="86" 
-                    fill="none" 
-                    stroke="#E62E04" 
-                    strokeWidth="12" 
-                    strokeDasharray={540}
-                    strokeDashoffset={540 - (540 * 0.95)}
-                    strokeLinecap="round"
-                    className="transition-all duration-1000 ease-out"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-4xl font-black text-slate-900 tracking-tighter">95%</span>
-                  <span className="text-[10px] font-black text-[#E62E04] uppercase tracking-[0.3em] mt-1.5">Optimal</span>
+              <div className="space-y-4">
+                <StatusMetric icon={<Clock size={14} />} label="Awaiting action" value={String(stats.awaitingAction)} badge={stats.awaitingAction > 0 ? "Open orders" : "Clear"} badgeColor={stats.awaitingAction > 0 ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"} />
+                <StatusMetric icon={<AlertCircle size={14} />} label="Open disputes" value={String(stats.openDisputes)} badge={stats.openDisputes > 0 ? "Action needed" : "None"} badgeColor={stats.openDisputes > 0 ? "bg-red-50 text-[#E62E04]" : "bg-emerald-50 text-emerald-600"} />
+                <StatusMetric icon={<Package size={14} />} label="Low-stock products" value={String(stats.lowStock)} badge="≤ 3 left" badgeColor="bg-amber-50 text-amber-600" />
+                <StatusMetric icon={<Package size={14} />} label="Inventory available" value={String(stats.inventoryAvailable)} badge="Units" badgeColor="bg-purple-50 text-purple-600" />
+              </div>
+
+              <button
+                onClick={() => setActiveTab("seller_info")}
+                className="mt-8 w-full py-3.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-800 transition-all"
+              >
+                View Seller Information
+              </button>
+            </div>
+
+            {!stats.storeOpen && (
+              <div className="bg-[#0A0F1C] rounded-[2rem] p-6 border border-white/5 shadow-2xl shadow-slate-900/30 flex items-center gap-4 group">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
+                  <AlertCircle size={24} />
+                </div>
+                <div>
+                  <h4 className="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-0.5">Store is hidden</h4>
+                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-tight">No new orders until you reopen it in Settings</p>
                 </div>
               </div>
-
-              {/* Metrics */}
-              <div className="space-y-4">
-                <StatusMetric icon={<Wifi size={14} />} label="Latency" value="12ms" badge="Fast" badgeColor="bg-emerald-50 text-emerald-600" />
-                <StatusMetric icon={<Lock size={14} />} label="Security" value="Shielded" badge="Active" badgeColor="bg-red-50 text-[#E62E04]" />
-                <StatusMetric icon={<ArrowRightLeft size={14} />} label="Traffic" value="Stable" badge="Medium" badgeColor="bg-blue-50 text-blue-600" />
-              </div>
-            </div>
-
-            <div className="bg-[#0A0F1C] rounded-[2rem] p-6 border border-white/5 shadow-2xl shadow-slate-900/30 flex items-center gap-4 group">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 group-hover:bg-amber-500/20 transition-all">
-                <AlertCircle size={24} />
-              </div>
-              <div>
-                <h4 className="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-0.5">Global Firewall</h4>
-                <p className="text-[10px] font-bold text-white/30 uppercase tracking-tight">Active 24/7 Monitoring</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

@@ -7,7 +7,8 @@ import {
   ShieldCheck, Zap, Star
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "../lib/supabase";
+import { db } from "../lib/dbclient";
+import { auth } from "../lib/auth-client";
 
 export function LiveSupportWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,7 +23,7 @@ export function LiveSupportWidget() {
       fetchMessages();
       
       // Upgrade to REAL-TIME Subscriptions (No more polling!)
-      const channel = supabase
+      const channel = db
         .channel('live-support')
         .on('postgres_changes', 
           { event: 'INSERT', schema: 'public', table: 'messages', filter: `username=eq.${username}` }, 
@@ -39,7 +40,7 @@ export function LiveSupportWidget() {
         .subscribe();
 
       return () => {
-        supabase.removeChannel(channel);
+        db.removeChannel(channel);
       };
     }
   }, [isOpen, username]);
@@ -50,7 +51,7 @@ export function LiveSupportWidget() {
 
   async function fetchMessages() {
     try {
-      const { data } = await supabase
+      const { data } = await db
         .from('messages')
         .select('*')
         .eq('username', username)
@@ -65,7 +66,7 @@ export function LiveSupportWidget() {
 
     setIsSending(true);
     try {
-      const { error } = await supabase.from('messages').insert({
+      const { error } = await db.from('messages').insert({
         username: username,
         subject: "Live Chat Inquiry",
         message: newMessage,

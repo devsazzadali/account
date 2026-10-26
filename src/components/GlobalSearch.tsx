@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Search, X, Clock, TrendingUp, ArrowRight, Package } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "../lib/supabase";
+import { db } from "../lib/dbclient";
+import { auth } from "../lib/auth-client";
 import Link from "next/link";
 
 interface SearchResult {
@@ -27,7 +28,7 @@ export function GlobalSearch({ onClose }: { onClose?: () => void }) {
   const [trending, setTrending] = useState<string[]>([]);
 
   useEffect(() => {
-    supabase.from("categories").select("name").limit(6).then(({ data }) => {
+    db.from("categories").select("name").limit(6).then(({ data }) => {
       if (data && data.length > 0) setTrending(data.map((c: any) => c.name));
     });
   }, []);
@@ -44,7 +45,7 @@ export function GlobalSearch({ onClose }: { onClose?: () => void }) {
 
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
-      const { data } = await supabase
+      const { data } = await db
         .from("products")
         .select("id, title, price, image, category")
         .ilike("title", `%${query}%`)

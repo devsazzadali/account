@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ShieldAlert, ArrowLeft, LogOut, Loader2, Mail, ArrowRight, PlusCircle, Store, Palette } from "lucide-react";
-import { supabase } from "../lib/supabase";
+import { db } from "../lib/dbclient";
+import { auth } from "../lib/auth-client";
 import { motion } from "framer-motion";
 import { AdminLayout } from "../components/admin/AdminLayout";
 import { AdminOverview } from "../components/admin/AdminOverview";
@@ -14,6 +15,10 @@ import { AdminSettings } from "../components/admin/AdminSettings";
 import { AdminCustomers } from "../components/admin/AdminCustomers";
 import { AdminMessages } from "../components/admin/AdminMessages";
 import { AdminCategories } from "../components/admin/AdminCategories";
+import { AdminPayments } from "../components/admin/AdminPayments";
+import { AdminSellerInfo } from "../components/admin/AdminSellerInfo";
+import { AdminFeedback } from "../components/admin/AdminFeedback";
+import { AdminCoupons } from "../components/admin/AdminCoupons";
 
 import { toast } from "react-hot-toast";
 
@@ -32,14 +37,14 @@ export function AdminDashboardPage() {
 
   useEffect(() => {
     async function checkAuth() {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await auth.getSession();
       if (!session) {
         router.push("/login");
         return;
       }
       setUser(session.user);
       
-      const { data: profileData } = await supabase
+      const { data: profileData } = await db
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
@@ -55,7 +60,7 @@ export function AdminDashboardPage() {
   useEffect(() => {
     if (profile?.role !== "admin" && profile?.role !== "moderator") return;
 
-    const orderSubscription = supabase.channel('admin-order-notifications')
+    const orderSubscription = db.channel('admin-order-notifications')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'orders' },
@@ -89,7 +94,7 @@ export function AdminDashboardPage() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(orderSubscription);
+      db.removeChannel(orderSubscription);
     };
   }, [profile]);
 
@@ -124,27 +129,11 @@ export function AdminDashboardPage() {
     );
   }
 
-  // Security Check: Email Confirmation
-  if (user && !user.email_confirmed_at) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md w-full bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden">
-          <div className="p-10 text-center">
-             <div className="w-20 h-20 bg-amber-50 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-amber-100">
-                <Mail className="w-10 h-10 text-amber-600" />
-             </div>
-             <h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Privileged Access Pending</h2>
-             <p className="text-slate-500 font-medium leading-relaxed mb-8">
-                Confirm your email <span className="text-slate-900 font-bold">{user.email}</span> to initialize administrative functions.
-             </p>
-             <button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-                Verify Status <ArrowRight size={16} />
-             </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  // NOTE (completion build): the old "email confirmation" gate was removed.
+  // Access is governed by the profile role, enforced server-side in the
+  // admin layout and in every API route — an unverified-email screen here
+  // only locked legitimate admins out (Neon Auth verification is optional
+  // and has its own flow).
 
   return (
     <AdminLayout activeTab={activeTab} setActiveTab={setActiveTab}>
@@ -153,28 +142,19 @@ export function AdminDashboardPage() {
         {(activeTab === "products" || activeTab === "active_offers" || activeTab === "create") && <AdminProducts activeTab={activeTab} />}
         {activeTab === "categories" && <AdminCategories />}
         {activeTab === "orders" && <AdminOrders setActiveTab={setActiveTab} />}
+        {activeTab === "payments" && <AdminPayments />}
         {activeTab === "messages" && <AdminMessages />}
         {activeTab === "customers" && <AdminCustomers setActiveTab={setActiveTab} />}
-        {activeTab === "management" && (
-           <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
-              <Store size={64} className="text-slate-900 mb-4" />
-              <h3 className="text-2xl font-black text-slate-900 uppercase italic">Store Management</h3>
-              <p className="text-slate-500 mt-2 font-medium">Configure your store settings and identity.</p>
-           </div>
-        )}
-        {activeTab === "violation" && (
-           <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
-              <ShieldAlert size={64} className="text-red-500 mb-4" />
-              <h3 className="text-2xl font-black text-slate-900 uppercase italic">Violation Center</h3>
-              <p className="text-slate-500 mt-2 font-medium">No system violations or compliance issues detected.</p>
-           </div>
-        )}
-        {activeTab === "customizer" && (
-           <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
-              <Palette size={64} className="text-emerald-500 mb-4" />
-              <h3 className="text-2xl font-black text-slate-900 uppercase italic">Store Customizer</h3>
-              <p className="text-slate-500 mt-2 font-medium">This module is currently being calibrated for your workspace.</p>
-           </div>
+        {activeTab === "seller_info" && <AdminSellerInfo setActiveTab={setActiveTab} />}
+        {activeTab === "feedback" && <AdminFeedback />}
+        {activeTab === "coupons" && <AdminCoupons />}
+        {/* Retired placeholder sections (Z2U alignment P0): "management",
+            "violation" and "customizer" were static text panels — the
+            Violation Center implied a platform disciplining the seller,
+            which does not exist in a single-seller store. Any stale link
+            to them lands on Seller Information, a real screen. */}
+        {(activeTab === "management" || activeTab === "violation" || activeTab === "customizer" || activeTab === "store_customize") && (
+          <AdminSellerInfo setActiveTab={setActiveTab} />
         )}
         {activeTab === "settings" && profile?.role === "admin" && <AdminSettings />}
         {activeTab === "settings" && profile?.role !== "admin" && (

@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { User, Shield, Bell, CreditCard, Save, CheckCircle, Smartphone, Mail, Lock, Loader2, Camera, AlertCircle, Sparkles, Zap, ShieldCheck, Fingerprint, Key, Wallet } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
 
 export function UserSettings() {
@@ -17,6 +18,7 @@ export function UserSettings() {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -27,10 +29,10 @@ export function UserSettings() {
 
   async function fetchUserData() {
     setLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await auth.getSession();
     if (session) {
       setUser(session.user);
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
@@ -51,7 +53,7 @@ export function UserSettings() {
     if (!user) return;
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('profiles')
         .update({
           full_name: fullName,
@@ -79,10 +81,15 @@ export function UserSettings() {
         toast.error("Security Credentials Mismatch.");
         return;
     }
+    if (!currentPassword) {
+        toast.error("Enter your current password to set a new one.");
+        return;
+    }
     setSaving(true);
     try {
-        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        const { error } = await auth.updateUser({ password: newPassword, currentPassword } as any);
         if (error) throw error;
+        setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
         toast.success("Access Key Rotated Successfully.");
@@ -103,18 +110,18 @@ export function UserSettings() {
         const fileName = `${user.id}-${Math.random()}.${fileExt}`;
         const filePath = `avatars/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await db.storage
             .from('profiles')
             .upload(filePath, file);
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
+        const { data: { publicUrl } } = db.storage
             .from('profiles')
             .getPublicUrl(filePath);
 
         setAvatarUrl(publicUrl);
-        await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
+        await db.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
         toast.success("Neural Imaging Data Ingested.");
     } catch (e: any) {
         toast.error("Ingestion Error: " + e.message);
@@ -280,6 +287,10 @@ export function UserSettings() {
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Password</label>
+                                            <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-sm focus:border-[#1dbf73] transition-all shadow-inner" placeholder="••••••••" />
+                                        </div>
+                                        <div>
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">New Access Password</label>
                                             <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-sm focus:border-[#1dbf73] transition-all shadow-inner" placeholder="••••••••" />
                                         </div>
