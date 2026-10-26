@@ -44,6 +44,8 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
     description: "",
     min_quantity: "1",
     delivery_eta_hours: "",
+    fulfilment_type: "manual",
+    warranty_days: "",
     use_inventory_stock: false,
     specs: {} as Record<string, string>,
     variants: [] as { label: string; priceDelta: string; stock: string }[]
@@ -77,6 +79,8 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
         description: editing.description || null,
         min_quantity: Math.max(1, parseInt(editing.min_quantity) || 1),
         delivery_eta_hours: editing.delivery_eta_hours === "" || editing.delivery_eta_hours == null ? null : parseInt(editing.delivery_eta_hours) || null,
+        fulfilment_type: ["instant", "manual", "service"].includes(editing.fulfilment_type) ? editing.fulfilment_type : "manual",
+        warranty_days: editing.warranty_days === "" || editing.warranty_days == null ? null : Math.max(0, parseInt(editing.warranty_days) || 0) || null,
         use_inventory_stock: !!editing.use_inventory_stock,
         is_active: editing.is_active !== false,
         specs: editing.specs && Object.keys(editing.specs).length ? editing.specs : null,
@@ -225,6 +229,8 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
         description: newProduct.description || null,
         min_quantity: Math.max(1, parseInt(newProduct.min_quantity) || 1),
         delivery_eta_hours: newProduct.delivery_eta_hours === "" ? null : parseInt(newProduct.delivery_eta_hours) || null,
+        fulfilment_type: newProduct.fulfilment_type,
+        warranty_days: newProduct.warranty_days === "" ? null : Math.max(0, parseInt(newProduct.warranty_days) || 0) || null,
         use_inventory_stock: newProduct.use_inventory_stock,
         specs: Object.keys(newProduct.specs).length ? newProduct.specs : null,
         variants: variants.length ? variants : null,
@@ -232,7 +238,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
       if (error) throw error;
       setNewProduct({
         title: "", price: "", image: "", stock: "10", category: "Accounts", game_type: "All",
-        description: "", min_quantity: "1", delivery_eta_hours: "", use_inventory_stock: false,
+        description: "", min_quantity: "1", delivery_eta_hours: "", fulfilment_type: "manual", warranty_days: "", use_inventory_stock: false,
         specs: {}, variants: [],
       });
       setShowAddForm(false);
@@ -383,6 +389,16 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                                 <FormItem label="Delivery ETA (hours, optional)">
                                     <input type="number" min={1} value={newProduct.delivery_eta_hours} onChange={e=>setNewProduct({...newProduct, delivery_eta_hours:e.target.value})} placeholder="e.g. 24" className="w-full bg-white border border-slate-300 rounded px-4 py-2.5 text-sm font-bold" />
                                 </FormItem>
+                                <FormItem label="Fulfilment Type">
+                                    <select value={newProduct.fulfilment_type} onChange={e=>setNewProduct({...newProduct, fulfilment_type:e.target.value})} className="w-full bg-white border border-slate-300 rounded px-4 py-2.5 text-sm font-bold">
+                                        <option value="instant">Instant — auto-deliver from inventory</option>
+                                        <option value="manual">Manual — type credentials per order</option>
+                                        <option value="service">Service — buyer intake form + proof</option>
+                                    </select>
+                                </FormItem>
+                                <FormItem label="Warranty (days, optional)">
+                                    <input type="number" min={1} value={newProduct.warranty_days} onChange={e=>setNewProduct({...newProduct, warranty_days:e.target.value})} placeholder="e.g. 30" className="w-full bg-white border border-slate-300 rounded px-4 py-2.5 text-sm font-bold" />
+                                </FormItem>
                             </div>
                             <FormItem label="Description">
                                 <textarea value={newProduct.description} onChange={e=>setNewProduct({...newProduct, description:e.target.value})} rows={3} className="w-full bg-white border border-slate-300 rounded px-4 py-2.5 text-sm font-medium resize-none" />
@@ -529,6 +545,14 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                         <FormItem label="Image URL"><input value={editing.image || ""} onChange={(e) => setEditing({ ...editing, image: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
                         <FormItem label="Min quantity per order"><input type="number" min={1} value={editing.min_quantity ?? 1} onChange={(e) => setEditing({ ...editing, min_quantity: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
                         <FormItem label="Delivery ETA (hours, blank = none)"><input type="number" min={1} value={editing.delivery_eta_hours ?? ""} onChange={(e) => setEditing({ ...editing, delivery_eta_hours: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                        <FormItem label="Fulfilment Type">
+                            <select value={editing.fulfilment_type || "manual"} onChange={(e) => setEditing({ ...editing, fulfilment_type: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400">
+                                <option value="instant">Instant — auto-deliver from inventory</option>
+                                <option value="manual">Manual — type credentials per order</option>
+                                <option value="service">Service — buyer intake form + proof</option>
+                            </select>
+                        </FormItem>
+                        <FormItem label="Warranty (days, blank = none)"><input type="number" min={1} value={editing.warranty_days ?? ""} onChange={(e) => setEditing({ ...editing, warranty_days: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
                     </div>
                     <div className="flex flex-wrap gap-6">
                         <label className="flex items-center gap-2 cursor-pointer">
@@ -617,6 +641,12 @@ function ProductCard({ product, onEdit, onDelete, selected, onToggleSelect, onSa
                     {product.use_inventory_stock && (
                         <span className="px-3 py-1 bg-[#0C2254]/90 rounded-lg text-[12px] font-black uppercase tracking-widest text-white">Derived stock</span>
                     )}
+                    <span className={`px-3 py-1 rounded-lg text-[12px] font-black uppercase tracking-widest text-white ${product.fulfilment_type === "service" ? "bg-[#F4751F]/90" : product.fulfilment_type === "instant" ? "bg-emerald-600/90" : "bg-slate-500/90"}`}>
+                        {product.fulfilment_type === "service" ? "Service" : product.fulfilment_type === "instant" ? "Instant" : "Manual"}
+                    </span>
+                    {product.warranty_days ? (
+                        <span className="px-3 py-1 bg-white/90 rounded-lg text-[12px] font-black uppercase tracking-widest text-emerald-700">{product.warranty_days}-day warranty</span>
+                    ) : null}
                 </div>
             </div>
             <div className="p-5 space-y-4">

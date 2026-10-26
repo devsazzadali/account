@@ -52,8 +52,9 @@ export async function logOrderEvent(
 // the storefront, checkout and admin always read ONE stock number.
 export async function syncDerivedStock(tx: Tx, productId: string | null | undefined) {
   if (!productId) return;
-  const product = await tx.product.findUnique({ where: { id: productId }, select: { useInventoryStock: true } });
-  if (!product?.useInventoryStock) return;
+  const product = await tx.product.findUnique({ where: { id: productId }, select: { useInventoryStock: true, fulfilmentType: true } });
+  // SERVICE products always use the plain stock counter (no inventory).
+  if (!product?.useInventoryStock || product.fulfilmentType === "service") return;
   const [available, reserved] = await Promise.all([
     tx.inventory.count({ where: { productId, status: "available" } }),
     tx.order.aggregate({
@@ -126,6 +127,67 @@ export async function priceCoupon(
   return { coupon, discount };
 }
 
+// ─── Service intake (fulfilment types) ─────────────────────────────────
+// SERVICE products collect buyer details at checkout, BEFORE payment
+// (Z2U's rule: the buyer bears the risk of the details they enter). The
+// fields come from the category's intake_schema; required answers are
+// validated here, server-side — the client form is only a convenience.
+export interface IntakeField {
+  key: string;
+  label: string;
+  type: string; // text | number | select | boolean | textarea
+  required: boolean;
+  options?: string[];
+}
+
+export function parseIntakeSchema(raw: unknown): IntakeField[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((f): f is Record<string, unknown> => !!f && typeof f === "object")
+    .map((f) => ({
+      key: String(f.key || "").trim(),
+      label: String(f.label || f.key || "").trim(),
+      type: ["text", "number", "select", "boolean", "textarea"].includes(String(f.type)) ? String(f.type) : "text",
+      required: f.required === true,
+      options: Array.isArray(f.options) ? f.options.map((o) => String(o)) : undefined,
+    }))
+    .filter((f) => f.key.length > 0);
+}
+
+async function intakeSchemaForCategory(tx: Tx, categoryName: string | null): Promise<IntakeField[]> {
+  if (!categoryName) return [];
+  const cat = await tx.category.findFirst({ where: { name: categoryName }, select: { intakeSchema: true } });
+  return parseIntakeSchema(cat?.intakeSchema);
+}
+
+/** Validate + normalise the buyer's intake answers against the schema.
+ *  Returns only known keys with non-empty values. Throws 422 listing
+ *  every missing required field by its buyer-facing label. */
+function validateIntake(schema: IntakeField[], raw: unknown): Record<string, string> {
+  const input = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const out: Record<string, string> = {};
+  const missing: string[] = [];
+  for (const field of schema) {
+    const v = input[field.key];
+    const value = v === null || v === undefined ? "" : String(v).trim();
+    if (!value) {
+      if (field.required) missing.push(field.label);
+      continue;
+    }
+    if (field.type === "number" && Number.isNaN(Number(value))) {
+      throw new ServiceError(`"${field.label}" must be a number`, 422);
+    }
+    if (field.type === "select" && field.options && field.options.length > 0 && !field.options.includes(value)) {
+      throw new ServiceError(`"${field.label}" must be one of: ${field.options.join(", ")}`, 422);
+    }
+    out[field.key] = value;
+  }
+  if (missing.length > 0) {
+    throw new ServiceError(`Please provide the required service details: ${missing.join(", ")}`, 422);
+  }
+  return out;
+}
+
 async function releaseCoupon(tx: Tx, order: { couponCode: string | null }) {
   if (!order.couponCode) return;
   await tx.coupon.updateMany({
@@ -196,13 +258,37 @@ async function debitWallet(tx: Tx, userId: string, amount: Prisma.Decimal, type:
   });
 }
 
-/** Assign inventory to a paid order. Returns units assigned. */
-async function autoDeliver(tx: Tx, order: { id: string; productId: string | null; quantity: number }) {
+/** Assign up to `maxUnits` available inventory units to the order and
+ *  attach their credentials. The first unit ever delivered fills the
+ *  order's credential fields; later units append "Account N:" lines to
+ *  the credential notes (the original auto-delivery format). Sets
+ *  deliveredQuantity per batch; the FIRST delivery flips the order to
+ *  "Delivering" and starts deliveredAt — so a partially delivered order
+ *  enters the same 48h-confirm window as a full one, and the buyer can
+ *  confirm the delivered part / cancel the remainder. sold increments
+ *  per batch (delivered part stays sold even if the rest is cancelled).
+ *  SERVICE products never touch inventory. Returns units assigned in
+ *  THIS call. */
+async function assignInventoryUnits(
+  tx: Tx,
+  order: { id: string; productId: string | null; quantity: number; deliveredQuantity: number; credentialUsername: string | null },
+  maxUnits: number,
+) {
   if (!order.productId) return 0;
+  const product = await tx.product.findUnique({
+    where: { id: order.productId },
+    select: { fulfilmentType: true },
+  });
+  if (!product || product.fulfilmentType === "service") return 0;
+
+  const remaining = order.quantity - order.deliveredQuantity;
+  const want = Math.min(maxUnits, remaining);
+  if (want <= 0) return 0;
+
   const items = await tx.inventory.findMany({
     where: { productId: order.productId, status: "available" },
     orderBy: { createdAt: "asc" },
-    take: order.quantity,
+    take: want,
   });
   if (items.length === 0) return 0;
 
@@ -213,38 +299,70 @@ async function autoDeliver(tx: Tx, order: { id: string; productId: string | null
     });
   }
 
-  const [first, ...rest] = items;
+  const hasCredentials = !!order.credentialUsername;
+  const first = hasCredentials ? null : items[0];
+  const restItems = hasCredentials ? items : items.slice(1);
   const notesParts: string[] = [];
-  if (first.additionalInfo) notesParts.push(first.additionalInfo);
-  if (first.twoFactorSecret) notesParts.push(`2FA secret: ${first.twoFactorSecret}`);
-  if (first.recoveryEmail) notesParts.push(`Recovery email: ${first.recoveryEmail}`);
-  rest.forEach((item, i) => {
+  if (first) {
+    if (first.additionalInfo) notesParts.push(first.additionalInfo);
+    if (first.twoFactorSecret) notesParts.push(`2FA secret: ${first.twoFactorSecret}`);
+    if (first.recoveryEmail) notesParts.push(`Recovery email: ${first.recoveryEmail}`);
+  }
+  restItems.forEach((item, i) => {
+    const n = order.deliveredQuantity + (hasCredentials ? 0 : 1) + i + 1;
     notesParts.push(
-      `Account ${i + 2}: ${item.accountLogin} / ${item.accountPassword}` +
+      `Account ${n}: ${item.accountLogin} / ${item.accountPassword}` +
         (item.twoFactorSecret ? ` (2FA: ${item.twoFactorSecret})` : "") +
+        (item.recoveryEmail ? ` (recovery: ${item.recoveryEmail})` : "") +
         (item.additionalInfo ? ` — ${item.additionalInfo}` : ""),
     );
   });
 
-  const fullyAssigned = items.length >= order.quantity;
+  const current = await tx.order.findUnique({
+    where: { id: order.id },
+    select: { credentialNotes: true },
+  });
+  const allNotes = [current?.credentialNotes, ...notesParts].filter(Boolean).join("\n");
+  const newDelivered = order.deliveredQuantity + items.length;
+  const fullyDelivered = newDelivered >= order.quantity;
+
   await tx.order.update({
     where: { id: order.id },
     data: {
-      credentialUsername: first.accountLogin,
-      credentialPassword: first.accountPassword,
-      credentialNotes: notesParts.join("\n") || null,
-      // Dedicated 2FA vault fields (the notes text above stays as a fallback record).
-      twoFactorSecret: first.twoFactorSecret || null,
-      recoveryEmail: first.recoveryEmail || null,
-      ...(fullyAssigned ? { status: "Delivering", deliveredAt: new Date() } : {}),
+      ...(first
+        ? {
+            credentialUsername: first.accountLogin,
+            credentialPassword: first.accountPassword,
+            // Dedicated 2FA vault fields (the notes text above stays as a fallback record).
+            twoFactorSecret: first.twoFactorSecret || null,
+            recoveryEmail: first.recoveryEmail || null,
+          }
+        : {}),
+      credentialNotes: allNotes || null,
+      deliveredQuantity: newDelivered,
+      ...(order.deliveredQuantity === 0 ? { status: "Delivering", deliveredAt: new Date() } : {}),
     },
   });
-  if (fullyAssigned) {
-    await tx.product.update({ where: { id: order.productId }, data: { sold: { increment: order.quantity } } });
-    await logOrderEvent(tx, order.id, "system", "delivered", `Auto-delivered ${items.length} unit(s) from inventory`);
-    await syncDerivedStock(tx, order.productId);
-  }
+  await tx.product.update({ where: { id: order.productId }, data: { sold: { increment: items.length } } });
+  await logOrderEvent(
+    tx,
+    order.id,
+    "system",
+    "delivered",
+    fullyDelivered
+      ? `Delivered all ${order.quantity} unit(s) from inventory`
+      : `Partial delivery: ${newDelivered} of ${order.quantity} unit(s) delivered from inventory`,
+  );
+  await syncDerivedStock(tx, order.productId);
   return items.length;
+}
+
+/** Back-compat wrapper: assign as many units as the order still needs. */
+async function autoDeliver(
+  tx: Tx,
+  order: { id: string; productId: string | null; quantity: number; deliveredQuantity: number; credentialUsername: string | null },
+) {
+  return assignInventoryUnits(tx, order, order.quantity);
 }
 
 /** Shared "payment is now verified" transition + auto-delivery attempt. */
@@ -264,13 +382,27 @@ async function markPaidAndDeliver(tx: Tx, orderId: string, paymentMethod: string
     },
   });
   await logOrderEvent(tx, orderId, paymentMethod === "stripe" ? "stripe" : "system", "payment_verified", `Paid via ${paymentMethod}`);
-  const assigned = await autoDeliver(tx, updated);
-  await queuePaymentVerified(tx, updated, assigned >= order.quantity);
-  if (assigned >= order.quantity) await queueDelivered(tx, updated);
+  await autoDeliver(tx, updated);
+  const after = await tx.order.findUnique({ where: { id: orderId } });
+  const deliveredQty = after?.deliveredQuantity ?? 0;
+  const fullyDelivered = deliveredQty >= order.quantity;
+  const partiallyDelivered = !fullyDelivered && deliveredQty > 0;
+  await queuePaymentVerified(tx, updated, fullyDelivered);
+  if (fullyDelivered) await queueDelivered(tx, updated);
   if (order.userId) {
-    await notify(tx, order.userId, "Payment verified", assigned >= order.quantity ? "Your payment was verified and your credentials are ready in the vault." : "Your payment was verified. Your order is being prepared for delivery.", "payment");
+    await notify(
+      tx,
+      order.userId,
+      "Payment verified",
+      fullyDelivered
+        ? "Your payment was verified and your credentials are ready in the vault."
+        : partiallyDelivered
+          ? `Your payment was verified. ${deliveredQty} of ${order.quantity} unit(s) are ready in the vault; the rest will follow.`
+          : "Your payment was verified. Your order is being prepared for delivery.",
+      "payment",
+    );
   }
-  return tx.order.findUnique({ where: { id: orderId } });
+  return after;
 }
 
 // ─── Orders ────────────────────────────────────────────────────────────────
@@ -284,6 +416,8 @@ export async function createOrder(input: {
   customerEmail?: string;
   variantLabel?: string;
   couponCode?: string;
+  /** SERVICE products only: the buyer's checkout intake answers. */
+  intakeData?: unknown;
 }) {
   const qty = Math.max(1, Math.floor(input.quantity || 1));
   return prisma.$transaction(async (tx) => {
@@ -297,6 +431,17 @@ export async function createOrder(input: {
     if (!product.isActive) throw new ServiceError("This product is no longer available", 409);
     if (qty < product.minQuantity) {
       throw new ServiceError(`Minimum order quantity for this product is ${product.minQuantity}`, 422);
+    }
+
+    // SERVICE products: the category's intake form is REQUIRED and is
+    // collected BEFORE payment (the order is created here, payment
+    // follows) — missing required answers reject the order with 422.
+    // Stored verbatim (normalised to known keys) on orders.intake_data.
+    const isService = product.fulfilmentType === "service";
+    let intake: Record<string, string> | null = null;
+    if (isService) {
+      const schema = await intakeSchemaForCategory(tx, product.category);
+      intake = validateIntake(schema, input.intakeData);
     }
 
     // Variant ("Custom Program") selection: adjusts the unit price and
@@ -315,7 +460,7 @@ export async function createOrder(input: {
     //  - inventory-derived products: sellable = available inventory −
     //    units reserved by unpaid orders (syncDerivedStock's formula);
     //    nothing is decremented here, the cache is re-synced instead.
-    if (product.useInventoryStock) {
+    if (product.useInventoryStock && !isService) {
       const [available, reserved] = await Promise.all([
         tx.inventory.count({ where: { productId: product.id, status: "available" } }),
         tx.order.aggregate({
@@ -359,6 +504,7 @@ export async function createOrder(input: {
         quantity: qty,
         totalPrice: total,
         variantLabel: variant?.label || null,
+        intakeData: intake ?? undefined,
         couponCode,
         discountAmount: discount,
         status: "New Order",
@@ -366,8 +512,8 @@ export async function createOrder(input: {
         escrowState: "pending_payment",
       },
     });
-    if (product.useInventoryStock) await syncDerivedStock(tx, product.id);
-    await logOrderEvent(tx, order.id, "buyer", "created", `Order placed × ${qty}${variant ? ` · ${variant.label}` : ""}${couponCode ? ` · coupon ${couponCode}` : ""}`);
+    if (product.useInventoryStock && !isService) await syncDerivedStock(tx, product.id);
+    await logOrderEvent(tx, order.id, "buyer", "created", `Order placed × ${qty}${variant ? ` · ${variant.label}` : ""}${couponCode ? ` · coupon ${couponCode}` : ""}${isService ? " · service intake received" : ""}`);
     await queueOrderConfirmation(tx, order, product.title);
     await notifyAdmins(tx, "New order", `${input.username} ordered ${product.title} × ${qty} ($${total.toFixed(2)}) — awaiting payment.`, "order");
     return order;
@@ -477,18 +623,24 @@ export async function reviewPaymentRequest(prId: string, approve: boolean, admin
 
 /** Refund a paid order to the buyer's wallet (shared by cancel/dispute/admin refund). */
 async function refundOrderToWallet(tx: Tx, order: NonNullable<Awaited<ReturnType<typeof prisma.order.findUnique>>>, reason: string) {
-  const wasDelivered = order.status === "Delivering" || order.status === "Completed";
+  const wasDelivered =
+    order.status === "Delivering" || order.status === "Completed" || order.deliveredQuantity > 0 || !!order.deliveredAt;
   if (order.userId) {
     await creditWallet(tx, order.userId, dec(order.totalPrice), "refund", { note: reason, referenceId: order.id });
   }
   // Credentials already exposed → stock units are consumed, never resold.
   await releaseAssignedInventory(tx, order.id, wasDelivered ? "used" : "available");
-  if (!wasDelivered && order.productId) {
+  if (order.productId) {
     const product = await tx.product.findUnique({ where: { id: order.productId } });
-    if (product && !product.useInventoryStock) {
-      // Nothing was delivered: the stock reserved at order time goes back.
-      await tx.product.update({ where: { id: order.productId }, data: { stock: { increment: order.quantity } } });
-      await adjustVariantStock(tx, product, order.variantLabel, order.quantity);
+    if (product && (!product.useInventoryStock || product.fulfilmentType === "service")) {
+      // Manual-counter stock: only the UNDELIVERED remainder was never
+      // sold — that part of the reservation goes back (0 when the order
+      // was fully delivered, the full quantity when nothing was).
+      const restore = order.quantity - order.deliveredQuantity;
+      if (restore > 0) {
+        await tx.product.update({ where: { id: order.productId }, data: { stock: { increment: restore } } });
+        await adjustVariantStock(tx, product, order.variantLabel, restore);
+      }
     }
   }
   await releaseCoupon(tx, order);
@@ -518,7 +670,7 @@ export async function cancelOrder(orderId: string, actor: { userId: string; isAd
     await tx.paymentRequest.updateMany({ where: { orderId: order.id, status: "pending" }, data: { status: "rejected", adminNote: "Order cancelled", reviewedAt: new Date() } });
     if (order.productId) {
       const product = await tx.product.findUnique({ where: { id: order.productId } });
-      if (product && !product.useInventoryStock) {
+      if (product && (!product.useInventoryStock || product.fulfilmentType === "service")) {
         await tx.product.update({ where: { id: order.productId }, data: { stock: { increment: order.quantity } } });
         await adjustVariantStock(tx, product, order.variantLabel, order.quantity);
       }
@@ -537,6 +689,13 @@ export async function deliverManually(orderId: string, creds: { username: string
     if (!order) throw new ServiceError("Order not found", 404);
     if (order.paymentStatus !== "paid") throw new ServiceError("Order is not paid yet — verify payment before delivering", 409);
     if (!creds.username.trim() || !creds.password.trim()) throw new ServiceError("Username and password are required", 422);
+    const productType = order.productId
+      ? (await tx.product.findUnique({ where: { id: order.productId }, select: { fulfilmentType: true } }))?.fulfilmentType
+      : null;
+    if (productType === "service") {
+      throw new ServiceError("This is a service order — complete it with a completion proof instead of credentials", 409);
+    }
+    const newlyDelivered = order.quantity - order.deliveredQuantity;
     const updated = await tx.order.update({
       where: { id: orderId },
       data: {
@@ -546,19 +705,22 @@ export async function deliverManually(orderId: string, creds: { username: string
         twoFactorSecret: creds.twoFactorSecret?.trim() || null,
         recoveryEmail: creds.recoveryEmail?.trim() || null,
         status: "Delivering",
-        deliveredAt: new Date(),
+        deliveredAt: order.deliveredAt ?? new Date(),
+        deliveredQuantity: order.quantity,
       },
     });
     if (order.productId) {
-      await tx.product.update({ where: { id: order.productId }, data: { sold: { increment: order.quantity } } });
+      await tx.product.update({ where: { id: order.productId }, data: { sold: { increment: Math.max(0, newlyDelivered) } } });
       // Inventory-derived products: a manual delivery consumes real units
       // so the derived stock can never oversell what was handed over.
+      // Only the not-yet-delivered remainder consumes spares (units the
+      // auto-delivery already assigned are not double-counted).
       const product = await tx.product.findUnique({ where: { id: order.productId }, select: { useInventoryStock: true } });
       if (product?.useInventoryStock) {
         const spare = await tx.inventory.findMany({
           where: { productId: order.productId, status: "available" },
           orderBy: { createdAt: "asc" },
-          take: order.quantity,
+          take: Math.max(0, newlyDelivered),
         });
         for (const item of spare) {
           await tx.inventory.update({ where: { id: item.id }, data: { status: "used", orderId: order.id, assignedAt: new Date() } });
@@ -569,6 +731,220 @@ export async function deliverManually(orderId: string, creds: { username: string
     await logOrderEvent(tx, orderId, "admin", "delivered", "Credentials delivered manually by the store");
     await queueDelivered(tx, updated);
     if (order.userId) await notify(tx, order.userId, "Order delivered", "Your credentials are ready in the order vault.", "delivery");
+    return updated;
+  });
+}
+
+// ─── Fulfilment types: progress, proofs, service + partial delivery ────
+// Every transition below writes an order_events row in the same
+// transaction (the buyer order page renders its timeline from them).
+
+/** Admin posts a work-in-progress note on a paid order. The note lands
+ *  in the order timeline (event "progress") and as a buyer notification —
+ *  this is how SERVICE orders report their state (Z2U-style). */
+export async function addOrderProgress(orderId: string, note: string) {
+  const text = (note || "").trim();
+  if (!text) throw new ServiceError("A progress note is required", 422);
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new ServiceError("Order not found", 404);
+    if (order.paymentStatus !== "paid") throw new ServiceError("Order is not paid yet", 409);
+    if (["Completed", "Canceled", "Refunded", "Disputed"].includes(order.status)) {
+      throw new ServiceError(`Cannot post progress on a ${order.status.toLowerCase()} order`, 409);
+    }
+    await logOrderEvent(tx, orderId, "admin", "progress", text);
+    if (order.userId) await notify(tx, order.userId, "Order update", text, "order");
+    return tx.order.findUnique({ where: { id: orderId } });
+  });
+}
+
+/** Attach a delivery proof (uploaded file URL and/or a written note) to
+ *  an order. kind "completion" proofs are what unlock service delivery. */
+export async function addDeliveryProof(
+  orderId: string,
+  input: { fileUrl?: string; note?: string; kind?: string; createdBy?: string },
+) {
+  const fileUrl = (input.fileUrl || "").trim() || null;
+  const note = (input.note || "").trim() || null;
+  if (!fileUrl && !note) throw new ServiceError("Attach a proof file or write a proof note", 422);
+  const kind = input.kind === "progress" ? "progress" : "completion";
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new ServiceError("Order not found", 404);
+    if (["Canceled", "Refunded", "Completed"].includes(order.status)) {
+      throw new ServiceError(`Cannot add proof to a ${order.status.toLowerCase()} order`, 409);
+    }
+    const proof = await tx.deliveryProof.create({
+      data: { orderId, fileUrl, note, kind, createdBy: input.createdBy || null },
+    });
+    await logOrderEvent(
+      tx,
+      orderId,
+      "admin",
+      "proof_added",
+      `${kind === "completion" ? "Completion" : "Progress"} proof attached${note ? `: ${note}` : ""}`,
+    );
+    return proof;
+  });
+}
+
+/** Complete a SERVICE order. Requires at least one completion proof on
+ *  file (a file or a written completion note — either may be supplied
+ *  with this call as `note`). On success the order enters "Delivering"
+ *  exactly like credential delivery: buyer confirms, or the existing
+ *  48h escrow rule completes it. */
+export async function deliverServiceOrder(orderId: string, input: { note?: string; createdBy?: string } = {}) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new ServiceError("Order not found", 404);
+    if (order.paymentStatus !== "paid") throw new ServiceError("Order is not paid yet — verify payment before delivering", 409);
+    const product = order.productId
+      ? await tx.product.findUnique({ where: { id: order.productId }, select: { fulfilmentType: true } })
+      : null;
+    if (product?.fulfilmentType !== "service") {
+      throw new ServiceError("This order is not for a service product", 409);
+    }
+    if (order.status === "Delivering" && order.deliveredQuantity >= order.quantity) {
+      throw new ServiceError("This service order is already delivered", 409);
+    }
+    if (!["PREPARING", "Delivering", "New Order"].includes(order.status)) {
+      throw new ServiceError(`Cannot deliver an order in status ${order.status}`, 409);
+    }
+    const note = (input.note || "").trim();
+    const existingProofs = await tx.deliveryProof.count({ where: { orderId, kind: "completion" } });
+    if (existingProofs === 0 && !note) {
+      throw new ServiceError("A completion proof is required before a service can be marked delivered — attach a proof file or a written completion note", 422);
+    }
+    if (note) {
+      await tx.deliveryProof.create({
+        data: { orderId, note, kind: "completion", createdBy: input.createdBy || null },
+      });
+    }
+    const updated = await tx.order.update({
+      where: { id: orderId },
+      data: { status: "Delivering", deliveredAt: order.deliveredAt ?? new Date(), deliveredQuantity: order.quantity },
+    });
+    await tx.product.update({ where: { id: order.productId as string }, data: { sold: { increment: order.quantity - order.deliveredQuantity } } });
+    await logOrderEvent(tx, orderId, "admin", "delivered", "Service completed — completion proof on file, awaiting buyer confirmation");
+    await queueDelivered(tx, updated);
+    if (order.userId) await notify(tx, order.userId, "Service delivered", "Your service is complete. Please review the proof on your order page and confirm receipt.", "delivery");
+    return updated;
+  });
+}
+
+/** Admin delivers MORE inventory units to a partially delivered order
+ *  (e.g. stock arrived after the first batch). */
+export async function deliverMoreUnits(orderId: string, units: number) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new ServiceError("Order not found", 404);
+    if (order.paymentStatus !== "paid") throw new ServiceError("Order is not paid yet", 409);
+    if (!["PREPARING", "Delivering"].includes(order.status)) {
+      throw new ServiceError(`Cannot deliver more units to a ${order.status.toLowerCase()} order`, 409);
+    }
+    if (order.deliveredQuantity >= order.quantity) throw new ServiceError("This order is already fully delivered", 409);
+    const want = Math.max(1, Math.floor(units || 1));
+    const assigned = await assignInventoryUnits(tx, order, want);
+    if (assigned === 0) throw new ServiceError("No inventory available for this product right now", 409);
+    const fresh = await tx.order.findUnique({ where: { id: orderId } });
+    const full = (fresh?.deliveredQuantity ?? 0) >= order.quantity;
+    if (full && fresh) await queueDelivered(tx, fresh);
+    if (order.userId) {
+      await notify(
+        tx,
+        order.userId,
+        "More units delivered",
+        full
+          ? "All units of your order are now delivered — see your order vault."
+          : `${fresh?.deliveredQuantity} of ${order.quantity} unit(s) are now delivered.`,
+        "delivery",
+      );
+    }
+    return fresh;
+  });
+}
+
+/** Buyer confirms the DELIVERED PART of a partially delivered order.
+ *  The order stays open (escrow still held) until the remainder is
+ *  delivered or cancelled — confirmation is recorded as an event so it
+ *  can happen exactly once. */
+export async function confirmPartialReceipt(orderId: string, userId: string) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new ServiceError("Order not found", 404);
+    if (order.userId !== userId) throw new ServiceError("Not your order", 403);
+    if (order.paymentStatus !== "paid") throw new ServiceError("Order is not paid yet", 409);
+    if (order.deliveredQuantity <= 0) throw new ServiceError("Nothing has been delivered on this order yet", 409);
+    if (order.deliveredQuantity >= order.quantity) {
+      throw new ServiceError("This order is fully delivered — use Confirm Receipt to complete it", 409);
+    }
+    if (!["PREPARING", "Delivering"].includes(order.status)) {
+      throw new ServiceError(`Cannot confirm a partial delivery on a ${order.status.toLowerCase()} order`, 409);
+    }
+    const already = await tx.orderEvent.findFirst({ where: { orderId, event: "partial_confirmed" } });
+    if (already) throw new ServiceError("You already confirmed the delivered part of this order", 409);
+    await logOrderEvent(tx, orderId, "buyer", "partial_confirmed", `Buyer confirmed receipt of ${order.deliveredQuantity} of ${order.quantity} unit(s)`);
+    await notifyAdmins(tx, "Partial delivery confirmed", `Buyer confirmed ${order.deliveredQuantity} of ${order.quantity} unit(s) on order ${order.id.slice(0, 8)}.`, "order");
+    return tx.order.findUnique({ where: { id: orderId } });
+  });
+}
+
+/** Cancel the UNDELIVERED remainder of a partially delivered order and
+ *  refund it pro-rata to the buyer's wallet. The delivered part stays
+ *  sold; the order completes (escrow released on the delivered part).
+ *  Refund = (total − $0.50 service fee) × remaining ÷ quantity — the fee
+ *  was earned by processing the order; coupons are NOT released (the
+ *  delivered part consumed the redemption). */
+export async function cancelRemainder(orderId: string, actor: { userId: string; isAdmin: boolean }) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new ServiceError("Order not found", 404);
+    if (!actor.isAdmin && order.userId !== actor.userId) throw new ServiceError("Not your order", 403);
+    if (order.paymentStatus !== "paid") throw new ServiceError("Order is not paid yet — cancel the order instead", 409);
+    if (!["PREPARING", "Delivering"].includes(order.status)) {
+      throw new ServiceError(`Cannot cancel a remainder on a ${order.status.toLowerCase()} order`, 409);
+    }
+    if (order.deliveredQuantity <= 0) throw new ServiceError("Nothing has been delivered yet — cancel or refund the whole order instead", 409);
+    if (order.deliveredQuantity >= order.quantity) throw new ServiceError("This order is fully delivered — nothing left to cancel", 409);
+
+    const remaining = order.quantity - order.deliveredQuantity;
+    const refund = dec(order.totalPrice).sub(SERVICE_FEE).mul(remaining).div(order.quantity).toDecimalPlaces(2);
+    if (refund.gt(0) && order.userId) {
+      await creditWallet(tx, order.userId, refund, "refund", {
+        note: `Partial refund — ${remaining} undelivered unit(s) of order ${order.id.slice(0, 8)} cancelled`,
+        referenceId: order.id,
+      });
+    }
+    if (order.productId) {
+      const product = await tx.product.findUnique({ where: { id: order.productId } });
+      if (product && (!product.useInventoryStock || product.fulfilmentType === "service")) {
+        // Manual-counter products reserved the full quantity at order
+        // time: the undelivered remainder goes back on the shelf.
+        await tx.product.update({ where: { id: order.productId }, data: { stock: { increment: remaining } } });
+        await adjustVariantStock(tx, product, order.variantLabel, remaining);
+      }
+      await syncDerivedStock(tx, order.productId);
+    }
+    const updated = await tx.order.update({
+      where: { id: orderId },
+      data: { status: "Completed", escrowState: "completed", fundsReleasedAt: new Date() },
+    });
+    await logOrderEvent(
+      tx,
+      orderId,
+      actor.isAdmin ? "admin" : "buyer",
+      "partial_canceled",
+      `Remainder cancelled: ${remaining} undelivered unit(s) refunded $${refund.toFixed(2)} to wallet; ${order.deliveredQuantity} delivered unit(s) stay sold`,
+    );
+    if (order.userId) {
+      await notify(
+        tx,
+        order.userId,
+        "Remainder cancelled",
+        `The remaining ${remaining} unit(s) of your order were cancelled and $${refund.toFixed(2)} was refunded to your wallet. The delivered part is yours to keep.`,
+        "payment",
+      );
+    }
     return updated;
   });
 }
@@ -648,8 +1024,20 @@ export async function resolveDispute(orderId: string, resolution: "refunded" | "
       await releaseAssignedInventory(tx, order.id, "flagged");
       const fresh = await tx.order.update({
         where: { id: orderId },
-        data: { credentialUsername: null, credentialPassword: null, credentialNotes: null, twoFactorSecret: null, recoveryEmail: null, status: "PREPARING", escrowState: "in_escrow" },
+        data: { credentialUsername: null, credentialPassword: null, credentialNotes: null, twoFactorSecret: null, recoveryEmail: null, deliveredQuantity: 0, status: "PREPARING", escrowState: "in_escrow" },
       });
+      const productType = order.productId
+        ? (await tx.product.findUnique({ where: { id: order.productId }, select: { fulfilmentType: true } }))?.fulfilmentType
+        : null;
+      if (productType === "service") {
+        // A service has nothing to re-assign: it goes back to PREPARING
+        // and the store performs the work again (progress + proof).
+        await tx.dispute.update({ where: { orderId }, data: { status: "resolved", resolution: "replaced" } });
+        await logOrderEvent(tx, orderId, "admin", "dispute_resolved", "Resolved: service will be performed again");
+        await queueDisputeOutcome(tx, order, "replaced");
+        if (order.userId) await notify(tx, order.userId, "Service will be redone", "Your dispute was accepted — the service will be performed again. Watch the order page for progress.", "delivery");
+        return tx.order.findUnique({ where: { id: orderId } });
+      }
       const assigned = await autoDeliver(tx, fresh);
       if (assigned < order.quantity) throw new ServiceError("No replacement stock available for this product", 409);
       await tx.dispute.update({ where: { orderId }, data: { status: "resolved", resolution: "replaced" } });

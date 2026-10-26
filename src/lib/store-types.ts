@@ -22,6 +22,9 @@ export interface StoreProduct {
   minQuantity: number;
   specs: { key: string; label: string; value: string }[];
   variants: { label: string; priceDelta: number; stock?: number | null }[];
+  // Fulfilment types: how this product is delivered + warranty promise.
+  fulfilmentType: "instant" | "manual" | "service";
+  warrantyDays: number | null;
 }
 
 export interface StoreCategory {

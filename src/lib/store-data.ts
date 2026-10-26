@@ -48,6 +48,8 @@ function toStoreProduct(
     variants: Array.isArray(row.variants)
       ? (row.variants as { label: string; priceDelta: number; stock?: number | null }[])
       : [],
+    fulfilmentType: row.fulfilmentType,
+    warrantyDays: row.warrantyDays,
   };
 }
 

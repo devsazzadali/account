@@ -31,8 +31,15 @@ import { PageLoader } from "../components/SkeletonUI";
 
 interface Product {
   id: string; title: string; price: number; image: string; stock: number;
+  category?: string;
+  fulfilment_type?: string;
   min_quantity?: number;
   variants?: { label: string; priceDelta: number; stock?: number | null }[] | null;
+}
+
+// SERVICE intake field (from the category's intake_schema).
+interface IntakeField {
+  key: string; label: string; type: string; required?: boolean; options?: string[];
 }
 
 interface PaymentConfig {
@@ -77,6 +84,10 @@ export function CheckoutPage() {
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
+  // SERVICE intake (fulfilment types): the category's intake form is
+  // collected on step 1, BEFORE payment, and stored on the order.
+  const [intakeSchema, setIntakeSchema] = useState<IntakeField[]>([]);
+  const [intake, setIntake] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!productId) return;
@@ -87,7 +98,16 @@ export function CheckoutPage() {
         auth.getSession().catch(() => ({ data: { session: null } })),
       ]);
       const row = prodRes?.data?.[0];
-      if (row) setProduct(row);
+      if (row) {
+        setProduct(row);
+        // Service products: load the category's intake schema so the
+        // buyer can provide the required details before paying.
+        if (row.fulfilment_type === "service" && row.category) {
+          const catRes = await fetch(`/api/db/categories?name=eq.${encodeURIComponent(row.category)}`).then((r) => r.json()).catch(() => null);
+          const schema = catRes?.data?.[0]?.intake_schema;
+          if (Array.isArray(schema)) setIntakeSchema(schema as IntakeField[]);
+        }
+      }
       if (cfgRes) {
         setPayConfig(cfgRes);
         // Default selection: Stripe (card) first whenever it is enabled;
@@ -123,6 +143,10 @@ export function CheckoutPage() {
   const outOfStock = !product || stockCap <= 0 || qty > stockCap || storeClosed;
   const manualNumber = paymentMethod === "bkash" ? payConfig?.manual.bkashNumber : paymentMethod === "nagad" ? payConfig?.manual.nagadNumber : null;
   const walletSufficient = walletBalance !== null && walletBalance >= total;
+  const isService = product?.fulfilment_type === "service";
+  const missingIntake = isService
+    ? intakeSchema.filter((f) => f.required && !(intake[f.key] || "").trim())
+    : [];
 
   async function api(path: string, body?: any) {
     const res = await fetch(path, {
@@ -160,6 +184,10 @@ export function CheckoutPage() {
   }
 
   const handlePlaceOrder = async () => {
+    if (isService && missingIntake.length > 0) {
+      toast.error(`Please fill in the required service details: ${missingIntake.map((f) => f.label).join(", ")}`);
+      return;
+    }
     if (!email.trim()) { toast.error("Please enter your delivery email"); return; }
     if (storeClosed) { toast.error("The store is temporarily closed and not accepting new orders"); return; }
     if (outOfStock) { toast.error("This product is out of stock"); return; }
@@ -189,6 +217,7 @@ export function CheckoutPage() {
           payWithWallet: paymentMethod === "wallet",
           variant_label: variantLabel || undefined,
           coupon_code: appliedCoupon?.code || undefined,
+          intake_data: isService ? intake : undefined,
         });
         orderId = created.order.id;
         setCreatedOrderId(orderId);
@@ -309,12 +338,74 @@ export function CheckoutPage() {
                   </div>
                 </div>
 
+                {isService && (
+                  <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                      <Package size={14} className="text-primary-600" /> Service Details
+                    </h3>
+                    <p className="text-[12px] text-slate-500 leading-relaxed mb-5">
+                      This is a service — the store performs the work for you. Please provide the details below
+                      <span className="font-bold text-slate-700"> before paying</span>. Double-check them carefully:
+                      you are responsible for the details you enter, and the service is performed using exactly these details.
+                    </p>
+                    {intakeSchema.length === 0 ? (
+                      <p className="text-[12px] font-bold text-slate-500">No extra details are required for this service.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {intakeSchema.map((f) => (
+                          <div key={f.key}>
+                            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
+                              {f.label}{f.required ? <span className="text-red-500"> *</span> : <span className="text-slate-300 normal-case tracking-normal"> (optional)</span>}
+                            </label>
+                            {f.type === "select" && f.options && f.options.length > 0 ? (
+                              <select
+                                value={intake[f.key] || ""}
+                                onChange={(e) => setIntake((s) => ({ ...s, [f.key]: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary-500"
+                              >
+                                <option value="">Select…</option>
+                                {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            ) : f.type === "boolean" ? (
+                              <select
+                                value={intake[f.key] || ""}
+                                onChange={(e) => setIntake((s) => ({ ...s, [f.key]: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary-500"
+                              >
+                                <option value="">Select…</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                              </select>
+                            ) : f.type === "textarea" ? (
+                              <textarea
+                                value={intake[f.key] || ""}
+                                onChange={(e) => setIntake((s) => ({ ...s, [f.key]: e.target.value }))}
+                                rows={3}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary-500"
+                              />
+                            ) : (
+                              <input
+                                type={f.type === "number" ? "number" : "text"}
+                                value={intake[f.key] || ""}
+                                onChange={(e) => setIntake((s) => ({ ...s, [f.key]: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary-500"
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2">
                     <CheckCheck size={14} className="text-emerald-600" /> What You Get
                   </h3>
                   <div className="space-y-3">
-                    {["Full account credentials (email + password) in your order vault", "Automatic delivery when the item is in stock", "48-hour escrow buyer protection after delivery", "Replacement or wallet refund if the credentials don't work"].map((item, i) => (
+                    {(isService
+                      ? ["The service performed using the details you provided at checkout", "Progress updates and completion proof posted on your order page", "48-hour escrow buyer protection after completion", "Redo or wallet refund if the service isn't delivered as described"]
+                      : ["Full account credentials (email + password) in your order vault", "Automatic delivery when the item is in stock", "48-hour escrow buyer protection after delivery", "Replacement or wallet refund if the credentials don't work"]).map((item, i) => (
                       <div key={i} className="flex items-center gap-3">
                         <div className="w-5 h-5 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
                           <CheckCircle size={12} className="text-emerald-600" />
@@ -392,7 +483,22 @@ export function CheckoutPage() {
                       </div>
                     )}
                   </div>
-                  <button disabled={outOfStock} onClick={() => setStep(2)} className="w-full py-4 bg-[#0C2254] text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:hover:scale-100">
+                  {isService && missingIntake.length > 0 && (
+                    <p className="text-[11px] font-bold text-red-500 leading-relaxed">
+                      Please fill in the required service details first: {missingIntake.map((f) => f.label).join(", ")}.
+                    </p>
+                  )}
+                  <button
+                    disabled={outOfStock}
+                    onClick={() => {
+                      if (isService && missingIntake.length > 0) {
+                        toast.error(`Please fill in the required service details: ${missingIntake.map((f) => f.label).join(", ")}`);
+                        return;
+                      }
+                      setStep(2);
+                    }}
+                    className="w-full py-4 bg-[#0C2254] text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:hover:scale-100"
+                  >
                     Continue to Payment <ChevronRight size={16} />
                   </button>
                   <div className="flex justify-center gap-4">

@@ -2,8 +2,10 @@
 // GET  /api/orders/:id → order (owner or admin only), escrow lazily released.
 // POST /api/orders/:id { action, ... } — the ONLY way order state changes:
 //   buyer:  submit_payment | pay_wallet | cancel | confirm_receipt | dispute
+//           confirm_partial | cancel_remainder
 //   admin:  verify_payment (via /api/admin/payments) | deliver | complete |
-//           cancel | refund | resolve_dispute
+//           cancel | refund | resolve_dispute | progress | add_proof |
+//           deliver_service | deliver_units | cancel_remainder
 
 import { getSessionContext, unauthorized, forbidden } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
@@ -21,12 +23,24 @@ import {
   adminCompleteOrder,
   adminRefundOrder,
   resolveDispute,
+  addOrderProgress,
+  addDeliveryProof,
+  deliverServiceOrder,
+  deliverMoreUnits,
+  confirmPartialReceipt,
+  cancelRemainder,
 } from "@/src/lib/order-service";
 
 async function loadOrder(id: string) {
   return prisma.order.findUnique({
     where: { id },
-    include: { product: true, dispute: true, events: { orderBy: { createdAt: "asc" } }, review: { select: { id: true } } },
+    include: {
+      product: true,
+      dispute: true,
+      events: { orderBy: { createdAt: "asc" } },
+      review: { select: { id: true } },
+      proofs: { orderBy: { createdAt: "asc" } },
+    },
   });
 }
 
@@ -104,6 +118,33 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       case "resolve_dispute":
         if (!isAdmin) return forbidden();
         result = await resolveDispute(id, body.resolution as "refunded" | "replaced" | "rejected");
+        break;
+      case "progress":
+        if (!isAdmin) return forbidden();
+        result = await addOrderProgress(id, String(body.note || ""));
+        break;
+      case "add_proof":
+        if (!isAdmin) return forbidden();
+        result = await addDeliveryProof(id, {
+          fileUrl: body.file_url || body.fileUrl,
+          note: body.note,
+          kind: body.kind,
+          createdBy: uid,
+        });
+        break;
+      case "deliver_service":
+        if (!isAdmin) return forbidden();
+        result = await deliverServiceOrder(id, { note: body.note, createdBy: uid });
+        break;
+      case "deliver_units":
+        if (!isAdmin) return forbidden();
+        result = await deliverMoreUnits(id, Number(body.units || 1));
+        break;
+      case "confirm_partial":
+        result = await confirmPartialReceipt(id, uid);
+        break;
+      case "cancel_remainder":
+        result = await cancelRemainder(id, { userId: uid, isAdmin });
         break;
       default:
         return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });

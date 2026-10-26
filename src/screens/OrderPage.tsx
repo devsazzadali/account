@@ -31,9 +31,11 @@ interface Order {
   payment_method: string | null;
   total_price: number;
   quantity: number;
+  delivered_quantity?: number;
+  intake_data?: Record<string, string> | null;
   created_at: string;
   customer_email: string;
-  products?: { title: string; image: string } | null;
+  products?: { title: string; image: string; fulfilment_type?: string; category?: string } | null;
   credential_username?: string | null;
   credential_password?: string | null;
   credential_notes?: string | null;
@@ -78,6 +80,9 @@ export function OrderPage() {
   const [disputeReason, setDisputeReason] = useState("");
   const [showDispute, setShowDispute] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  // Intake field labels for the service summary (from the category's
+  // public intake schema; falls back to humanised keys).
+  const [intakeLabels, setIntakeLabels] = useState<Record<string, string>>({});
 
   const refresh = useCallback(async () => {
     if (!orderId) return;
@@ -96,6 +101,23 @@ export function OrderPage() {
     const timer = setInterval(refresh, 8000);
     return () => clearInterval(timer);
   }, [refresh]);
+
+  useEffect(() => {
+    const cat = order?.products?.category;
+    if (order?.intake_data && cat) {
+      fetch(`/api/db/categories?name=eq.${encodeURIComponent(cat)}`)
+        .then((r) => r.json())
+        .then((j) => {
+          const schema = j?.data?.[0]?.intake_schema;
+          if (Array.isArray(schema)) {
+            const map: Record<string, string> = {};
+            for (const f of schema) if (f?.key) map[String(f.key)] = String(f.label || f.key);
+            setIntakeLabels(map);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [order?.products?.category, !!order?.intake_data]);
 
   useEffect(() => {
     if (order?.payment_status === "unpaid") {
@@ -145,6 +167,15 @@ export function OrderPage() {
   const canConfirm = isPaid && order.escrow_state === "in_escrow" && (order.status === "Delivering" || order.status === "Completed");
   const canDispute = isPaid && ["PREPARING", "Delivering", "Completed"].includes(order.status);
   const canCancel = order.payment_status === "unpaid" || order.payment_status === "pending_verification" || (isPaid && order.status === "PREPARING");
+  // Fulfilment types: service orders + partial delivery state.
+  const isService = order.products?.fulfilment_type === "service";
+  const deliveredQty = order.delivered_quantity ?? 0;
+  const isPartial = isPaid && deliveredQty > 0 && deliveredQty < order.quantity && ["PREPARING", "Delivering"].includes(order.status);
+  const orderEvents: any[] = Array.isArray((order as any).events) ? (order as any).events : [];
+  const partialConfirmed = orderEvents.some((e) => e.event === "partial_confirmed");
+  const proofs: any[] = Array.isArray((order as any).proofs) ? (order as any).proofs : [];
+  const intakeEntries = order.intake_data ? Object.entries(order.intake_data).filter(([, v]) => String(v).trim() !== "") : [];
+  const humanizeKey = (k: string) => intakeLabels[k] || k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-20">
@@ -278,6 +309,79 @@ export function OrderPage() {
           </div>
         )}
 
+        {/* Service intake summary (fulfilment types) */}
+        {intakeEntries.length > 0 && (
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
+            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Service Details You Provided</h3>
+            <div className="space-y-2.5">
+              {intakeEntries.map(([k, v]) => (
+                <div key={k} className="flex items-baseline justify-between gap-4">
+                  <span className="text-xs font-bold text-slate-400">{humanizeKey(k)}</span>
+                  <span className="text-xs font-bold text-slate-800 text-right break-all">{String(v)}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium mt-4">The service is performed using exactly these details. If something above looks wrong, contact support before the work starts.</p>
+          </div>
+        )}
+
+        {/* Partial delivery (fulfilment types) */}
+        {isPartial && (
+          <div className="bg-white rounded-[2rem] border border-primary-200 p-6 shadow-sm space-y-4">
+            <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+              <Package size={14} className="text-primary-600" /> Partial Delivery — {deliveredQty} of {order.quantity} delivered
+            </h3>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              {deliveredQty} of your {order.quantity} units have been delivered{order.credential_username ? " — they are in the vault below" : ""}.
+              The store can still deliver the remaining {order.quantity - deliveredQty}. You can confirm the delivered part now,
+              and if the rest can't be delivered you can cancel the remainder for a pro-rated refund to your wallet
+              (the $0.50 service fee is not refundable).
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {!partialConfirmed && (
+                <button disabled={busy === "confirm_partial"} onClick={() => act("confirm_partial")} className="px-5 py-3 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 transition-all disabled:opacity-40 flex items-center gap-2">
+                  <CheckCircle size={14} /> Confirm Delivered Part ({deliveredQty} of {order.quantity})
+                </button>
+              )}
+              {partialConfirmed && (
+                <span className="px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                  <CheckCircle size={14} /> Delivered part confirmed
+                </span>
+              )}
+              <button
+                disabled={busy === "cancel_remainder"}
+                onClick={() => { if (confirm(`Cancel the remaining ${order.quantity - deliveredQty} unit(s)? Their value will be refunded to your wallet (pro-rated, minus the service fee). The delivered part stays yours.`)) act("cancel_remainder"); }}
+                className="px-5 py-3 bg-white border border-red-200 text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center gap-2 disabled:opacity-40"
+              >
+                <XCircle size={14} /> Cancel Remainder &amp; Refund
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Delivery proofs (fulfilment types) */}
+        {proofs.length > 0 && (
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
+            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Delivery Proofs</h3>
+            <div className="space-y-3">
+              {proofs.map((p) => (
+                <div key={p.id} className="flex items-start justify-between gap-4 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">
+                      {p.kind === "completion" ? "Completion proof" : "Progress proof"}
+                      {p.note ? <span className="block font-medium text-slate-500 mt-0.5">{p.note}</span> : null}
+                    </p>
+                    {p.file_url && (
+                      <a href={p.file_url} target="_blank" rel="noreferrer" className="text-[11px] font-black text-primary-600 uppercase tracking-widest hover:underline">View proof file</a>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 shrink-0">{new Date(p.created_at).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Credential Vault */}
         {hasCredentials ? (
           <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
@@ -341,6 +445,18 @@ export function OrderPage() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+        ) : isService && isPaid && order.status !== "Disputed" ? (
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 text-center shadow-sm">
+            <div className="w-16 h-16 rounded-2xl bg-primary-50 border border-primary-100 flex items-center justify-center mx-auto mb-4">
+              <Package size={28} className="text-primary-600" />
+            </div>
+            <h3 className="text-sm font-black text-slate-900 mb-1">{order.status === "Delivering" ? "Service Completed" : "Service In Progress"}</h3>
+            <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+              {order.status === "Delivering"
+                ? "The store has marked this service complete — review the proof above, then confirm receipt to release escrow."
+                : "Payment confirmed. The store is performing your service using the details you provided — progress updates and proof will appear on this page."}
+            </p>
           </div>
         ) : isPaid && order.status !== "Disputed" ? (
           <div className="bg-white rounded-[2rem] border border-slate-200 p-8 text-center shadow-sm">
@@ -416,9 +532,12 @@ export function OrderPage() {
             <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Order History</h3>
             <div className="space-y-3">
               {(order as any).events.map((e: any) => (
-                <div key={e.id} className="flex items-baseline justify-between gap-4">
-                  <span className="text-xs font-bold text-slate-700">{ORDER_EVENT_LABELS[e.event] || e.event}</span>
-                  <span className="text-[10px] font-bold text-slate-400 shrink-0">{new Date(e.created_at).toLocaleString()}</span>
+                <div key={e.id}>
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="text-xs font-bold text-slate-700">{ORDER_EVENT_LABELS[e.event] || e.event}</span>
+                    <span className="text-[10px] font-bold text-slate-400 shrink-0">{new Date(e.created_at).toLocaleString()}</span>
+                  </div>
+                  {e.detail && <p className="text-[11px] text-slate-500 font-medium mt-0.5 leading-relaxed">{e.detail}</p>}
                 </div>
               ))}
             </div>
@@ -459,6 +578,10 @@ const ORDER_EVENT_LABELS: Record<string, string> = {
   refunded: "Refunded to wallet",
   dispute_opened: "Dispute opened",
   dispute_resolved: "Dispute resolved",
+  progress: "Progress update",
+  proof_added: "Proof attached by the store",
+  partial_confirmed: "Delivered part confirmed",
+  partial_canceled: "Remainder cancelled — refunded",
 };
 
 /** Review form bound to a completed order (P3). One review per order;

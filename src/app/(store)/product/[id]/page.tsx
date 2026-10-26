@@ -103,6 +103,8 @@ export default async function ProductPage({ params }: Props) {
           description: product.description ?? "",
           stock: product.stock,
           category: product.category ?? undefined,
+          fulfilmentType: product.fulfilmentType,
+          warrantyDays: product.warrantyDays,
         }}
       />
     </>

@@ -27,6 +27,17 @@ enum EscrowState {
   refunded
 }
 
+/// Per-product fulfilment model. instant = credentials auto-deliver from
+/// the delivery inventory when payment verifies; manual = the store types
+/// the credentials into the order panel; service = the buyer provides
+/// intake details at checkout (category intake schema) and the store
+/// performs the work, proving completion with a proof on the order.
+enum FulfilmentType {
+  instant
+  manual
+  service
+}
+
 model Profile {
   id                String   @id // Neon Auth user id
   username          String?  @unique
@@ -62,6 +73,11 @@ model Category {
   // Per-category specification attribute schema (Z2U alignment P2):
   // [{ key, label, type: "text"|"number"|"select"|"boolean", options?: string[] }]
   attributeSchema Json    @default("[]") @map("attribute_schema")
+  // Per-category SERVICE intake schema (fulfilment types): same field
+  // shape plus `required`. For SERVICE products the buyer fills these in
+  // at checkout BEFORE paying; answers are stored on orders.intake_data.
+  // [{ key, label, type, required?: boolean, options?: string[] }]
+  intakeSchema    Json    @default("[]") @map("intake_schema")
   createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("categories")
@@ -93,6 +109,11 @@ model Product {
   specs            Json    @default("{}")
   variants         Json    @default("[]")
   useInventoryStock Boolean @default(false) @map("use_inventory_stock")
+  // Fulfilment types: how this product is delivered (see the enum).
+  // Backfilled from useInventoryStock (true → instant) at migration;
+  // warrantyDays renders as an "X-day warranty" badge on the product page.
+  fulfilmentType   FulfilmentType @default(manual) @map("fulfilment_type")
+  warrantyDays     Int?           @map("warranty_days")
   createdAt   DateTime @default(now()) @map("created_at")
 
   orders    Order[]
@@ -129,6 +150,11 @@ model Order {
   // the audit timeline.
   internalRemarks    String?     @map("internal_remarks")
   variantLabel       String?     @map("variant_label")
+  // Fulfilment types: SERVICE orders carry the buyer's checkout intake
+  // answers here ({ fieldKey: value }); deliveredQuantity tracks partial
+  // delivery (units the buyer has actually received, 0..quantity).
+  intakeData         Json?       @map("intake_data")
+  deliveredQuantity  Int         @default(0) @map("delivered_quantity")
   couponCode         String?     @map("coupon_code")
   discountAmount     Decimal     @default(0) @map("discount_amount") @db.Decimal(10, 2)
   paidAt             DateTime?   @map("paid_at")
@@ -143,6 +169,7 @@ model Order {
   dispute   Dispute?
   events    OrderEvent[]
   review    Review?
+  proofs    DeliveryProof[]
 
   @@index([userId])
   @@map("orders")
@@ -162,6 +189,24 @@ model OrderEvent {
 
   @@index([orderId, createdAt])
   @@map("order_events")
+}
+
+/// Delivery proofs attached to an order (fulfilment types). Files go
+/// through the existing /api/upload adapter (bucket "proofs"); a written
+/// note alone is also a valid proof. A SERVICE order can only be marked
+/// delivered once at least one kind="completion" proof exists.
+model DeliveryProof {
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fileUrl   String?  @map("file_url")
+  note      String?
+  kind      String   @default("completion") // progress | completion
+  createdBy String?  @map("created_by") // profile id of the admin who attached it
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderId, createdAt])
+  @@map("delivery_proofs")
 }
 
 model Inventory {

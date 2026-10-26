@@ -46,6 +46,10 @@ const EVENT_LABELS: Record<string, string> = {
   refunded: "Refunded to buyer wallet",
   dispute_opened: "Dispute opened by buyer",
   dispute_resolved: "Dispute resolved",
+  progress: "Progress update",
+  proof_added: "Proof attached",
+  partial_confirmed: "Buyer confirmed the delivered part",
+  partial_canceled: "Remainder cancelled — pro-rated refund",
 };
 
 /** Audit trail: the order_events rows when present; older orders fall
@@ -140,21 +144,49 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   const [remarks, setRemarks] = useState(order?.internal_remarks || "");
   const [savingRemarks, setSavingRemarks] = useState(false);
 
-  useEffect(() => {
+  // Fulfilment types: progress notes, proofs, service completion,
+  // partial-delivery controls.
+  const [progressNote, setProgressNote] = useState("");
+  const [proofNote, setProofNote] = useState("");
+  const [proofKind, setProofKind] = useState("completion");
+  const [proofBusy, setProofBusy] = useState(false);
+  const [completionNote, setCompletionNote] = useState("");
+  const [deliverUnits, setDeliverUnits] = useState("1");
+  const [intakeLabels, setIntakeLabels] = useState<Record<string, string>>({});
+
+  async function loadDetail() {
     if (!order?.id) return;
-    fetch(`/api/orders/${order.id}`, { credentials: "same-origin" })
-      .then((r) => r.json())
-      .then((j) => {
-        if (j?.order) {
-          setDetail(j.order);
-          if (typeof j.order.internal_remarks === "string") setRemarks(j.order.internal_remarks);
-        }
-      })
-      .catch(() => {});
-  }, [order?.id]);
+    try {
+      const r = await fetch(`/api/orders/${order.id}`, { credentials: "same-origin" });
+      const j = await r.json();
+      if (j?.order) {
+        setDetail(j.order);
+        if (typeof j.order.internal_remarks === "string") setRemarks(j.order.internal_remarks);
+      }
+    } catch { /* keep last state */ }
+  }
+
+  useEffect(() => { loadDetail(); }, [order?.id]);
 
   const d = detail || order;
   const disputeReason = d?.dispute?.reason || order?.dispute_reason || null;
+
+  // Intake labels from the product category's public intake schema.
+  const productCategoryName = (Array.isArray(order?.products) ? order.products[0] : order?.products)?.category;
+  useEffect(() => {
+    if (!d?.intake_data || !productCategoryName) return;
+    fetch(`/api/db/categories?name=eq.${encodeURIComponent(productCategoryName)}`)
+      .then((r) => r.json())
+      .then((j) => {
+        const schema = j?.data?.[0]?.intake_schema;
+        if (Array.isArray(schema)) {
+          const map: Record<string, string> = {};
+          for (const f of schema) if (f?.key) map[String(f.key)] = String(f.label || f.key);
+          setIntakeLabels(map);
+        }
+      })
+      .catch(() => {});
+  }, [productCategoryName, !!d?.intake_data]);
 
   async function saveRemarks() {
     setSavingRemarks(true);
@@ -174,6 +206,18 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   const product = Array.isArray(order.products) ? order.products[0] : order.products;
   const currentStep = STEPS.findIndex(s => s.label.toUpperCase() === status.toUpperCase()) + 1 || 1;
 
+  // Fulfilment types derived state.
+  const isService = product?.fulfilment_type === "service";
+  const deliveredQty = d?.delivered_quantity ?? order?.delivered_quantity ?? 0;
+  const orderQty = d?.quantity ?? order?.quantity ?? 1;
+  const isPartial = order.payment_status === "paid" && deliveredQty > 0 && deliveredQty < orderQty && ["PREPARING", "Delivering"].includes(status);
+  const proofs: any[] = Array.isArray(d?.proofs) ? d.proofs : [];
+  const intakeEntries: [string, string][] = d?.intake_data
+    ? Object.entries(d.intake_data).filter(([, v]) => String(v).trim() !== "").map(([k, v]) => [k, String(v)] as [string, string])
+    : [];
+  const humanizeKey = (k: string) => intakeLabels[k] || k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const orderClosed = ["Completed", "Canceled", "Refunded"].includes(status);
+
   // All order mutations go through the transactional action API — the
   // generic table endpoint refuses order writes by design, so stock,
   // escrow, wallet and delivery bookkeeping can never be skipped.
@@ -190,6 +234,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
       if (!res.ok) throw new Error(json.error || "Action failed");
       if (json.order?.status) setStatus(json.order.status);
       toast.success("Done — order updated");
+      await loadDetail();
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -198,6 +243,33 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
       setShowDeliverModal(false);
       setShowCancelModal(false);
     }
+  }
+
+  // Proof upload: file goes through the existing upload adapter
+  // (bucket "proofs"), then the proof row is attached via the action API.
+  async function handleProofUpload(file: File | null) {
+    if (!file) return;
+    setProofBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("bucket", "proofs");
+      const up = await fetch("/api/upload", { method: "POST", credentials: "same-origin", body: fd });
+      const uj = await up.json();
+      if (!up.ok) throw new Error(uj.error || "Upload failed");
+      await orderAction("add_proof", { file_url: uj.url, note: proofNote.trim() || undefined, kind: proofKind });
+      setProofNote("");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setProofBusy(false);
+    }
+  }
+
+  async function handleProofNote() {
+    if (!proofNote.trim()) { toast.error("Write a proof note (or upload a file)"); return; }
+    await orderAction("add_proof", { note: proofNote.trim(), kind: proofKind });
+    setProofNote("");
   }
 
   async function handleConfirmDeliver() {
@@ -429,6 +501,147 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                 </div>
             </div>
 
+            {/* Service intake — buyer-provided details (fulfilment types) */}
+            {intakeEntries.length > 0 && (
+            <div className="mt-12 bg-[#F4751F]/5 p-8 rounded-[2rem] border-2 border-[#F4751F]/40">
+                <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest italic mb-2 flex items-center gap-2">
+                    <Package size={14} className="text-[#F4751F]" /> Service Intake — Details Provided by the Buyer
+                </h3>
+                <p className="text-[11px] font-bold text-slate-400 mb-5">Collected at checkout, before payment. Perform the service using exactly these details — the buyer confirmed them at checkout.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
+                    {intakeEntries.map(([k, v]) => (
+                        <div key={k} className="bg-white border border-slate-200 rounded-2xl px-5 py-4">
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{humanizeKey(k)}</div>
+                            <div className="text-[14px] font-black text-slate-900 break-all">{v}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            )}
+
+            {/* Fulfilment workspace: progress, proofs, service completion, partial delivery */}
+            {order.payment_status === "paid" && !orderClosed && (
+            <div className="mt-12 grid grid-cols-12 gap-10">
+                <div className="col-span-12 lg:col-span-6 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-200/60 space-y-6">
+                    <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest italic">Fulfilment</h3>
+                    <LedgerItem label="Delivered" value={`${deliveredQty} of ${orderQty} unit(s)`} />
+                    {status !== "Disputed" && (
+                    <div>
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Progress Update (visible to the buyer)</div>
+                        <textarea
+                            value={progressNote}
+                            onChange={(e) => setProgressNote(e.target.value)}
+                            rows={3}
+                            placeholder="e.g. Started the boost — currently Diamond II, on track for tonight…"
+                            className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-[13px] font-medium outline-none focus:border-[#E62E04] transition-all resize-none"
+                        />
+                        <button
+                            onClick={async () => { if (!progressNote.trim()) { toast.error("Write a progress note first"); return; } await orderAction("progress", { note: progressNote.trim() }); setProgressNote(""); }}
+                            disabled={loading}
+                            className="mt-3 px-8 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-50"
+                        >
+                            Post Progress Update
+                        </button>
+                    </div>
+                    )}
+                    {!isService && deliveredQty < orderQty && ["PREPARING", "Delivering"].includes(status) && (
+                    <div>
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Deliver More Units (from inventory)</div>
+                        <div className="flex gap-3">
+                            <input
+                                type="number" min={1} max={orderQty - deliveredQty} value={deliverUnits}
+                                onChange={(e) => setDeliverUnits(e.target.value)}
+                                className="w-24 bg-white border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold outline-none"
+                            />
+                            <button
+                                onClick={() => orderAction("deliver_units", { units: Number(deliverUnits) || 1 })}
+                                disabled={loading}
+                                className="px-6 py-3 bg-[#0C2254] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50"
+                            >
+                                Deliver Units
+                            </button>
+                        </div>
+                    </div>
+                    )}
+                    {isPartial && (
+                    <div>
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Partial Delivery</div>
+                        <button
+                            onClick={() => { if (confirm(`Cancel the remaining ${orderQty - deliveredQty} unit(s) and refund the buyer pro-rata to their wallet? The delivered part stays sold.`)) orderAction("cancel_remainder"); }}
+                            disabled={loading}
+                            className="px-6 py-3 bg-white border border-red-200 text-[#E62E04] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all disabled:opacity-50"
+                        >
+                            Cancel Remainder — Pro-Rated Refund
+                        </button>
+                    </div>
+                    )}
+                    {isService && status === "PREPARING" && (
+                    <div>
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Complete the Service</div>
+                        <p className="text-[11px] font-bold text-slate-400 mb-3">Delivery requires at least one completion proof (attach one on the right, or write the completion note here). The order then waits for the buyer's confirmation, like any delivery.</p>
+                        <input
+                            value={completionNote}
+                            onChange={(e) => setCompletionNote(e.target.value)}
+                            placeholder="Completion note (optional if a proof is attached)"
+                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold outline-none mb-3"
+                        />
+                        <button
+                            onClick={async () => { await orderAction("deliver_service", { note: completionNote.trim() || undefined }); setCompletionNote(""); }}
+                            disabled={loading}
+                            className="px-8 py-3.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50"
+                        >
+                            Mark Service Complete &amp; Deliver
+                        </button>
+                    </div>
+                    )}
+                </div>
+                <div className="col-span-12 lg:col-span-6 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-200/60 space-y-5">
+                    <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest italic">Delivery Proofs</h3>
+                    {proofs.length === 0 && <p className="text-[12px] font-bold text-slate-400">No proofs attached yet.</p>}
+                    <div className="space-y-3">
+                        {proofs.map((p) => (
+                            <div key={p.id} className="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-[13px] font-black text-slate-900">{p.kind === "completion" ? "Completion proof" : "Progress proof"}</p>
+                                    {p.note && <p className="text-[12px] font-medium text-slate-500 mt-0.5">{p.note}</p>}
+                                    {p.file_url && <a href={p.file_url} target="_blank" rel="noreferrer" className="text-[11px] font-black text-[#0C2254] uppercase tracking-widest hover:underline">View file</a>}
+                                </div>
+                                <span className="text-[11px] font-bold text-slate-400 shrink-0">{new Date(p.created_at).toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="pt-2 space-y-3">
+                        <div className="flex gap-3">
+                            <select value={proofKind} onChange={(e) => setProofKind(e.target.value)} className="bg-white border border-slate-200 rounded-xl px-3 py-3 text-[12px] font-bold outline-none">
+                                <option value="completion">Completion</option>
+                                <option value="progress">Progress</option>
+                            </select>
+                            <input
+                                value={proofNote}
+                                onChange={(e) => setProofNote(e.target.value)}
+                                placeholder="Proof note (a written note alone counts as proof)"
+                                className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-medium outline-none"
+                            />
+                        </div>
+                        <div className="flex gap-3">
+                            <label className={`px-6 py-3 bg-[#0C2254] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2 ${proofBusy ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}>
+                                <Upload size={14} /> {proofBusy ? "Uploading…" : "Upload Proof File"}
+                                <input
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain"
+                                    className="hidden"
+                                    onChange={(e) => { handleProofUpload(e.target.files?.[0] || null); e.target.value = ""; }}
+                                />
+                            </label>
+                            <button onClick={handleProofNote} disabled={loading} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all disabled:opacity-50">
+                                Attach Note as Proof
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            )}
+
             {/* Internal remarks + audit timeline (P1) */}
             <div className="mt-12 grid grid-cols-12 gap-10">
                 <div className="col-span-12 lg:col-span-6 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-200/60">
@@ -457,8 +670,9 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                 </div>
             </div>
 
-            {/* Account Info Form Section */}
-            {order.payment_status === "paid" && (status === "PREPARING" || status === "Delivering" || status === "Disputed") && (
+            {/* Account Info Form Section — credential delivery; service
+                orders complete via proof instead (fulfilment workspace). */}
+            {order.payment_status === "paid" && !isService && (status === "PREPARING" || status === "Delivering" || status === "Disputed") && (
             <div className="mt-16">
                 <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden">
                     <div className="bg-[#0A0F1C] px-10 py-6 flex justify-between items-center text-white">

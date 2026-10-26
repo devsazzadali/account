@@ -330,6 +330,101 @@ async function main() {
   const announcements = await call(buyer, "GET", "/api/announcements");
   step("buyer sees the announcement", (announcements.json?.announcements || []).some((a) => a.title === bTitle));
 
+  // ══ FULFILMENT TYPES (instant | manual | service + partial) ════
+
+  // ── service: category intake schema + service product ───────────
+  const svcCatName = `E2E Services ${uniq}`;
+  const svcCat = await call(admin, "POST", "/api/db/categories", {
+    name: svcCatName,
+    intake_schema: [
+      { key: "game_id", label: "Game ID", type: "text", required: true },
+      { key: "server", label: "Server", type: "select", required: true, options: ["NA", "EU"] },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+  });
+  step("admin creates category with intake schema", svcCat.status === 200 && Array.isArray(svcCat.json?.data?.[0]?.intake_schema) && svcCat.json.data[0].intake_schema.length === 3, `status ${svcCat.status}`);
+
+  const svcProd = await call(admin, "POST", "/api/db/products", { title: `E2E Rank Boost ${uniq}`, price: 15, stock: 5, category: svcCatName, fulfilment_type: "service", warranty_days: 30 });
+  const svcProduct = svcProd.json?.data?.[0];
+  step("admin creates SERVICE product with warranty", svcProd.status === 200 && svcProduct?.fulfilment_type === "service" && Number(svcProduct?.warranty_days) === 30, `status ${svcProd.status} type=${svcProduct?.fulfilment_type}`);
+
+  const svcPage = await call(null, "GET", `/product/${svcProduct.id}`);
+  step("product page shows the warranty badge", svcPage.status === 200 && (svcPage.text || "").includes("30-day warranty"), `status ${svcPage.status}`);
+  step("product page labels the fulfilment as a service", (svcPage.text || "").includes("Service — details required"));
+
+  // ── service: intake is REQUIRED before payment ──────────────────
+  const noIntake = await call(buyer, "POST", "/api/orders", { product_id: svcProduct.id, quantity: 1, customer_email: buyerEmail });
+  step("service order without intake = 422", noIntake.status === 422, `got ${noIntake.status}: ${noIntake.json?.error || ""}`);
+  const partialIntake = await call(buyer, "POST", "/api/orders", { product_id: svcProduct.id, quantity: 1, customer_email: buyerEmail, intake_data: { game_id: "p1" } });
+  step("service order missing a required field = 422", partialIntake.status === 422, `got ${partialIntake.status}`);
+
+  const svcOrderRes = await call(buyer, "POST", "/api/orders", { product_id: svcProduct.id, quantity: 1, customer_email: buyerEmail, payWithWallet: true, intake_data: { game_id: "player-1", server: "NA", notes: "evenings only" } });
+  const svcOrder = svcOrderRes.json?.order;
+  step("service order with intake = 201 + paid via wallet", svcOrderRes.status === 201 && svcOrder?.payment_status === "paid", `status ${svcOrderRes.status} ps=${svcOrder?.payment_status}`);
+  step("intake stored on the order", svcOrder?.intake_data?.game_id === "player-1" && svcOrder?.intake_data?.server === "NA", JSON.stringify(svcOrder?.intake_data));
+  step("service order waits in PREPARING (no auto-delivery, no vault)", svcOrder?.status === "PREPARING" && !svcOrder?.credential_username, `status=${svcOrder?.status}`);
+  const walletSvc = await call(buyer, "GET", "/api/wallet");
+  step("wallet debited for the service ($25 → $9.50)", Number(walletSvc.json?.wallet?.balance) === 9.5, `balance=${walletSvc.json?.wallet?.balance}`);
+
+  // ── service: progress → proof gate → delivery → confirm ─────────
+  const progress = await call(admin, "POST", `/api/orders/${svcOrder.id}`, { action: "progress", note: "Boost started — currently Diamond II" });
+  step("admin posts a progress update", progress.status === 200, `got ${progress.status}: ${progress.json?.error || ""}`);
+  const svcView = await call(buyer, "GET", `/api/orders/${svcOrder.id}`);
+  step("buyer sees the progress note in the order timeline", (svcView.json?.order?.events || []).some((e) => e.event === "progress" && (e.detail || "").includes("Diamond II")));
+  step("buyer order carries the proofs list", Array.isArray(svcView.json?.order?.proofs) && svcView.json.order.proofs.length === 0);
+
+  const noProof = await call(admin, "POST", `/api/orders/${svcOrder.id}`, { action: "deliver_service" });
+  step("service completion WITHOUT proof = 422", noProof.status === 422, `got ${noProof.status}: ${noProof.json?.error || ""}`);
+  const addProof = await call(admin, "POST", `/api/orders/${svcOrder.id}`, { action: "add_proof", note: "Final rank reached — screenshot on file", kind: "completion" });
+  step("admin attaches a completion proof (written note)", addProof.status === 200, `got ${addProof.status}: ${addProof.json?.error || ""}`);
+  const svcDeliver = await call(admin, "POST", `/api/orders/${svcOrder.id}`, { action: "deliver_service" });
+  step("service delivered once proof exists", svcDeliver.status === 200 && svcDeliver.json?.order?.status === "Delivering" && Number(svcDeliver.json?.order?.delivered_quantity) === 1, `status=${svcDeliver.json?.order?.status} dq=${svcDeliver.json?.order?.delivered_quantity}`);
+  const svcView2 = await call(buyer, "GET", `/api/orders/${svcOrder.id}`);
+  step("buyer sees the completion proof", (svcView2.json?.order?.proofs || []).some((p) => p.kind === "completion"));
+  const svcConfirm = await call(buyer, "POST", `/api/orders/${svcOrder.id}`, { action: "confirm_receipt" });
+  step("buyer confirms service → Completed", svcConfirm.status === 200 && svcConfirm.json?.order?.status === "Completed", svcConfirm.json?.order?.status);
+
+  // ── partial delivery: qty 3, only 2 units in inventory ────────
+  const instProd = await call(admin, "POST", "/api/db/products", { title: `E2E Instant Pack ${uniq}`, price: 10, stock: 5, category: "E2E", fulfilment_type: "instant" });
+  const instProduct = instProd.json?.data?.[0];
+  step("admin creates INSTANT product (manual stock counter 5)", instProd.status === 200 && instProduct?.fulfilment_type === "instant", `status ${instProd.status}`);
+  for (let i = 0; i < 2; i++) {
+    await call(admin, "POST", "/api/db/inventory", { product_id: instProduct.id, account_login: `inst-${uniq}-${i}@vault.test`, account_password: `ipw-${i}`, status: "available" });
+  }
+  const instPage = await call(null, "GET", `/product/${instProduct.id}`);
+  step("product page labels instant delivery", instPage.status === 200 && (instPage.text || "").includes("Instant delivery"));
+
+  const topup2 = await call(buyer, "POST", "/api/wallet", { amount: 40, method: "bkash", trxId: `TP2${uniq}`.toUpperCase(), senderNumber: "01700000001" });
+  const queue3 = await call(admin, "GET", "/api/admin/payments?status=pending");
+  const topRow2 = (queue3.json?.payment_requests || []).find((r) => r.id === topup2.json?.payment_request?.id);
+  await call(admin, "POST", "/api/admin/payments", { id: topRow2.id, approve: true });
+  const walletTop = await call(buyer, "GET", "/api/wallet");
+  step("wallet topped up ($9.50 → $49.50)", Number(walletTop.json?.wallet?.balance) === 49.5, `balance=${walletTop.json?.wallet?.balance}`);
+
+  const pOrderRes = await call(buyer, "POST", "/api/orders", { product_id: instProduct.id, quantity: 3, customer_email: buyerEmail, payWithWallet: true });
+  const pOrder = pOrderRes.json?.order;
+  step("qty-3 order paid from wallet", pOrderRes.status === 201 && pOrder?.payment_status === "paid", `status ${pOrderRes.status}`);
+  const pView = await call(buyer, "GET", `/api/orders/${pOrder.id}`);
+  step("partial delivery tracked: 2 of 3 delivered", Number(pView.json?.order?.delivered_quantity) === 2, `dq=${pView.json?.order?.delivered_quantity}`);
+  step("partial order is Delivering with the first credentials in the vault", pView.json?.order?.status === "Delivering" && !!pView.json?.order?.credential_username, `status=${pView.json?.order?.status}`);
+  const instAfter = await call(admin, "GET", `/api/db/products?id=eq.${instProduct.id}`);
+  step("sold counts only delivered units (2); stock counter untouched by delivery (2 left reserved)", Number(instAfter.json?.data?.[0]?.sold) === 2 && Number(instAfter.json?.data?.[0]?.stock) === 2, `sold=${instAfter.json?.data?.[0]?.sold} stock=${instAfter.json?.data?.[0]?.stock}`);
+
+  const confirmPart = await call(buyer, "POST", `/api/orders/${pOrder.id}`, { action: "confirm_partial" });
+  step("buyer confirms the delivered part", confirmPart.status === 200, `got ${confirmPart.status}: ${confirmPart.json?.error || ""}`);
+  const confirmPart2 = await call(buyer, "POST", `/api/orders/${pOrder.id}`, { action: "confirm_partial" });
+  step("second partial confirm = 409", confirmPart2.status === 409, `got ${confirmPart2.status}`);
+
+  const cancelRem = await call(buyer, "POST", `/api/orders/${pOrder.id}`, { action: "cancel_remainder" });
+  step("buyer cancels the remainder → order Completed", cancelRem.status === 200 && cancelRem.json?.order?.status === "Completed" && cancelRem.json?.order?.escrow_state === "completed", `status=${cancelRem.json?.order?.status}`);
+  const walletAfterRem = await call(buyer, "GET", "/api/wallet");
+  step("pro-rated refund credited exactly ($19.00 → $29.00)", Number(walletAfterRem.json?.wallet?.balance) === 29, `balance=${walletAfterRem.json?.wallet?.balance}`);
+  step("partial refund ledger row exists ($10.00)", (walletAfterRem.json?.transactions || []).some((t) => t.type === "refund" && Number(t.amount) === 10));
+  const instFinal = await call(admin, "GET", `/api/db/products?id=eq.${instProduct.id}`);
+  step("stock exact after remainder cancel (counter 3 = 5 − 3 + 1 back; sold stays 2)", Number(instFinal.json?.data?.[0]?.stock) === 3 && Number(instFinal.json?.data?.[0]?.sold) === 2, `stock=${instFinal.json?.data?.[0]?.stock} sold=${instFinal.json?.data?.[0]?.sold}`);
+  const deliverLate = await call(admin, "POST", `/api/orders/${pOrder.id}`, { action: "deliver_units", units: 1 });
+  step("deliver_units on a completed order = 409", deliverLate.status === 409, `got ${deliverLate.status}`);
+
   // ── P0: hide shop gates ordering ────────────────────────────────
   const hideRes = await call(admin, "PUT", "/api/admin/settings", { store_open: "false" });
   step("admin hides the shop", hideRes.status === 200 && hideRes.json?.settings?.store_open === "false", `got ${hideRes.status}`);

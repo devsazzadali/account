@@ -26,6 +26,9 @@ export function AdminCategories() {
     slug: "",
     description: "",
     attribute_schema: [] as { key: string; label: string; type: string; options: string }[],
+    // SERVICE intake schema (fulfilment types): same field shape plus a
+    // Required flag — buyers fill these in at checkout before paying.
+    intake_schema: [] as { key: string; label: string; type: string; options: string; required: boolean }[],
   });
   const [productsCount, setProductsCount] = useState(0);
 
@@ -68,6 +71,7 @@ export function AdminCategories() {
     if (category) {
       setEditingId(category.id);
       const schema = Array.isArray(category.attribute_schema) ? category.attribute_schema : [];
+      const intake = Array.isArray(category.intake_schema) ? category.intake_schema : [];
       setFormData({
         name: category.name,
         slug: category.slug || "",
@@ -76,10 +80,15 @@ export function AdminCategories() {
           key: f.key || "", label: f.label || "", type: f.type || "text",
           options: Array.isArray(f.options) ? f.options.join(", ") : "",
         })),
+        intake_schema: intake.map((f: any) => ({
+          key: f.key || "", label: f.label || "", type: f.type || "text",
+          options: Array.isArray(f.options) ? f.options.join(", ") : "",
+          required: f.required === true,
+        })),
       });
     } else {
       setEditingId(null);
-      setFormData({ name: "", slug: "", description: "", attribute_schema: [] });
+      setFormData({ name: "", slug: "", description: "", attribute_schema: [], intake_schema: [] });
     }
     setShowDrawer(true);
   };
@@ -100,11 +109,25 @@ export function AdminCategories() {
             ? { options: f.options.split(",").map((o) => o.trim()).filter(Boolean) }
             : {}),
         }));
+      // Intake schema (fulfilment types): same normalisation, plus the
+      // required flag and a textarea type.
+      const intake = formData.intake_schema
+        .filter((f) => f.key.trim() && f.label.trim())
+        .map((f) => ({
+          key: f.key.trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_"),
+          label: f.label.trim(),
+          type: ["text", "number", "select", "boolean", "textarea"].includes(f.type) ? f.type : "text",
+          required: f.required === true,
+          ...(f.type === "select"
+            ? { options: f.options.split(",").map((o) => o.trim()).filter(Boolean) }
+            : {}),
+        }));
       const payload = {
         name: formData.name,
         slug: formData.slug || formData.name.toLowerCase().replace(/ /g, "-"),
         description: formData.description,
         attribute_schema: schema.length ? schema : null,
+        intake_schema: intake.length ? intake : null,
       };
 
       if (editingId) {
@@ -365,6 +388,77 @@ export function AdminCategories() {
                         <button
                           type="button"
                           onClick={() => setFormData({ ...formData, attribute_schema: formData.attribute_schema.filter((_, j) => j !== i) })}
+                          className="text-slate-300 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-2 ml-1">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Service Intake Form</label>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, intake_schema: [...formData.intake_schema, { key: "", label: "", type: "text", options: "", required: true }] })}
+                      className="text-[10px] font-black text-primary-600 uppercase tracking-widest hover:underline"
+                    >
+                      + Add field
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-medium mb-3 ml-1 leading-relaxed">
+                    For SERVICE products in this category: buyers must fill this form in at checkout, before paying. Required fields block the order until provided; answers are stored on the order for the admin to work from.
+                  </p>
+                  <div className="space-y-2">
+                    {formData.intake_schema.length === 0 && (
+                      <p className="text-[12px] text-slate-300 font-bold py-2">No intake fields — service checkouts in this category ask for nothing extra.</p>
+                    )}
+                    {formData.intake_schema.map((f, i) => (
+                      <div key={i} className="flex gap-2 items-center">
+                        <input
+                          value={f.key}
+                          onChange={e => { const arr = [...formData.intake_schema]; arr[i] = { ...arr[i], key: e.target.value }; setFormData({ ...formData, intake_schema: arr }); }}
+                          placeholder="key (e.g. game_id)"
+                          className="w-[22%] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-600"
+                        />
+                        <input
+                          value={f.label}
+                          onChange={e => { const arr = [...formData.intake_schema]; arr[i] = { ...arr[i], label: e.target.value }; setFormData({ ...formData, intake_schema: arr }); }}
+                          placeholder="Label (e.g. Game ID)"
+                          className="w-[22%] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-600"
+                        />
+                        <select
+                          value={f.type}
+                          onChange={e => { const arr = [...formData.intake_schema]; arr[i] = { ...arr[i], type: e.target.value }; setFormData({ ...formData, intake_schema: arr }); }}
+                          className="w-[15%] bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-[12px] font-medium focus:outline-none"
+                        >
+                          <option value="text">Text</option>
+                          <option value="number">Number</option>
+                          <option value="select">Select</option>
+                          <option value="boolean">Yes/No</option>
+                          <option value="textarea">Long text</option>
+                        </select>
+                        {f.type === "select" ? (
+                          <input
+                            value={f.options}
+                            onChange={e => { const arr = [...formData.intake_schema]; arr[i] = { ...arr[i], options: e.target.value }; setFormData({ ...formData, intake_schema: arr }); }}
+                            placeholder="Options, comma separated"
+                            className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-600"
+                          />
+                        ) : <span className="flex-1" />}
+                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 shrink-0 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={f.required}
+                            onChange={e => { const arr = [...formData.intake_schema]; arr[i] = { ...arr[i], required: e.target.checked }; setFormData({ ...formData, intake_schema: arr }); }}
+                            className="accent-[#0C2254]"
+                          />
+                          Required
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, intake_schema: formData.intake_schema.filter((_, j) => j !== i) })}
                           className="text-slate-300 hover:text-red-500 transition-colors"
                         >
                           <Trash2 size={14} />

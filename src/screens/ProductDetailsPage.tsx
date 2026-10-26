@@ -29,6 +29,12 @@ interface Product {
   minQuantity?: number;
   specs?: { key: string; label: string; value: string }[];
   variants?: { label: string; priceDelta: number; stock?: number | null }[];
+  // Fulfilment types (camelCase from the server page, snake_case from
+  // the client-fetch fallback — both read below).
+  fulfilmentType?: string;
+  fulfilment_type?: string;
+  warrantyDays?: number | null;
+  warranty_days?: number | null;
 }
 
 export function ProductDetailsPage({
@@ -96,6 +102,8 @@ export function ProductDetailsPage({
   const activeVariant = variants.find((v) => v.label === variantLabel) || variants[0] || null;
   const unitPrice = (product?.price || 0) + (activeVariant ? Number(activeVariant.priceDelta) || 0 : 0);
   const minQty = Math.max(1, product?.minQuantity || 1);
+  const fulfilment = product?.fulfilmentType || product?.fulfilment_type || "manual";
+  const warrantyDays = product?.warrantyDays ?? product?.warranty_days ?? null;
   const stockCap = activeVariant && activeVariant.stock != null ? Number(activeVariant.stock) : (product?.stock || 0);
   const qty = Math.min(Math.max(quantity, minQty), Math.max(stockCap, minQty));
 
@@ -307,6 +315,21 @@ export function ProductDetailsPage({
                         <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-slate-500">
                             <Clock size={13} className="text-primary-600" /> Delivery within ~{product.deliveryEtaHours} hours of payment verification
                         </p>
+                    ) : null}
+                    {/* Fulfilment type + warranty (fulfilment types build) */}
+                    <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                        {fulfilment === "instant" ? (
+                            <><Zap size={13} className="text-primary-600" /> Instant delivery — credentials arrive automatically right after payment is verified</>
+                        ) : fulfilment === "service" ? (
+                            <><MessageSquare size={13} className="text-primary-600" /> Service — details required at checkout; the store performs the work and posts progress + proof on your order</>
+                        ) : (
+                            <><Clock size={13} className="text-primary-600" /> Manual delivery — the store sends your credentials after payment is verified</>
+                        )}
+                    </p>
+                    {warrantyDays ? (
+                        <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1 text-[11px] font-bold">
+                            <ShieldCheck size={13} /> {`${warrantyDays}-day warranty`}
+                        </span>
                     ) : null}
                 </div>
 

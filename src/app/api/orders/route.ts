@@ -24,6 +24,7 @@ export async function POST(req: Request) {
       customerEmail: body.customer_email || body.customerEmail,
       variantLabel: body.variant_label || body.variantLabel || undefined,
       couponCode: body.coupon_code || body.couponCode || undefined,
+      intakeData: body.intake_data ?? body.intakeData,
     });
     let final = order;
     if (body.payment_method === "wallet" || body.paymentMethod === "wallet" || body.payWithWallet === true || body.pay_with_wallet === true) {
