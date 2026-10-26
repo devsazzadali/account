@@ -9,13 +9,14 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
+import { lsGet, lsSet } from "@/src/lib/storage";
 
 export function LiveSupportWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [newMessage, setNewMessage] = useState("");
-  const username = (typeof window !== "undefined" ? localStorage.getItem : () => null)("username") || "Guest";
+  const username = lsGet("username") || "Guest";
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

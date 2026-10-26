@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
 import { toast } from "react-hot-toast";
+import { lsGet, lsSet } from "@/src/lib/storage";
 
 
 export function SignupPage() {
@@ -55,8 +56,8 @@ export function SignupPage() {
 
         if (data.user) {
             toast.success("Account created! Please check your email for verification if required.");
-            (typeof window !== "undefined" ? localStorage.setItem : () => {})("userRole", "user");
-            (typeof window !== "undefined" ? localStorage.setItem : () => {})("username", email.split('@')[0]);
+            lsSet("userRole", "user");
+            lsSet("username", email.split('@')[0]);
             router.push("/dashboard");
         }
     } catch (err: any) {

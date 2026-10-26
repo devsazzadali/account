@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { UserMessages } from "../components/user/UserMessages";
 import { UserSettings } from "../components/user/UserSettings";
 import { WalletDashboard } from "../components/user/WalletDashboard";
+import { lsClear } from "@/src/lib/storage";
 
 export function UserDashboardPage() {
   const [user, setUser] = useState<any>(null);
@@ -53,7 +54,7 @@ export function UserDashboardPage() {
 
   function handleLogout() {
     auth.signOut().then(() => {
-        (typeof window !== "undefined" ? localStorage.clear : () => {})();
+        lsClear();
         router.push("/login");
     });
   }

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
 import Link from "next/link";
+import { lsGet, lsSet, lsRemove } from "@/src/lib/storage";
 
 interface SearchResult {
   id: string;
@@ -35,7 +36,7 @@ export function GlobalSearch({ onClose }: { onClose?: () => void }) {
 
   useEffect(() => {
     inputRef.current?.focus();
-    const saved = (typeof window !== "undefined" ? localStorage.getItem : () => null)(HISTORY_KEY);
+    const saved = lsGet(HISTORY_KEY);
     if (saved) setHistory(JSON.parse(saved));
   }, []);
 
@@ -58,12 +59,12 @@ export function GlobalSearch({ onClose }: { onClose?: () => void }) {
   const saveHistory = (term: string) => {
     const updated = [term, ...history.filter(h => h !== term)].slice(0, 5);
     setHistory(updated);
-    (typeof window !== "undefined" ? localStorage.setItem : () => {})(HISTORY_KEY, JSON.stringify(updated));
+    lsSet(HISTORY_KEY, JSON.stringify(updated));
   };
 
   const clearHistory = () => {
     setHistory([]);
-    (typeof window !== "undefined" ? localStorage.removeItem : () => {})(HISTORY_KEY);
+    lsRemove(HISTORY_KEY);
   };
 
   return (

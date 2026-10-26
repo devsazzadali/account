@@ -33,9 +33,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
+import { lsGet, lsSet } from "@/src/lib/storage";
 
 export function UserMessages() {
-  const [username, setUsername] = useState<string>((typeof window !== "undefined" ? localStorage.getItem : () => null)("username") || "User");
+  const [username, setUsername] = useState<string>(lsGet("username") || "User");
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);

@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
 import { toast } from "react-hot-toast";
+import { lsGet, lsSet } from "@/src/lib/storage";
 
 
 export function LoginPage() {
@@ -51,8 +52,8 @@ export function LoginPage() {
                 .single();
 
             if (profile) {
-                (typeof window !== "undefined" ? localStorage.setItem : () => {})("userRole", profile.role);
-                (typeof window !== "undefined" ? localStorage.setItem : () => {})("username", profile.username || "User");
+                lsSet("userRole", profile.role);
+                lsSet("username", profile.username || "User");
                 
                 if (profile.role === 'admin') {
                     router.push("/admin");
@@ -61,7 +62,7 @@ export function LoginPage() {
                 }
             } else {
                 // Fallback if profile trigger hasn't finished
-                (typeof window !== "undefined" ? localStorage.setItem : () => {})("userRole", "user");
+                lsSet("userRole", "user");
                 router.push("/dashboard");
             }
         }

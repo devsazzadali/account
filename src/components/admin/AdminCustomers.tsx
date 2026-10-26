@@ -10,6 +10,7 @@ import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
+import { lsGet, lsSet } from "@/src/lib/storage";
 
 
 export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
@@ -167,7 +168,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
                     </td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={(e) => { e.stopPropagation(); (typeof window !== "undefined" ? localStorage.setItem : () => {})("selectedUserChat", profile.username); setActiveTab?.("messages"); }} className="p-2 text-slate-400 hover:text-primary-600"><MessageSquare size={18} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); lsSet("selectedUserChat", profile.username); setActiveTab?.("messages"); }} className="p-2 text-slate-400 hover:text-primary-600"><MessageSquare size={18} /></button>
                         <button onClick={(e) => { e.stopPropagation(); setSelectedUser(profile); setIsEditing(true); }} className="p-2 text-slate-400 hover:text-amber-600"><Edit2 size={18} /></button>
                       </div>
                     </td>
@@ -199,7 +200,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
                   <div className="flex justify-between items-center">
                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{new Date(profile.created_at).toLocaleDateString()}</span>
                      <div className="flex gap-2">
-                        <button onClick={(e) => { e.stopPropagation(); (typeof window !== "undefined" ? localStorage.setItem : () => {})("selectedUserChat", profile.username); setActiveTab?.("messages"); }} className="p-2.5 bg-slate-100 text-slate-600 rounded-lg"><MessageSquare size={16} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); lsSet("selectedUserChat", profile.username); setActiveTab?.("messages"); }} className="p-2.5 bg-slate-100 text-slate-600 rounded-lg"><MessageSquare size={16} /></button>
                         <button onClick={(e) => { e.stopPropagation(); setSelectedUser(profile); setIsEditing(true); }} className="p-2.5 bg-slate-100 text-slate-600 rounded-lg"><Edit2 size={16} /></button>
                      </div>
                   </div>
@@ -286,7 +287,7 @@ function UserDetailsView({ user, onEdit, setActiveTab, onClose }: any) {
         <button onClick={onEdit} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
           <Edit2 size={16} /> Edit Profile
         </button>
-        <button onClick={() => { (typeof window !== "undefined" ? localStorage.setItem : () => {})("selectedUserChat", user.username); setActiveTab?.("messages"); onClose(); }} className="flex-1 py-4 bg-primary-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center justify-center gap-2">
+        <button onClick={() => { lsSet("selectedUserChat", user.username); setActiveTab?.("messages"); onClose(); }} className="flex-1 py-4 bg-primary-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center justify-center gap-2">
           <MessageSquare size={16} /> Send Message
         </button>
       </div>

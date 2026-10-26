@@ -22,6 +22,7 @@ import {
 import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
+import { lsGet, lsSet } from "@/src/lib/storage";
 
 interface OrderDetailsProps {
   order: any;
@@ -295,7 +296,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
 
   const handleChatNow = () => {
       if (order.username) {
-          (typeof window !== "undefined" ? localStorage.setItem : () => {})("selectedUserChat", order.username);
+          lsSet("selectedUserChat", order.username);
           toast.success("User selected for chat! Please navigate to the Messages tab.");
       }
   };

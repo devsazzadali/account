@@ -10,6 +10,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { GlobalSearch } from "./GlobalSearch";
 import { NotificationCenter } from "./NotificationCenter";
 import { useRealtimeNotifications } from "../lib/useRealtimeNotifications";
+import { lsGet, lsSet, lsRemove } from "@/src/lib/storage";
 
 export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -52,8 +53,8 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
       } else if (event === 'SIGNED_OUT') {
         // ONLY clear on explicit sign out, not on initial load transients
         setProfile(null);
-        (typeof window !== "undefined" ? localStorage.removeItem : () => {})("userRole");
-        (typeof window !== "undefined" ? localStorage.removeItem : () => {})("username");
+        lsRemove("userRole");
+        lsRemove("username");
       }
     });
 
@@ -64,8 +65,8 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
     const { data } = await db.from('profiles').select('*').eq('id', userId).single();
     if (data) {
       setProfile(data);
-      (typeof window !== "undefined" ? localStorage.setItem : () => {})("userRole", data.role || "user");
-      (typeof window !== "undefined" ? localStorage.setItem : () => {})("username", data.username || "User");
+      lsSet("userRole", data.role || "user");
+      lsSet("username", data.username || "User");
     }
   }
 
@@ -94,8 +95,8 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
 
   const handleLogout = async () => {
     await auth.signOut();
-    (typeof window !== "undefined" ? localStorage.removeItem : () => {})("userRole");
-    (typeof window !== "undefined" ? localStorage.removeItem : () => {})("username");
+    lsRemove("userRole");
+    lsRemove("username");
     router.push("/login");
   };
 

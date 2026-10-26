@@ -32,6 +32,7 @@ import { useRouter } from "next/navigation";
 import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
+import { lsGet, lsClear } from "@/src/lib/storage";
 
 // ── Web Audio Chime ──────────────────────────────────────────
 function playOrderChime() {
@@ -107,7 +108,7 @@ function OrderToast({ title, amount, onView, onDismiss }: { title: string; amoun
 }
 
 export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutProps) {
-  const username = (typeof window !== "undefined" ? localStorage.getItem : () => null)("username") || "Admin";
+  const username = lsGet("username") || "Admin";
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [newOrderAlert, setNewOrderAlert] = useState<{ title: string; amount: number; orderId: string } | null>(null);
@@ -170,7 +171,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
 
   function handleLogout() {
     auth.signOut().then(() => {
-      (typeof window !== "undefined" ? localStorage.clear : () => {})();
+      lsClear();
       router.push("/login");
     });
   }

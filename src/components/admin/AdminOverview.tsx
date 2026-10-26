@@ -24,6 +24,7 @@ import {
 import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
 import { motion } from "framer-motion";
+import { lsGet, lsSet } from "@/src/lib/storage";
 
 interface AdminOverviewProps {
   setActiveTab: (tab: string) => void;
@@ -46,7 +47,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
   });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const username = (typeof window !== "undefined" ? localStorage.getItem : () => null)("username") || "ACCCOUNTSTOREONE";
+  const username = lsGet("username") || "ACCCOUNTSTOREONE";
 
   const fetchStats = useCallback(async () => {
     try {

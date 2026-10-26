@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
+import { lsGet, lsRemove } from "@/src/lib/storage";
 
 
 export function AdminMessages() {
@@ -44,11 +45,11 @@ export function AdminMessages() {
     fetchMessages();
     fetchProfiles();
     
-    const preSelected = (typeof window !== "undefined" ? localStorage.getItem : () => null)("selectedUserChat");
+    const preSelected = lsGet("selectedUserChat");
     if (preSelected) {
       setSelectedUser(preSelected);
       setViewMode("chat");
-      (typeof window !== "undefined" ? localStorage.removeItem : () => {})("selectedUserChat");
+      lsRemove("selectedUserChat");
     }
 
     const channel = db

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
+import { lsGet, lsSet } from "@/src/lib/storage";
 
 export function UserSettings() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -67,7 +68,7 @@ export function UserSettings() {
       if (error) throw error;
       
       // Sync legacy localStorage
-      (typeof window !== "undefined" ? localStorage.setItem : () => {})("username", username);
+      lsSet("username", username);
       toast.success("Identity Protocol Synchronized Successfully.");
     } catch (e: any) {
       toast.error("Sync Error: " + e.message);
