@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { Download, Search, ShoppingBag, ExternalLink, Copy, CheckCircle2, Package, Clock, ShieldCheck, AlertCircle, RefreshCw } from "lucide-react";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,28 +20,42 @@ export function UserOrders() {
   async function fetchOrders() {
     try {
         setLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await auth.getSession();
         if (!session) return;
-        
-        let query = supabase
+
+        // Orders are scoped to the signed-in account server-side; filter by
+        // account id (usernames can change, ids cannot).
+        const { data, error } = await db
             .from('orders')
             .select('*, products(title, image, category)')
-            .eq('username', (typeof window !== "undefined" ? localStorage.getItem : () => null)('username') || '') // More reliable than email prefix
+            .eq('user_id', session.user.id)
             .order('created_at', { ascending: false });
-        
-        if (activeFilter === "Success") {
-            query = query.eq('status', 'Completed');
-        } else if (activeFilter === "Processing") {
-            query = query.or('status.eq.Preparing,status.eq.Delivering,status.eq.Paid');
-        }
-        
-        const { data, error } = await query;
         if (error) throw error;
-        setOrders(data || []);
+        let rows = data || [];
+        if (activeFilter === "Success") rows = rows.filter((o: any) => o.status === 'Completed');
+        if (activeFilter === "Processing") rows = rows.filter((o: any) => ['PREPARING', 'Delivering', 'New Order'].includes(o.status));
+        setOrders(rows);
     } catch (err: any) {
         console.error("Error fetching orders:", err.message);
     } finally {
         setLoading(false);
+    }
+  }
+
+  async function cancelOrder(orderId: string) {
+    if (!confirm("Cancel this order?")) return;
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel" }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Cancel failed");
+      await fetchOrders();
+    } catch (err: any) {
+      alert(err.message);
     }
   }
 
@@ -157,6 +172,14 @@ export function UserOrders() {
                                         {order.status}
                                     </span>
                                     <span className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">{order.products?.category}</span>
+                                    <span className={`px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                        order.payment_status === 'paid' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                                        order.payment_status === 'pending_verification' ? "bg-blue-50 text-blue-500 border-blue-100" :
+                                        order.payment_status === 'refunded' ? "bg-violet-50 text-violet-600 border-violet-100" :
+                                        "bg-amber-50 text-amber-600 border-amber-100"
+                                    }`}>
+                                        {order.payment_status === 'paid' ? "Paid" : order.payment_status === 'pending_verification' ? "Verifying Payment" : order.payment_status === 'refunded' ? "Refunded" : "Awaiting Payment"}
+                                    </span>
                                 </div>
                                 <h4 className="text-[17px] font-black text-slate-900 mb-2 leading-tight group-hover:text-[#1dbf73] transition-colors">{order.products?.title}</h4>
                                 <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-[12px] text-slate-400 font-medium">
@@ -169,10 +192,12 @@ export function UserOrders() {
                             <div className="flex flex-col items-center lg:items-end gap-3 shrink-0">
                                 <div className="text-2xl font-black text-slate-900 tracking-tight">${Number(order.total_price).toFixed(2)}</div>
                                 <div className="flex gap-2">
-                                    <button className="p-3 bg-slate-50 text-slate-400 hover:text-[#1dbf73] hover:bg-emerald-50 rounded-2xl transition-all border border-slate-100">
-                                        <Download size={18} />
-                                    </button>
-                                    <Link href={`/checkout?order=${order.id}`} className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-[#1dbf73] transition-all shadow-xl shadow-slate-900/10 active:scale-95 flex items-center gap-2">
+                                    {(order.payment_status === 'unpaid' || order.payment_status === 'pending_verification') && order.status !== 'Canceled' && (
+                                        <button onClick={() => cancelOrder(order.id)} className="px-5 py-3 bg-white text-red-500 border border-red-200 rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-red-50 transition-all">
+                                            Cancel
+                                        </button>
+                                    )}
+                                    <Link href={`/order/${order.id}`} className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-[#1dbf73] transition-all shadow-xl shadow-slate-900/10 active:scale-95 flex items-center gap-2">
                                         Details <ExternalLink size={14} />
                                     </Link>
                                 </div>

@@ -3,9 +3,10 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Lock, ArrowRight, Zap, Crown, CheckCircle2, Github, Mail, Globe, Facebook, Loader2 } from "lucide-react";
+import { User, Lock, ArrowRight, Zap, Crown, CheckCircle2, Github, Mail, Globe, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { supabase } from "../lib/supabase";
+import { db } from "../lib/dbclient";
+import { auth } from "../lib/auth-client";
 import { toast } from "react-hot-toast";
 
 
@@ -15,9 +16,9 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSocialLogin = async (provider: 'google' | 'github' | 'facebook') => {
+  const handleSocialLogin = async (provider: 'google' | 'github') => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: window.location.origin + '/dashboard'
@@ -34,7 +35,7 @@ export function LoginPage() {
     setLoading(true);
     
     try {
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        const { data: authData, error: authError } = await auth.signInWithPassword({
             email,
             password
         });
@@ -43,7 +44,7 @@ export function LoginPage() {
 
         if (authData.user) {
             // Check role from profiles
-            const { data: profile, error: profileError } = await supabase
+            const { data: profile, error: profileError } = await db
                 .from('profiles')
                 .select('role, username')
                 .eq('id', authData.user.id)
@@ -174,7 +175,7 @@ export function LoginPage() {
                     <div>
                         <div className="flex justify-between items-center mb-2 ml-1">
                             <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Password</label>
-                            <a href="#" className="text-[10px] font-bold text-[#1dbf73] hover:text-[#19a463] transition-colors uppercase tracking-widest">Forgot?</a>
+                            <a href="/forgot-password" className="text-[10px] font-bold text-[#1dbf73] hover:text-[#19a463] transition-colors uppercase tracking-widest">Forgot?</a>
                         </div>
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -238,14 +239,7 @@ export function LoginPage() {
                         <Github className="w-5 h-5 mb-1" />
                         <span className="text-[10px] font-bold uppercase tracking-widest">Github</span>
                     </button>
-                    <button 
-                        type="button" 
-                        onClick={() => handleSocialLogin('facebook')}
-                        className="flex flex-col items-center justify-center py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-blue-50 hover:text-blue-600"
-                    >
-                        <Facebook className="w-5 h-5 mb-1" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Facebook</span>
-                    </button>
+                    
                 </div>
             </form>
 

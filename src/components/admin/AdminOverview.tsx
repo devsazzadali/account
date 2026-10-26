@@ -21,7 +21,8 @@ import {
   User,
   Loader2
 } from "lucide-react";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import { motion } from "framer-motion";
 
 interface AdminOverviewProps {
@@ -44,19 +45,26 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
     try {
       setLoading(true);
       const [ordersRes, productsRes, recentRes] = await Promise.all([
-        supabase.from("orders").select("total_amount, status"),
-        supabase.from("products").select("id", { count: "exact" }),
-        supabase.from("orders")
+        db.from("orders").select("total_price, status, payment_status"),
+        db.from("products").select("id"),
+        db.from("orders")
           .select("*")
           .order("created_at", { ascending: false })
           .limit(5)
       ]);
 
       const orders = ordersRes.data || [];
-      const totalRevenue = orders.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+      // Money truth: revenue counts PAID orders only — an unpaid order is
+      // not revenue. total_price is the one canonical amount field.
+      const paidOrders = orders.filter(o => o.payment_status === 'paid');
+      const totalRevenue = paidOrders.reduce((acc, curr) => acc + (Number(curr.total_price) || 0), 0);
       const totalOrders = orders.length;
       const completedOrders = orders.filter(o => o.status?.toLowerCase() === 'completed').length;
-      const awaitingAction = orders.filter(o => ['pending', 'preparing', 'waiting'].includes(o.status?.toLowerCase())).length;
+      const awaitingAction = orders.filter(o =>
+        o.payment_status === 'pending_verification' ||
+        o.status === 'Disputed' ||
+        (o.payment_status === 'paid' && o.status === 'PREPARING')
+      ).length;
       const successRate = totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 100;
 
       setStats({
@@ -64,7 +72,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
         transactions: totalOrders,
         successRate: successRate,
         awaitingAction: awaitingAction,
-        registryDensity: productsRes.count || 0
+        registryDensity: (productsRes.data || []).length
       });
 
       setRecentOrders(recentRes.data || []);
@@ -230,7 +238,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
                     key={order.id}
                     title={order.product_title || "Unknown Asset"}
                     buyer={order.customer_name || order.username || "Anonymous"}
-                    price={`$${(Number(order.total_amount) || 0).toFixed(2)}`}
+                    price={`$${(Number(order.total_price) || 0).toFixed(2)}`}
                     status={order.status || "Pending"}
                     time={new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   />

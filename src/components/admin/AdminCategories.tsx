@@ -6,7 +6,8 @@ import {
   ArrowRight, Check, AlertCircle, ChevronRight,
   FolderPlus, Layers, ListFilter
 } from "lucide-react";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { toast } from "react-hot-toast";
@@ -37,7 +38,7 @@ export function AdminCategories() {
       // In a real scenario, you'd have a categories table. 
       // If not, we derive them from products or create the table.
       // For this implementation, we assume a 'categories' table exists or we'll provide the SQL to create it.
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("categories")
         .select("*")
         .order("name", { ascending: true });
@@ -85,11 +86,11 @@ export function AdminCategories() {
       };
 
       if (editingId) {
-        const { error } = await supabase.from("categories").update(payload).eq("id", editingId);
+        const { error } = await db.from("categories").update(payload).eq("id", editingId);
         if (error) throw error;
         toast.success("Category updated successfully");
       } else {
-        const { error } = await supabase.from("categories").insert(payload);
+        const { error } = await db.from("categories").insert(payload);
         if (error) throw error;
         toast.success("Category created successfully");
       }
@@ -105,7 +106,7 @@ export function AdminCategories() {
 
   async function handleDelete(id: string) {
     try {
-      const { error } = await supabase.from("categories").delete().eq("id", id);
+      const { error } = await db.from("categories").delete().eq("id", id);
       if (error) throw error;
       setCategories(categories.filter(c => c.id !== id));
       toast.success("Category removed");

@@ -7,7 +7,8 @@ import {
   Mail, ExternalLink, ArrowRight, ShieldCheck, Crown,
   LayoutDashboard, History, MessageCircle, Shield, LogOut, Wallet
 } from "lucide-react";
-import { supabase } from "../lib/supabase";
+import { db } from "../lib/dbclient";
+import { auth } from "../lib/auth-client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,7 +29,7 @@ export function UserDashboardPage() {
   }, []);
 
   async function checkUser() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await auth.getSession();
     if (!session) {
       router.push("/login");
       return;
@@ -36,8 +37,8 @@ export function UserDashboardPage() {
     setUser(session.user);
     
     const [profileRes, ordersRes] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', session.user.id).single(),
-      supabase.from('orders').select('*, products(*)').eq('username', session.user.user_metadata.username || session.user.email?.split('@')[0]).order('created_at', { ascending: false })
+      db.from('profiles').select('*').eq('id', session.user.id).single(),
+      db.from('orders').select('*, products(*)').eq('user_id', session.user.id).order('created_at', { ascending: false })
     ]);
 
     if (profileRes.data?.role === 'admin' || profileRes.data?.role === 'moderator') {
@@ -51,7 +52,7 @@ export function UserDashboardPage() {
   }
 
   function handleLogout() {
-    supabase.auth.signOut().then(() => {
+    auth.signOut().then(() => {
         (typeof window !== "undefined" ? localStorage.clear : () => {})();
         router.push("/login");
     });
@@ -65,21 +66,9 @@ export function UserDashboardPage() {
     );
   }
 
-  // Security Check: Email Confirmation
-  if (user && !user.email_confirmed_at) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md w-full bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden">
-          <div className="p-10 text-center">
-             <div className="w-20 h-20 bg-amber-50 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-amber-100"><Mail className="w-10 h-10 text-amber-600" /></div>
-             <h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Identity Verification Required</h2>
-             <p className="text-slate-500 font-medium leading-relaxed mb-8">Your account is restricted. Confirm your email <span className="text-slate-900 font-bold">{user.email}</span> to unlock the hub.</p>
-             <button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">Check Status <ArrowRight size={16} /></button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  // NOTE (completion build): the old email-confirmation lock screen was
+  // removed — Neon Auth verification is optional and handled by its own
+  // flow; locking every new customer out of the dashboard was a dead end.
 
   const menuItems = [
     { id: "dashboard", label: "Operational Hub",      icon: LayoutDashboard },
@@ -190,8 +179,9 @@ function OperationalOverview({ profile, orders, setActiveTab }: any) {
                       </div>
                    </div>
                    <div className="text-right">
-                      <div className="text-[14px] font-black text-slate-900">${order.total_price}</div>
+                      <div className="text-[14px] font-black text-slate-900">${Number(order.total_price).toFixed(2)}</div>
                       <div className={`text-[9px] font-black uppercase tracking-widest ${order.status === 'Completed' ? 'text-emerald-500' : 'text-amber-500'}`}>{order.status}</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">{order.payment_status === 'paid' ? 'Paid' : order.payment_status === 'pending_verification' ? 'Verifying' : order.payment_status === 'refunded' ? 'Refunded' : 'Unpaid'}</div>
                    </div>
                 </div>
              ))}
@@ -227,8 +217,9 @@ function OrderManifest({ orders }: any) {
                    </div>
                    <div className="flex items-center gap-6">
                       <div className="text-right">
-                         <div className="text-[18px] font-black text-slate-900">${order.total_price}</div>
+                         <div className="text-[18px] font-black text-slate-900">${Number(order.total_price).toFixed(2)}</div>
                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date(order.created_at).toLocaleDateString()}</div>
+                         <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">{order.payment_status === 'paid' ? 'Paid' : order.payment_status === 'pending_verification' ? 'Verifying payment' : order.payment_status === 'refunded' ? 'Refunded' : 'Awaiting payment'}</div>
                       </div>
                       <Link href={`/order/${order.id}`} className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-[#1dbf73] transition-all flex items-center gap-2">Access <ArrowRight size={16} /></Link>
                    </div>

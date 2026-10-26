@@ -19,7 +19,8 @@ import {
   ArrowRight,
   Activity
 } from "lucide-react";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
 
 interface OrderDetailsProps {
@@ -31,9 +32,7 @@ const STEPS = [
   { id: 1, label: "New Order" },
   { id: 2, label: "PREPARING" },
   { id: 3, label: "Delivering" },
-  { id: 4, label: "Waiting for confirmation" },
-  { id: 5, label: "Completed" },
-  { id: 6, label: "Evaluate" }
+  { id: 4, label: "Completed" }
 ];
 
 function MetadataItem({ label, value }: any) {
@@ -77,7 +76,11 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   
-  const [accountInfo, setAccountInfo] = useState(order?.account_info || {});
+  // Delivery writes the SAME credential_* fields the customer's vault
+  // reads (the old build wrote an account_info blob nobody ever read).
+  const [credUsername, setCredUsername] = useState(order?.credential_username || "");
+  const [credPassword, setCredPassword] = useState(order?.credential_password || "");
+  const [credNotes, setCredNotes] = useState(order?.credential_notes || "");
   const [isSubmittingInfo, setIsSubmittingInfo] = useState(false);
   const [showDeliverModal, setShowDeliverModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -87,15 +90,22 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   const product = Array.isArray(order.products) ? order.products[0] : order.products;
   const currentStep = STEPS.findIndex(s => s.label.toUpperCase() === status.toUpperCase()) + 1 || 1;
 
-  async function updateStatus(newStatus: string) {
+  // All order mutations go through the transactional action API — the
+  // generic table endpoint refuses order writes by design, so stock,
+  // escrow, wallet and delivery bookkeeping can never be skipped.
+  async function orderAction(action: string, extra: Record<string, unknown> = {}) {
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: newStatus })
-        .eq('id', order.id);
-      if (error) throw error;
-      setStatus(newStatus);
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, ...extra }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Action failed");
+      if (json.order?.status) setStatus(json.order.status);
+      toast.success("Done — order updated");
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -109,20 +119,19 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   async function handleConfirmDeliver() {
       setIsSubmittingInfo(true);
       try {
-          const { error } = await supabase
-            .from('orders')
-            .update({ 
-                account_info: accountInfo,
-                status: "Delivering" 
-            })
-            .eq('id', order.id);
-          
-          if (error) throw error;
+          const res = await fetch(`/api/orders/${order.id}`, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "deliver", username: credUsername, password: credPassword, notes: credNotes }),
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error || "Delivery failed");
           setStatus("Delivering");
           setShowDeliverModal(false);
-          toast.success("Account Information Sent to Customer!");
+          toast.success("Credentials delivered — they are now in the customer's vault!");
       } catch (e: any) {
-          toast.error("Failed to deliver info: " + e.message);
+          toast.error("Failed to deliver: " + e.message);
       } finally {
           setIsSubmittingInfo(false);
       }
@@ -241,7 +250,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                         <button onClick={handleChatNow} className="flex items-center gap-3 px-6 py-3 bg-[#E62E04] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-red-500/20 hover:bg-red-700 transition-all active:scale-95">
                             <MessageCircle size={16} /> Open Channel
                         </button>
-                        <a href={`mailto:${order.email || ''}`} className="flex items-center gap-3 px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95">
+                        <a href={`mailto:${order.customer_email || ''}`} className="flex items-center gap-3 px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95">
                             <Mail size={16} /> SMTP Link
                         </a>
                         <button onClick={() => setShowCancelModal(true)} className="flex items-center gap-3 px-6 py-3 bg-white border border-red-100 text-[#E62E04] rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-red-50 transition-all active:scale-95">
@@ -265,38 +274,48 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                         </div>
                         <div className="space-y-6">
                             <MetadataItem label="Registry User" value={order?.username || "Anonymous"} />
-                            <MetadataItem label="Registry Level" value="System Administrator" />
+                            <MetadataItem label="Buyer Email" value={order?.customer_email || "N/A"} />
                         </div>
                     </div>
 
                     <div className="pt-10">
                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Operational Actions</div>
-                        <div className="flex gap-4">
-                            {status === "New Order" && (
-                                <button 
-                                    onClick={() => setShowConfirmModal(true)}
-                                    className="px-10 py-4 bg-[#0A0F1C] text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-slate-900/40 hover:bg-slate-800 transition-all active:scale-95"
+                        <div className="flex gap-4 flex-wrap">
+                            {order.payment_status === "pending_verification" && (
+                                <p className="text-[12px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4">
+                                    A payment is waiting for verification — approve or reject it in the Payment Verification tab. Delivery starts automatically on approval.
+                                </p>
+                            )}
+                            {order.payment_status === "unpaid" && status === "New Order" && (
+                                <p className="text-[12px] font-bold text-amber-600 bg-amber-50 border border-amber-100 rounded-2xl px-5 py-4">
+                                    Unpaid order — no action needed until the buyer pays.
+                                </p>
+                            )}
+                            {order.payment_status === "paid" && status === "PREPARING" && (
+                                <p className="text-[12px] font-bold text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4">
+                                    Paid and in escrow. Deliver the credentials below — or add inventory stock for this product and it will auto-deliver on the next payment.
+                                </p>
+                            )}
+                            {status === "Delivering" && (
+                                <button
+                                    onClick={() => orderAction("complete")}
+                                    disabled={loading}
+                                    className="px-10 py-4 bg-emerald-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-emerald-900/40 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50"
                                 >
-                                    INITIALIZE PREPARATION
+                                    COMPLETE ORDER — RELEASE ESCROW
                                 </button>
                             )}
-                            {status === "PREPARING" && (
-                                <button 
-                                    onClick={() => updateStatus("Delivering")}
-                                    className="px-10 py-4 bg-[#E62E04] text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-red-900/40 hover:bg-red-700 transition-all active:scale-95"
-                                >
-                                    COMMENCE TRADE
-                                </button>
-                            )}
-                            {status === "Waiting for confirmation" && (
-                                <button 
-                                    onClick={() => updateStatus("Completed")}
-                                    className="px-10 py-4 bg-emerald-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-emerald-900/40 hover:bg-emerald-700 transition-all active:scale-95"
-                                >
-                                    FINALIZE REGISTRY
-                                </button>
+                            {status === "Disputed" && (
+                                <>
+                                    <button onClick={() => orderAction("resolve_dispute", { resolution: "refunded" })} disabled={loading} className="px-8 py-4 bg-violet-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-violet-700 transition-all disabled:opacity-50">REFUND TO WALLET</button>
+                                    <button onClick={() => orderAction("resolve_dispute", { resolution: "replaced" })} disabled={loading} className="px-8 py-4 bg-[#0A0F1C] text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-slate-800 transition-all disabled:opacity-50">REPLACE FROM STOCK</button>
+                                    <button onClick={() => orderAction("resolve_dispute", { resolution: "rejected" })} disabled={loading} className="px-8 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-slate-50 transition-all disabled:opacity-50">REJECT DISPUTE</button>
+                                </>
                             )}
                         </div>
+                        {status === "Disputed" && order.dispute_reason && (
+                            <p className="mt-4 text-[12px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-2xl px-5 py-4">Buyer dispute: {order.dispute_reason}</p>
+                        )}
                     </div>
                 </div>
 
@@ -304,13 +323,14 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                 <div className="col-span-12 lg:col-span-4 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-200/60">
                     <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest italic mb-8">Financial Ledger</h3>
                     <div className="space-y-6">
-                        <LedgerItem label="Asset Valuation" value={`$${(order?.total_price || 0).toLocaleString()}`} />
-                        <LedgerItem label="Quantity Unit" value="01 Registry Entry" />
-                        <LedgerItem label="Service Protocol (8%)" value={`$${((order?.total_price || 0) * 0.08).toFixed(2)}`} />
+                        <LedgerItem label="Order Total (one canonical field)" value={`$${Number(order?.total_price || 0).toFixed(2)}`} />
+                        <LedgerItem label="Quantity" value={`${order?.quantity || 1} unit(s)`} />
+                        <LedgerItem label="Payment" value={`${order?.payment_status || "unpaid"}${order?.payment_method ? ` · ${order.payment_method}` : ""}`} />
+                        <LedgerItem label="Escrow" value={order?.escrow_state || "pending_payment"} />
                         <div className="pt-6 mt-6 border-t border-slate-200">
                              <div className="flex justify-between items-center">
-                                  <span className="text-[11px] font-black text-slate-900 uppercase">Settlement Amount</span>
-                                  <span className="text-2xl font-black text-[#E62E04] tracking-tighter">${((order?.total_price || 0) * 0.92).toFixed(2)}</span>
+                                  <span className="text-[11px] font-black text-slate-900 uppercase">Buyer Paid</span>
+                                  <span className="text-2xl font-black text-[#0C2254] tracking-tighter">${Number(order?.total_price || 0).toFixed(2)}</span>
                              </div>
                         </div>
                     </div>
@@ -318,7 +338,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
             </div>
 
             {/* Account Info Form Section */}
-            {currentStep >= 2 && (
+            {order.payment_status === "paid" && (status === "PREPARING" || status === "Delivering" || status === "Disputed") && (
             <div className="mt-16">
                 <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden">
                     <div className="bg-[#0A0F1C] px-10 py-6 flex justify-between items-center text-white">
@@ -329,10 +349,9 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                         <div className="px-3 py-1 bg-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest text-white/50">SECURE V2</div>
                     </div>
                     <div className="p-10 bg-white grid grid-cols-1 md:grid-cols-2 gap-10">
-                        <FormInput label="Login Registry / Email" value={accountInfo?.loginAccount} onChange={(v) => setAccountInfo({...accountInfo, loginAccount: v})} required />
-                        <FormInput label="Passcode Registry" value={accountInfo?.loginPassword} onChange={(v) => setAccountInfo({...accountInfo, loginPassword: v})} type="password" required />
-                        <FormInput label="2FA Protocol Code" value={accountInfo?.twoFactorCode} onChange={(v) => setAccountInfo({...accountInfo, twoFactorCode: v})} placeholder="Scan fallback..." />
-                        <FormInput label="Cookie Registry Payload" value={accountInfo?.cookies} onChange={(v) => setAccountInfo({...accountInfo, cookies: v})} placeholder="JSON / String..." />
+                        <FormInput label="Credential Username / Email" value={credUsername} onChange={setCredUsername} required />
+                        <FormInput label="Credential Password" value={credPassword} onChange={setCredPassword} required />
+                        <FormInput label="Delivery Notes (optional)" value={credNotes} onChange={setCredNotes} placeholder="Anything the buyer should know..." />
                         <div className="col-span-2 pt-6">
                             <button onClick={() => setShowDeliverModal(true)} disabled={isSubmittingInfo} className="px-12 py-4 bg-[#E62E04] text-white rounded-2xl font-black text-[12px] uppercase tracking-[0.3em] shadow-2xl shadow-red-500/30 hover:bg-red-700 transition-all disabled:opacity-50 flex items-center gap-3">
                                 {isSubmittingInfo ? <Loader2 size={18} className="animate-spin" /> : <>TRANSMIT DATA <ArrowRight size={16} /></>}
@@ -345,30 +364,6 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
           </div>
         </div>
       </div>
-
-      {/* Confirm Preparing Modal */}
-      {showConfirmModal && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
-              <div className="fixed inset-0 bg-black/40" onClick={() => setShowConfirmModal(false)} />
-              <div className="relative bg-white w-full max-w-[400px] rounded-3xl shadow-2xl overflow-hidden border border-slate-100">
-                  <div className="bg-[#0A0F1C] px-6 py-4 flex justify-between items-center text-white text-[11px] font-black uppercase tracking-widest">
-                      <span className="flex items-center gap-2"><Settings size={14} className="text-[#E62E04]" /> Protocol Initialize</span>
-                      <button onClick={() => setShowConfirmModal(false)} className="hover:text-[#E62E04] transition-colors"><X size={18} /></button>
-                  </div>
-                  <div className="p-10 text-center">
-                      <div className="w-16 h-16 bg-red-50 text-[#E62E04] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner">
-                          <Activity size={32} />
-                      </div>
-                      <h3 className="text-lg font-black text-slate-900 mb-2 uppercase italic tracking-tight">Commence Preparation?</h3>
-                      <p className="text-[12px] text-slate-500 mb-10 font-bold uppercase tracking-tight leading-relaxed">System will transition to <span className="text-[#E62E04]">PREPARING</span> status. Verify all registry entries before proceeding.</p>
-                      <div className="flex gap-4">
-                          <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Abort</button>
-                          <button onClick={() => updateStatus("PREPARING")} className="flex-1 py-4 bg-[#E62E04] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-red-500/20 hover:bg-red-700 transition-all">Confirm</button>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
 
       {/* Deliver Account Info Modal */}
       {showDeliverModal && (
@@ -414,11 +409,11 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                           <XCircle size={32} />
                       </div>
                       <h3 className="text-lg font-black text-slate-900 mb-2 uppercase italic tracking-tight">Terminate Entry?</h3>
-                      <p className="text-[12px] text-slate-500 mb-10 font-bold uppercase tracking-tight leading-relaxed">Are you absolutely certain? This operation will <span className="text-[#E62E04]">CANCEL</span> the registry entry permanently.</p>
+                      <p className="text-[12px] text-slate-500 mb-10 font-bold uppercase tracking-tight leading-relaxed">Are you absolutely certain? {order.payment_status === "paid" ? "The buyer will be refunded to their store wallet and the order closed." : "This unpaid order will be canceled and its reserved stock restored."}</p>
                       <div className="flex gap-4">
                           <button onClick={() => setShowCancelModal(false)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Abort</button>
-                          <button 
-                            onClick={() => updateStatus("Canceled")} 
+                          <button
+                            onClick={() => orderAction(order.payment_status === "paid" ? "refund" : "cancel")}
                             disabled={loading}
                             className="flex-1 py-4 bg-red-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-red-500/20 hover:bg-red-700 transition-all flex items-center justify-center gap-2"
                           >

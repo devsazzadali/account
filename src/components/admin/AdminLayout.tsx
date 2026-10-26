@@ -29,7 +29,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
 
 // ── Web Audio Chime ──────────────────────────────────────────
@@ -122,7 +123,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
 
   // ── Real-time new order watcher ──────────────────────────
   useEffect(() => {
-    const channel = supabase
+    const channel = db
       .channel("admin_new_order_alert")
       .on(
         "postgres_changes",
@@ -143,7 +144,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
       )
       .subscribe();
     isFirstLoad.current = false;
-    return () => { supabase.removeChannel(channel); };
+    return () => { db.removeChannel(channel); };
   }, []);
 
   useEffect(() => {
@@ -156,19 +157,19 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
 
   async function fetchUnreadCount() {
     try {
-      const { count, error } = await supabase
+      const { data, error } = await db
         .from('messages')
-        .select('*', { count: 'exact', head: true })
+        .select('id')
         .eq('status', 'unread');
-      
-      if (!error) setUnreadCount(count || 0);
+
+      if (!error) setUnreadCount((data || []).length);
     } catch (e) {
       console.error("Error fetching unread count:", e);
     }
   }
 
   function handleLogout() {
-    supabase.auth.signOut().then(() => {
+    auth.signOut().then(() => {
       (typeof window !== "undefined" ? localStorage.clear : () => {})();
       router.push("/login");
     });
@@ -231,9 +232,17 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             setActiveTab={setActiveTab}
             collapsed={isSidebarCollapsed}
           />
-          <MenuItem 
-            id="products" 
-            label="Create New Offers" 
+          <MenuItem
+            id="payments"
+            label="Payment Verification"
+            icon={<DollarSign size={20} />}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem
+            id="products"
+            label="Create New Offers"
             icon={<Plus size={20} />} 
             activeTab={activeTab} 
             setActiveTab={setActiveTab}

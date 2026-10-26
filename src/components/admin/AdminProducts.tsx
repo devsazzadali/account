@@ -25,7 +25,8 @@ import {
   HelpCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
 
 
@@ -42,6 +43,45 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
     game_type: "All"
   });
 
+  const [editing, setEditing] = useState<any>(null);
+
+  async function handleUpdateProduct() {
+    if (!editing) return;
+    setLoading(true);
+    try {
+      const { error } = await db.from("products").update({
+        title: editing.title,
+        price: parseFloat(editing.price),
+        stock: parseInt(editing.stock) || 0,
+        category: editing.category,
+        badge: editing.badge || null,
+        image: editing.image || null,
+        description: editing.description || null,
+      }).eq("id", editing.id);
+      if (error) throw error;
+      toast.success("Product updated");
+      setEditing(null);
+      fetchProducts();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDeleteProduct(product: any) {
+    if (!confirm(`Delete "${product.title}"? This cannot be undone.`)) return;
+    try {
+      const { error } = await db.from("products").delete().eq("id", product.id);
+      if (error) throw error;
+      toast.success("Product deleted");
+      if (editing?.id === product.id) setEditing(null);
+      fetchProducts();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
   // UI State for the new design
   const [sellingItemQuery, setSellingItemQuery] = useState("");
   const [sellingCategory, setSellingCategory] = useState("Accounts");
@@ -56,8 +96,8 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
     setLoading(true);
     try {
       const [prodRes, catRes] = await Promise.all([
-          supabase.from("products").select("*").order("created_at", { ascending: false }),
-          supabase.from("categories").select("*").order("name", { ascending: true })
+          db.from("products").select("*").order("created_at", { ascending: false }),
+          db.from("categories").select("*").order("name", { ascending: true })
       ]);
       if (prodRes.error) throw prodRes.error;
       setProducts(prodRes.data || []);
@@ -73,7 +113,14 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
     if (!newProduct.title || !newProduct.price) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from("products").insert([newProduct]);
+      const { error } = await db.from("products").insert([{
+        title: newProduct.title,
+        price: parseFloat(newProduct.price),
+        image: newProduct.image || null,
+        stock: parseInt(newProduct.stock) || 0,
+        category: newProduct.category,
+        game_type: newProduct.game_type,
+      }]);
       if (error) throw error;
       setNewProduct({ title: "", price: "", image: "", stock: "10", category: "Accounts", game_type: "All" });
       setShowAddForm(false);
@@ -592,9 +639,32 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                         </button>
                     </div>
                 ) : products.map(product => (
-                    <ProductCard key={product.id} product={product} />
+                    <ProductCard key={product.id} product={product} onEdit={() => setEditing({ ...product })} onDelete={() => handleDeleteProduct(product)} />
                 ))}
             </div>
+
+            {editing && (
+                <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-lg font-black text-slate-900">Edit product — {editing.title}</h4>
+                        <button onClick={() => setEditing(null)} className="text-slate-400 hover:text-slate-900"><XCircle size={20} /></button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormItem label="Title"><input value={editing.title || ""} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                        <FormItem label="Category"><input value={editing.category || ""} onChange={(e) => setEditing({ ...editing, category: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                        <FormItem label="Price (USD)"><input type="number" step="0.01" value={editing.price ?? ""} onChange={(e) => setEditing({ ...editing, price: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                        <FormItem label="Stock (manual count)"><input type="number" value={editing.stock ?? 0} onChange={(e) => setEditing({ ...editing, stock: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                        <FormItem label="Badge"><input value={editing.badge || ""} onChange={(e) => setEditing({ ...editing, badge: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                        <FormItem label="Image URL"><input value={editing.image || ""} onChange={(e) => setEditing({ ...editing, image: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                    </div>
+                    <FormItem label="Description"><textarea value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} rows={4} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-red-400 resize-none" /></FormItem>
+                    <div className="flex gap-3">
+                        <button onClick={handleUpdateProduct} disabled={loading} className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black text-[12px] uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-50">Save Changes</button>
+                        <button onClick={() => handleDeleteProduct(editing)} className="px-8 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-black text-[12px] uppercase tracking-widest hover:bg-red-50 transition-all">Delete Product</button>
+                    </div>
+                    <InventoryManager productId={editing.id} />
+                </div>
+            )}
             </div>
         )}
       </div>
@@ -611,14 +681,14 @@ function FormItem({ label, children }: any) {
     );
 }
 
-function ProductCard({ product }: any) {
+function ProductCard({ product, onEdit, onDelete }: any) {
     return (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm group hover:border-[#E62E04] transition-all duration-300">
             <div className="h-48 overflow-hidden relative">
                 <img src={product.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
                 <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="bg-white p-2 rounded-lg text-slate-600 hover:text-[#E62E04] shadow-xl border border-slate-100"><Edit size={16} /></button>
-                    <button className="bg-white p-2 rounded-lg text-slate-600 hover:text-red-600 shadow-xl border border-slate-100"><Trash2 size={16} /></button>
+                    <button onClick={onEdit} className="bg-white p-2 rounded-lg text-slate-600 hover:text-[#E62E04] shadow-xl border border-slate-100"><Edit size={16} /></button>
+                    <button onClick={onDelete} className="bg-white p-2 rounded-lg text-slate-600 hover:text-red-600 shadow-xl border border-slate-100"><Trash2 size={16} /></button>
                 </div>
                 <div className="absolute bottom-3 left-3 px-3 py-1 bg-white/90 backdrop-blur-md rounded-lg text-[12px] font-black uppercase tracking-widest text-slate-900 border border-white/20">
                     {product.category}
@@ -638,10 +708,93 @@ function ProductCard({ product }: any) {
                         <p className="text-sm font-black text-slate-900">{product.stock || 0} PCS</p>
                     </div>
                 </div>
-                <button className="w-full py-2.5 bg-slate-50 border border-slate-100 text-slate-600 rounded-lg text-[13px] font-black uppercase tracking-[0.1em] group-hover:bg-slate-900 group-hover:text-white group-hover:border-slate-900 transition-all">
-                    View Analytics
+                <button onClick={onEdit} className="w-full py-2.5 bg-slate-50 border border-slate-100 text-slate-600 rounded-lg text-[13px] font-black uppercase tracking-[0.1em] group-hover:bg-slate-900 group-hover:text-white group-hover:border-slate-900 transition-all">
+                    Edit · Stock · Credentials
                 </button>
             </div>
         </div>
     );
+}
+
+
+// ── Inventory (auto-delivery stock) ─────────────────────────────
+// Each row is ONE deliverable account. When a payment is verified the
+// order service assigns the oldest available row, writes its credentials
+// into the order's vault fields and marks the row assigned.
+function InventoryManager({ productId }: { productId: string }) {
+  const [items, setItems] = useState<any[]>([]);
+  const [login, setLogin] = useState("");
+  const [password, setPassword] = useState("");
+  const [info, setInfo] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    const { data } = await db.from("inventory").select("*").eq("product_id", productId).order("created_at", { ascending: false });
+    setItems(data || []);
+  }
+  useEffect(() => { load(); }, [productId]);
+
+  async function addItem() {
+    if (!login.trim() || !password.trim()) { toast.error("Login and password are required"); return; }
+    setBusy(true);
+    try {
+      const { error } = await db.from("inventory").insert({
+        product_id: productId,
+        account_login: login.trim(),
+        account_password: password,
+        additional_info: info.trim() || null,
+        status: "available",
+      });
+      if (error) throw error;
+      setLogin(""); setPassword(""); setInfo("");
+      toast.success("Inventory item added — it will auto-deliver on the next verified payment (keep the product stock count in sync).");
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeItem(item: any) {
+    if (item.status !== "available") { toast.error("Only unused (available) items can be removed"); return; }
+    if (!confirm("Remove this unused credential from inventory?")) return;
+    const { error } = await db.from("inventory").delete().eq("id", item.id);
+    if (error) toast.error(error.message); else load();
+  }
+
+  const counts = items.reduce((acc: any, i: any) => { acc[i.status] = (acc[i.status] || 0) + 1; return acc; }, {});
+
+  return (
+    <div className="border-t border-slate-100 pt-6 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h5 className="text-[13px] font-black text-slate-900 uppercase tracking-widest">Delivery Inventory (auto-delivery stock)</h5>
+        <span className="text-[11px] font-bold text-slate-400">
+          {counts.available || 0} available · {counts.assigned || 0} assigned · {counts.used || 0} used · {counts.flagged || 0} flagged
+        </span>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <input value={login} onChange={(e) => setLogin(e.target.value)} placeholder="Account login / email" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
+        <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Account password" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
+        <input value={info} onChange={(e) => setInfo(e.target.value)} placeholder="Notes (optional)" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
+      </div>
+      <button onClick={addItem} disabled={busy} className="px-6 py-3 bg-[#0C2254] text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2">
+        <Plus size={14} /> Add Credential to Inventory
+      </button>
+      <div className="divide-y divide-slate-50 border border-slate-100 rounded-2xl overflow-hidden">
+        {items.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-slate-400 font-medium">No inventory yet — orders for this product will need manual delivery until stock is added.</p>
+        ) : items.map((item) => (
+          <div key={item.id} className="flex items-center gap-4 px-5 py-3 bg-white">
+            <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${item.status === "available" ? "bg-emerald-50 text-emerald-600" : item.status === "assigned" ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-500"}`}>{item.status}</span>
+            <span className="text-sm font-bold text-slate-800 truncate flex-1">{item.account_login}</span>
+            <span className="text-[11px] text-slate-400 font-medium hidden md:block">{item.order_id ? `Order #${String(item.order_id).slice(0, 8).toUpperCase()}` : "—"}</span>
+            {item.status === "available" && (
+              <button onClick={() => removeItem(item)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={15} /></button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

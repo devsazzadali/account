@@ -4,7 +4,8 @@ import { Search, User, ShoppingCart, Menu, LayoutDashboard, ShoppingBag, Store, 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabase";
+import { db } from "../lib/dbclient";
+import { auth } from "../lib/auth-client";
 import { AnimatePresence, motion } from "framer-motion";
 import { GlobalSearch } from "./GlobalSearch";
 import { NotificationCenter } from "./NotificationCenter";
@@ -34,7 +35,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
 
   useEffect(() => {
     // 1. Initial Session Check
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
         fetchProfile(session.user.id);
@@ -43,7 +44,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
     });
 
     // 2. Auth State Listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
@@ -60,7 +61,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   }, []);
 
   async function fetchProfile(userId: string) {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    const { data } = await db.from('profiles').select('*').eq('id', userId).single();
     if (data) {
       setProfile(data);
       (typeof window !== "undefined" ? localStorage.setItem : () => {})("userRole", data.role || "user");
@@ -74,7 +75,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
         try {
             const now = new Date();
             const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-            const { data, error } = await supabase.from('orders').select('total_price').gte('created_at', firstDay);
+            const { data, error } = await db.from('orders').select('total_price').gte('created_at', firstDay);
             if (error) throw error;
             if (data) {
                 const total = data.reduce((acc, o) => acc + Number(o.total_price), 0);
@@ -92,7 +93,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await auth.signOut();
     (typeof window !== "undefined" ? localStorage.removeItem : () => {})("userRole");
     (typeof window !== "undefined" ? localStorage.removeItem : () => {})("username");
     router.push("/login");

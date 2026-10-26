@@ -26,7 +26,8 @@ import {
   FileText,
   Loader2
 } from "lucide-react";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import { AdminOrderDetails } from "./AdminOrderDetails";
 
 export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
@@ -53,32 +54,34 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
       setLoading(true);
       
       // Fetch Categories
-      const { data: catData } = await supabase
+      const { data: catData } = await db
         .from("categories")
         .select("*")
         .order("name", { ascending: true });
       setCategories(catData || []);
 
-      // Fetch Orders with Joined Data
-      const { data, error } = await supabase
+      // Fetch Orders with Joined Data (product embed → display fields)
+      const { data, error } = await db
         .from("orders")
-        .select(`
-          *,
-          product_title,
-          product_image
-        `)
+        .select("*, products(title, image)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setOrders(data || []);
+      const rows = (data || []).map((o: any) => ({
+        ...o,
+        product_title: o.products?.title || "Product",
+        product_image: o.products?.image || null,
+      }));
+      setOrders(rows);
 
-      // Calculate counts
+      // Counts use the canonical states: payment pending_verification =
+      // "Pending", paid + PREPARING = "Waiting" (on the store to deliver).
       const countsMap = {
-        All: data?.length || 0,
-        Pending: data?.filter(o => o.status === 'pending').length || 0,
-        Waiting: data?.filter(o => o.status === 'waiting').length || 0,
-        Completed: data?.filter(o => o.status === 'completed').length || 0,
-        Canceled: data?.filter(o => o.status === 'canceled' || o.status === 'cancelled').length || 0,
+        All: rows.length,
+        Pending: rows.filter(o => o.payment_status === 'pending_verification' || (o.payment_status === 'unpaid' && o.status === 'New Order')).length,
+        Waiting: rows.filter(o => o.payment_status === 'paid' && (o.status === 'PREPARING' || o.status === 'Delivering')).length,
+        Completed: rows.filter(o => o.status === 'Completed').length,
+        Canceled: rows.filter(o => o.status === 'Canceled').length,
       };
       setCounts(countsMap);
 
@@ -95,11 +98,11 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
 
   const filteredOrders = orders.filter(order => {
     // Status Tab Filter
-    const matchesTab = activeTab === "All" || 
-                      (activeTab === "Pending" && order.status === "pending") ||
-                      (activeTab === "Waiting" && order.status === "waiting") ||
-                      (activeTab === "Completed" && order.status === "completed") ||
-                      (activeTab === "Canceled" && (order.status === "canceled" || order.status === "cancelled"));
+    const matchesTab = activeTab === "All" ||
+                      (activeTab === "Pending" && (order.payment_status === "pending_verification" || (order.payment_status === "unpaid" && order.status === "New Order"))) ||
+                      (activeTab === "Waiting" && order.payment_status === "paid" && (order.status === "PREPARING" || order.status === "Delivering")) ||
+                      (activeTab === "Completed" && order.status === "Completed") ||
+                      (activeTab === "Canceled" && order.status === "Canceled");
     
     if (!matchesTab) return false;
 
@@ -340,7 +343,7 @@ function OrderRow({ order, onDetail }: { order: any, onDetail: () => void, key?:
 
         {/* Unit Price (col-span-2) */}
         <div className="col-span-2">
-          <span className="text-[13px] font-bold text-slate-900">${(order.total_amount || 0).toLocaleString()}</span>
+          <span className="text-[13px] font-bold text-slate-900">${(order.total_price || 0).toLocaleString()}</span>
         </div>
 
         {/* Type (col-span-1) */}
@@ -368,7 +371,7 @@ function OrderRow({ order, onDetail }: { order: any, onDetail: () => void, key?:
 
         {/* Total Amount (col-span-1) */}
         <div className="col-span-1 text-right">
-           <p className="text-[14px] font-bold text-slate-900">${(order.total_amount || 0).toLocaleString()}</p>
+           <p className="text-[14px] font-bold text-slate-900">${(order.total_price || 0).toLocaleString()}</p>
         </div>
       </div>
     </div>

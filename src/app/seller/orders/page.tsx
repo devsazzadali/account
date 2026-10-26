@@ -1,7 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { SoldOrdersPage } from "@/src/screens/Seller/SoldOrdersPage";
-
+// Single-seller store: seller surfaces were folded into the admin console.
 export default function SoldOrdersRoute() {
-  return <SoldOrdersPage />;
+  redirect("/admin/orders");
 }

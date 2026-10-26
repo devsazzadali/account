@@ -9,7 +9,8 @@ import {
   Users, UserPlus, Zap, ChevronLeft, FileText, X, List, Image as ImageIcon
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
 
 
@@ -46,7 +47,7 @@ export function AdminMessages() {
       (typeof window !== "undefined" ? localStorage.removeItem : () => {})("selectedUserChat");
     }
 
-    const channel = supabase
+    const channel = db
       .channel('helpdesk_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
         fetchMessages();
@@ -54,7 +55,7 @@ export function AdminMessages() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      db.removeChannel(channel);
     };
   }, []);
 
@@ -66,12 +67,12 @@ export function AdminMessages() {
   }, [selectedUser]);
 
   async function fetchUserOrders(username: string) {
-    const { data } = await supabase.from('orders').select('*, products(title)').eq('username', username).order('created_at', { ascending: false });
+    const { data } = await db.from('orders').select('*, products(title)').eq('username', username).order('created_at', { ascending: false });
     setUserOrders(data || []);
   }
 
   async function fetchProfiles() {
-    const { data } = await supabase.from('profiles').select('*').order('username');
+    const { data } = await db.from('profiles').select('*').order('username');
     setAllProfiles(data || []);
   }
 
@@ -87,17 +88,17 @@ export function AdminMessages() {
 
   async function markMessagesAsRead(username: string) {
     try {
-      await supabase.from('messages').update({ status: 'replied' }).eq('username', username).eq('status', 'unread');
+      await db.from('messages').update({ status: 'replied' }).eq('username', username).eq('status', 'unread');
     } catch (e) { console.error(e); }
   }
 
   async function fetchMessages() {
     try {
-        const { data, error } = await supabase.from('messages').select('*').order('created_at', { ascending: true });
+        const { data, error } = await db.from('messages').select('*').order('created_at', { ascending: true });
         if (error) throw error;
         setMessages(data || []);
         if (data && data.length > 0 && !selectedUser && window.innerWidth > 1024) {
-            const uniqueUsers = Array.from(new Set(data.map(m => m.username)));
+            const uniqueUsers = Array.from(new Set(data.map((m: any) => m.username))) as string[];
             if (uniqueUsers.length > 0) setSelectedUser(uniqueUsers[0]);
         }
         setLoading(false);
@@ -113,7 +114,7 @@ export function AdminMessages() {
 
     setIsReplying(true);
     try {
-        const { error } = await supabase.from('messages').insert({
+        const { error } = await db.from('messages').insert({
             username: selectedUser,
             subject: "Helpdesk Ticket",
             message: "[ADMIN_INITIATED]",
@@ -136,7 +137,7 @@ export function AdminMessages() {
     setIsBroadcasting(true);
     try {
        const promises = allProfiles.map(profile => {
-         return supabase.from('messages').insert({
+         return db.from('messages').insert({
            username: profile.username,
            subject: "Global Announcement",
            message: "[ADMIN_INITIATED]",

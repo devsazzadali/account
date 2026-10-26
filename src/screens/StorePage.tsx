@@ -6,8 +6,9 @@ import { MainContent } from "../components/MainContent";
 import { Banner } from "../components/Banner";
 import { ActivityFeed } from "../components/ActivityFeed";
 import { useSearch } from "../components/SearchContext";
+import type { HomeData } from "../lib/store-types";
 
-export function StorePage() {
+export function StorePage({ initialData }: { initialData?: HomeData } = {}) {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const { searchQuery } = useSearch();
 
@@ -28,15 +29,18 @@ export function StorePage() {
                
                {/* Main Content */}
                <div className={`flex-1 min-w-0 pt-8`}>
-                   <MainContent 
-                    selectedCategory={selectedCategory} 
-                    setSelectedCategory={setSelectedCategory} 
+                   <MainContent
+                    selectedCategory={selectedCategory}
+                    setSelectedCategory={setSelectedCategory}
+                    initialProducts={initialData?.products}
+                    initialCategories={initialData?.categories}
+                    initialReviews={initialData?.reviews}
                    />
                </div>
            </div>
       </div>
 
-      {/* Real-time Activity Feed — shows only real orders from Supabase */}
+      {/* Real-time Activity Feed — shows only real, payment-verified orders */}
       <ActivityFeed />
     </div>
   );

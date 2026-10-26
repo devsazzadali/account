@@ -8,7 +8,8 @@ import {
   MessageSquare, Share2, ChevronRight, Shield, ShieldCheck, BadgeCheck, AlertCircle, Plus, Minus
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "../lib/supabase";
+import { db } from "../lib/dbclient";
+import { auth } from "../lib/auth-client";
 import { SellerTrustCard, StockIntelligence, DeliveryTimeline, TrustBadges } from "../components/ProductTrustSystem";
 import { PageLoader } from "../components/SkeletonUI";
 
@@ -24,21 +25,66 @@ interface Product {
   category?: string;
 }
 
-export function ProductDetailsPage() {
+export function ProductDetailsPage({
+  initialProduct,
+}: {
+  /** Server-rendered product from Prisma (SEO port). When provided, the
+   *  screen renders it immediately — including in the SSR HTML — and the
+   *  legacy client fetch is skipped. */
+  initialProduct?: Product | null;
+} = {}) {
   const params = useParams();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [product, setProduct] = useState<Product | null>(
+    initialProduct ?? null,
+  );
+  const [loading, setLoading] = useState(!initialProduct);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [myRating, setMyRating] = useState(5);
+  const [myComment, setMyComment] = useState("");
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [me, setMe] = useState<any>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    db.from("reviews").select("*").eq("product_id", id).order("created_at", { ascending: false }).limit(20)
+      .then(({ data }: any) => setReviews(data || []));
+    auth.getSession().then(({ data }: any) => setMe(data?.session?.user || null));
+  }, [id]);
+
+  async function submitReview() {
+    if (!me) { window.location.href = `/login?next=/product/${id}`; return; }
+    if (!myComment.trim()) return;
+    setReviewBusy(true);
+    try {
+      const { data: profile } = await db.from("profiles").select("username").eq("id", me.id).single();
+      const { error } = await db.from("reviews").insert({
+        product_id: id,
+        user_id: me.id,
+        username: profile?.username || me.email?.split("@")[0] || "Customer",
+        rating: myRating,
+        comment: myComment.trim(),
+      });
+      if (error) throw error;
+      setMyComment("");
+      const { data } = await db.from("reviews").select("*").eq("product_id", id).order("created_at", { ascending: false }).limit(20);
+      setReviews(data || []);
+    } catch (err: any) {
+      alert(err.message || "Could not post review");
+    } finally {
+      setReviewBusy(false);
+    }
+  }
 
   useEffect(() => {
     async function fetchProduct() {
         try {
             setLoading(true);
-            const { data, error } = await supabase
+            const { data, error } = await db
                 .from('products')
                 .select('*')
                 .eq('id', id)
@@ -53,8 +99,8 @@ export function ProductDetailsPage() {
             setLoading(false);
         }
     }
-    if (id) fetchProduct();
-  }, [id]);
+    if (id && !initialProduct) fetchProduct();
+  }, [id, initialProduct]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -180,7 +226,7 @@ export function ProductDetailsPage() {
                                     <Zap size={18} className="text-primary-600" />
                                     Automated Transmission
                                 </h4>
-                                <p className="text-slate-600">Upon successful settlement, the digital asset credentials will be transmitted directly to your secure portal and registered email address. Typical resolution time: <strong>Millisecond clearance.</strong></p>
+                                <p className="text-slate-600">As soon as your payment is verified, the credentials appear in the Credential Vault on your order page. When the item is in stock delivery is automatic; otherwise the store delivers manually. Your payment stays held in escrow until you confirm receipt — open a dispute from the order page if anything is wrong.</p>
                             </div>
                         )}
                         {activeTab === "warranty" && (
@@ -188,14 +234,63 @@ export function ProductDetailsPage() {
                                 <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 flex items-start gap-4">
                                     <Shield size={24} className="text-blue-600 shrink-0" />
                                     <div>
-                                        <h4 className="text-slate-900 font-bold mb-1">Lifetime Governance</h4>
-                                        <p className="text-xs text-slate-600">This asset is covered by our full-term warranty protocol. Any divergence from specification will result in immediate replacement or credits.</p>
+                                        <h4 className="text-slate-900 font-bold mb-1">Buyer Protection</h4>
+                                        <p className="text-xs text-slate-600">Covered by the store's Buyer Protection: if the delivered credentials don't work, open a dispute on your order page and the store will replace the item or refund you to your wallet. See the Buyer Protection page for the full policy.</p>
                                     </div>
                                 </div>
                             </div>
                         )}
                     </motion.div>
                 </AnimatePresence>
+            </div>
+
+            {/* Reviews */}
+            <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Customer Reviews ({reviews.length})</h3>
+                {reviews.length === 0 ? (
+                    <p className="text-sm text-slate-400 font-medium mb-6">No reviews yet — be the first to review this product after your purchase.</p>
+                ) : (
+                    <div className="space-y-4 mb-8">
+                        {reviews.map((r) => (
+                            <div key={r.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-xs font-bold text-slate-900">{r.username || "Customer"}</span>
+                                    <span className="flex items-center gap-0.5">
+                                        {[1, 2, 3, 4, 5].map((i) => (
+                                            <Star key={i} size={11} className={i <= r.rating ? "text-yellow-500 fill-current" : "text-slate-300"} />
+                                        ))}
+                                    </span>
+                                </div>
+                                <p className="text-sm text-slate-600 font-medium">{r.comment}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">{(r.created_at || "").slice(0, 10)}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <div className="border-t border-slate-100 pt-6">
+                    <p className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-3">Write a review</p>
+                    <div className="flex items-center gap-1 mb-3">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <button key={i} onClick={() => setMyRating(i)} className="p-0.5">
+                                <Star size={20} className={i <= myRating ? "text-yellow-500 fill-current" : "text-slate-300"} />
+                            </button>
+                        ))}
+                    </div>
+                    <textarea
+                        value={myComment}
+                        onChange={(e) => setMyComment(e.target.value)}
+                        rows={3}
+                        placeholder={me ? "Share your experience with this product…" : "Sign in to write a review"}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary-500 transition-all resize-none"
+                    />
+                    <button
+                        onClick={submitReview}
+                        disabled={reviewBusy || !myComment.trim()}
+                        className="mt-3 px-6 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-40"
+                    >
+                        {reviewBusy ? "Posting…" : me ? "Post Review" : "Sign in to Review"}
+                    </button>
+                </div>
             </div>
           </div>
 
@@ -208,12 +303,6 @@ export function ProductDetailsPage() {
                 <h1 className="text-3xl font-display font-bold text-slate-900 mb-4 leading-tight">{product.title}</h1>
                 
                 <div className="flex items-center gap-6 mb-10 pb-8 border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1">
-                            {[1,2,3,4,5].map(i => <Star key={i} size={14} className="text-yellow-500 fill-current" />)}
-                        </div>
-                        <span className="text-xs font-bold text-slate-400">5.0</span>
-                    </div>
                     <div className="flex items-center gap-2">
                         <ShoppingCart size={14} className="text-primary-600" />
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{product.sold || 0}+ Acquisitions</span>
@@ -239,19 +328,25 @@ export function ProductDetailsPage() {
                         <div className="flex items-center gap-4">
                             <button onClick={() => setQuantity(Math.max(1, quantity-1))} className="p-2 text-slate-400 hover:text-primary-600 transition-colors"><Minus size={16} /></button>
                             <span className="text-lg font-bold text-slate-900 w-6 text-center">{quantity}</span>
-                            <button onClick={() => setQuantity(quantity+1)} className="p-2 text-slate-400 hover:text-primary-600 transition-colors"><Plus size={16} /></button>
+                            <button onClick={() => setQuantity(Math.min(product.stock || 1, quantity+1))} className="p-2 text-slate-400 hover:text-primary-600 transition-colors"><Plus size={16} /></button>
                         </div>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-4 mb-6">
-                    <Link 
-                        href={`/checkout/${product.id}?quantity=${quantity}`}
-                        className="w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:scale-[1.02] active:scale-[0.98] text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary-500/20 transition-all text-sm uppercase tracking-widest"
-                    >
-                        <Zap size={20} fill="currentColor" />
-                        Buy Now — ${(product.price * quantity).toFixed(2)}
-                    </Link>
+                    {product.stock <= 0 ? (
+                        <span className="w-full bg-slate-100 text-slate-400 font-bold py-5 rounded-2xl flex items-center justify-center gap-3 text-sm uppercase tracking-widest cursor-not-allowed">
+                            Out of Stock
+                        </span>
+                    ) : (
+                        <Link
+                            href={`/checkout/${product.id}?quantity=${Math.min(quantity, product.stock)}`}
+                            className="w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:scale-[1.02] active:scale-[0.98] text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary-500/20 transition-all text-sm uppercase tracking-widest"
+                        >
+                            <Zap size={20} fill="currentColor" />
+                            Buy Now — ${(product.price * Math.min(quantity, product.stock)).toFixed(2)}
+                        </Link>
+                    )}
                     <div className="grid grid-cols-2 gap-4">
                          <button className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-50 border border-slate-200 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-white hover:text-slate-900 transition-all shadow-sm">
                             <MessageSquare size={16} /> Contact Seller
