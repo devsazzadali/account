@@ -35,7 +35,8 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [activeTab, setLocalTab] = useState("All");
-  const [counts, setCounts] = useState<any>({ All: 0, Pending: 0, Waiting: 0, Completed: 0, Canceled: 0 });
+  const [subStatus, setSubStatus] = useState<string | null>(null);
+  const [counts, setCounts] = useState<any>({ All: 0, Pending: 0, Waiting: 0, Completed: 0, Disputed: 0, Canceled: 0 });
   const [categories, setCategories] = useState<any[]>([]);
   
   // Filter States
@@ -63,7 +64,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
       // Fetch Orders with Joined Data (product embed → display fields)
       const { data, error } = await db
         .from("orders")
-        .select("*, products(title, image)")
+        .select("*, products(title, image, delivery_eta_hours)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -71,16 +72,20 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
         ...o,
         product_title: o.products?.title || "Product",
         product_image: o.products?.image || null,
+        product_eta_hours: o.products?.delivery_eta_hours ?? null,
       }));
       setOrders(rows);
 
       // Counts use the canonical states: payment pending_verification =
       // "Pending", paid + PREPARING = "Waiting" (on the store to deliver).
+      // Disputed is its own tab, joined from the same orders list (P1) —
+      // disputes themselves stay visible in the order detail.
       const countsMap = {
         All: rows.length,
         Pending: rows.filter(o => o.payment_status === 'pending_verification' || (o.payment_status === 'unpaid' && o.status === 'New Order')).length,
         Waiting: rows.filter(o => o.payment_status === 'paid' && (o.status === 'PREPARING' || o.status === 'Delivering')).length,
         Completed: rows.filter(o => o.status === 'Completed').length,
+        Disputed: rows.filter(o => o.status === 'Disputed').length,
         Canceled: rows.filter(o => o.status === 'Canceled').length,
       };
       setCounts(countsMap);
@@ -102,16 +107,18 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
                       (activeTab === "Pending" && (order.payment_status === "pending_verification" || (order.payment_status === "unpaid" && order.status === "New Order"))) ||
                       (activeTab === "Waiting" && order.payment_status === "paid" && (order.status === "PREPARING" || order.status === "Delivering")) ||
                       (activeTab === "Completed" && order.status === "Completed") ||
+                      (activeTab === "Disputed" && order.status === "Disputed") ||
                       (activeTab === "Canceled" && order.status === "Canceled");
-    
+
     if (!matchesTab) return false;
+    if (subStatus && order.status !== subStatus) return false;
 
     // Advanced Filters
     const matchesGame = filters.game === "All" || order.game_type === filters.game;
     const matchesCategory = filters.category === "All" || order.category === filters.category;
     const matchesOrderNum = !filters.orderNumber || order.id.toLowerCase().includes(filters.orderNumber.toLowerCase());
     const matchesTitle = !filters.productTitle || (order.product_title && order.product_title.toLowerCase().includes(filters.productTitle.toLowerCase()));
-    const matchesRemarks = !filters.remarks || (order.remarks && order.remarks.toLowerCase().includes(filters.remarks.toLowerCase()));
+    const matchesRemarks = !filters.remarks || (order.internal_remarks && order.internal_remarks.toLowerCase().includes(filters.remarks.toLowerCase()));
     
     // Date Filters
     let matchesDate = true;
@@ -148,6 +155,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
     { id: "Pending", label: `Pending Delivery (${counts.Pending})` },
     { id: "Waiting", label: `Waiting Confirmation (${counts.Waiting})` },
     { id: "Completed", label: `Completed (${counts.Completed})` },
+    { id: "Disputed", label: `Disputed (${counts.Disputed})` },
     { id: "Canceled", label: `Canceled (${counts.Canceled})` },
   ];
 
@@ -267,17 +275,26 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
           </div>
         </div>
 
-        {/* Sub-Tabs Section */}
+        {/* Fulfilment sub-filter — wired to the real status column */}
         <div className="flex items-center gap-3 mt-4 mb-2">
-            <button className="px-5 py-2 border border-slate-300 rounded text-sm font-bold text-slate-800 bg-white hover:bg-slate-50 transition-colors">
-                New Order
-            </button>
-            <button className="px-5 py-2 border border-slate-300 rounded text-sm font-bold text-slate-400 bg-white hover:text-slate-800 transition-colors uppercase">
-                Preparing
-            </button>
-            <button className="px-5 py-2 border border-slate-300 rounded text-sm font-bold text-slate-400 bg-white hover:text-slate-800 transition-colors">
-                Delivering
-            </button>
+            {["New Order", "PREPARING", "Delivering"].map((s) => (
+              <button
+                key={s}
+                onClick={() => setSubStatus(subStatus === s ? null : s)}
+                className={`px-5 py-2 border rounded text-sm font-bold transition-colors uppercase ${
+                  subStatus === s
+                    ? "border-[#E62E04] text-[#E62E04] bg-red-50"
+                    : "border-slate-300 text-slate-400 bg-white hover:text-slate-800"
+                }`}
+              >
+                {s === "PREPARING" ? "Preparing" : s}
+              </button>
+            ))}
+            {subStatus && (
+              <button onClick={() => setSubStatus(null)} className="text-[11px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600">
+                Clear
+              </button>
+            )}
         </div>
 
         {/* Orders Table Section */}
@@ -324,6 +341,14 @@ function OrderRow({ order, onDetail }: { order: any, onDetail: () => void, key?:
   const hoursPassed = Math.floor((Date.now() - created.getTime()) / (1000 * 60 * 60));
   const showWarning = hoursPassed > 2 && !isCanceled && order.status !== 'completed';
 
+  // Delivery ETA (P1): paid but not yet delivered past the product's
+  // promised window (created + delivery_eta_hours).
+  const etaOverdue = order.payment_status === 'paid' &&
+    !order.delivered_at &&
+    order.product_eta_hours != null &&
+    Date.now() > created.getTime() + Number(order.product_eta_hours) * 3600_000 &&
+    !['Completed', 'Canceled', 'Refunded'].includes(order.status);
+
   return (
     <div onClick={onDetail} className="group hover:bg-slate-50/50 transition-all duration-300 cursor-pointer">
       <div className="px-6 py-6 grid grid-cols-12 gap-4 items-center">
@@ -351,21 +376,35 @@ function OrderRow({ order, onDetail }: { order: any, onDetail: () => void, key?:
            <Package size={18} />
         </div>
 
-        {/* Status (col-span-2) */}
-        <div className="col-span-2">
+        {/* Status (col-span-2) — fulfilment state + payment state */}
+        <div className="col-span-2 flex flex-col items-start gap-1.5">
            <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border ${
               isCanceled ? 'bg-red-50 text-[#E62E04] border-red-100' :
-              order.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+              order.status === 'completed' || order.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+              order.status === 'Disputed' ? 'bg-red-50 text-red-600 border-red-100' :
               'bg-amber-50 text-amber-600 border-amber-100'
            }`}>
              {isCanceled ? 'Terminated' : order.status}
            </span>
+           <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md border ${
+              order.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+              order.payment_status === 'pending_verification' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+              order.payment_status === 'refunded' ? 'bg-slate-100 text-slate-500 border-slate-200' :
+              'bg-slate-50 text-slate-400 border-slate-100'
+           }`}>
+             {order.payment_status === 'pending_verification' ? 'Verifying' : order.payment_status || 'unpaid'}
+           </span>
+           {etaOverdue && (
+             <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-red-50 text-red-600 border border-red-100">
+               ETA passed
+             </span>
+           )}
         </div>
 
         {/* Internal Remarks (col-span-2) */}
         <div className="col-span-2">
            <p className="text-[12px] font-medium text-slate-500 truncate pr-4">
-               {order.remarks ? `"${order.remarks}"` : '-'}
+               {order.internal_remarks ? `"${order.internal_remarks}"` : '-'}
            </p>
         </div>
 

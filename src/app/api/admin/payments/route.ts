@@ -9,6 +9,7 @@ import { requireAdmin, isResponse } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 import { serializeRows, serializeRow } from "@/src/lib/serialize";
 import { reviewPaymentRequest, ServiceError } from "@/src/lib/order-service";
+import { flushEmailOutbox } from "@/src/lib/mailer";
 
 export async function GET(req: Request) {
   const gate = await requireAdmin(req);
@@ -47,6 +48,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   try {
     const updated = await reviewPaymentRequest(String(body.id || ""), !!body.approve, body.note);
+    void flushEmailOutbox();
     return Response.json({ ok: true, payment_request: serializeRow(updated as unknown as Record<string, unknown>) });
   } catch (err) {
     if (err instanceof ServiceError) return Response.json({ error: err.message }, { status: err.status });

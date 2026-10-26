@@ -15,7 +15,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ShieldCheck, Zap, CheckCircle, Clock, Package, Eye, EyeOff,
-  Copy, Check, AlertTriangle, Lock, ArrowLeft, Loader2, Wallet, XCircle
+  Copy, Check, AlertTriangle, Lock, ArrowLeft, Loader2, Wallet, XCircle, Star
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -178,6 +178,14 @@ export function OrderPage() {
               <span>•</span>
               <span>{new Date(order.created_at).toLocaleDateString()}</span>
             </div>
+            {(order as any).variant_label && (
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Option: {(order as any).variant_label}</p>
+            )}
+            {(order as any).coupon_code && (
+              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-1">
+                Coupon {(order as any).coupon_code} · -${Number((order as any).discount_amount || 0).toFixed(2)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -385,6 +393,38 @@ export function OrderPage() {
           </div>
         )}
 
+        {/* Invoice (P4) — printable receipt for paid orders */}
+        {isPaid && (
+          <div className="flex justify-end">
+            <Link
+              href={`/order/${order.id}/invoice`}
+              className="px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
+            >
+              View / Print Invoice
+            </Link>
+          </div>
+        )}
+
+        {/* Review (P3) — bound to THIS completed order */}
+        {order.status === "Completed" && (
+          <OrderReview order={order} />
+        )}
+
+        {/* Confirmation trail (P1 events) */}
+        {Array.isArray((order as any).events) && (order as any).events.length > 0 && (
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
+            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Order History</h3>
+            <div className="space-y-3">
+              {(order as any).events.map((e: any) => (
+                <div key={e.id} className="flex items-baseline justify-between gap-4">
+                  <span className="text-xs font-bold text-slate-700">{ORDER_EVENT_LABELS[e.event] || e.event}</span>
+                  <span className="text-[10px] font-bold text-slate-400 shrink-0">{new Date(e.created_at).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Escrow banner */}
         <div className="bg-blue-50 border border-blue-200 rounded-[2rem] p-5 flex gap-4">
           <ShieldCheck size={22} className="text-blue-600 shrink-0 mt-0.5" />
@@ -404,6 +444,107 @@ export function OrderPage() {
           <Link href="/dashboard" className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-colors">← Back to my orders</Link>
         </div>
       </div>
+    </div>
+  );
+}
+
+const ORDER_EVENT_LABELS: Record<string, string> = {
+  created: "Order placed",
+  payment_submitted: "Payment submitted",
+  payment_verified: "Payment verified — escrow started",
+  payment_rejected: "Payment rejected",
+  delivered: "Delivered",
+  completed: "Completed — escrow released",
+  canceled: "Canceled",
+  refunded: "Refunded to wallet",
+  dispute_opened: "Dispute opened",
+  dispute_resolved: "Dispute resolved",
+};
+
+/** Review form bound to a completed order (P3). One review per order;
+ *  the server enforces ownership + completion. */
+function OrderReview({ order }: { order: any }) {
+  const existing = order.review;
+  const [rating, setRating] = useState(5);
+  const [delivery, setDelivery] = useState(0);
+  const [service, setService] = useState(0);
+  const [description, setDescription] = useState(0);
+  const [comment, setComment] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(!!existing);
+
+  if (done) {
+    return (
+      <div className="bg-white rounded-[2rem] border border-emerald-100 p-6 shadow-sm">
+        <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-1">Thanks for your feedback</h3>
+        <p className="text-xs text-slate-500 font-medium">Your review for this order has been recorded and appears on the product page.</p>
+      </div>
+    );
+  }
+
+  async function submit() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          order_id: order.id,
+          rating,
+          comment: comment.trim(),
+          delivery_rating: delivery || undefined,
+          service_rating: service || undefined,
+          description_rating: description || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Could not save the review");
+      toast.success("Review published — thank you!");
+      setDone(true);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const Stars = ({ value, onPick }: { value: number; onPick: (n: number) => void }) => (
+    <span className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <button key={i} type="button" onClick={() => onPick(i)} className="p-0.5">
+          <Star size={16} className={i <= value ? "text-yellow-500 fill-current" : "text-slate-300"} />
+        </button>
+      ))}
+    </span>
+  );
+
+  return (
+    <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm space-y-4">
+      <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Rate this order</h3>
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-slate-500">Overall</span>
+        <Stars value={rating} onPick={setRating} />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-bold text-slate-500">
+        <div className="flex items-center justify-between sm:flex-col sm:items-start gap-1.5">Delivery speed <Stars value={delivery} onPick={setDelivery} /></div>
+        <div className="flex items-center justify-between sm:flex-col sm:items-start gap-1.5">Service quality <Stars value={service} onPick={setService} /></div>
+        <div className="flex items-center justify-between sm:flex-col sm:items-start gap-1.5">Item as described <Stars value={description} onPick={setDescription} /></div>
+      </div>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        rows={3}
+        placeholder="How was the account and the delivery?"
+        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-primary-500 transition-all resize-none"
+      />
+      <button
+        onClick={submit}
+        disabled={busy || comment.trim().length < 3}
+        className="px-6 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-40"
+      >
+        {busy ? "Publishing…" : "Publish Review"}
+      </button>
     </div>
   );
 }

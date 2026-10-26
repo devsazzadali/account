@@ -206,6 +206,142 @@ async function main() {
   step("signed-in buyer sees the store bkash number", cfgBuyer.json?.manual?.bkashNumber === "01700000000", cfgBuyer.json?.manual?.bkashNumber);
   step("stripe reported not configured (no keys in test env)", cfgBuyer.json?.stripe?.enabled === false);
 
+  // ══ Z2U ALIGNMENT (P0–P5) ══════════════════════════════════════
+
+  // ── P0: seller stats are self-consistent (computed, not typed) ──
+  const statsRes = await call(null, "GET", "/api/store/stats");
+  const seller = statsRes.json?.seller;
+  step("seller info stats present", !!seller && typeof seller.total_orders === "number");
+  if (seller) {
+    const denom = seller.total_orders - seller.canceled_orders;
+    const expected = denom > 0 ? Number(((seller.completed_orders / denom) * 100).toFixed(2)) : null;
+    step("completion rate = completed ÷ non-canceled (recomputed)", seller.completion_rate === expected, `rate=${seller.completion_rate} expected=${expected}`);
+  }
+
+  // ── P1: remarks round-trip ──────────────────────────────────────
+  const remarkText = `E2E remark ${uniq}`;
+  const remarkPatch = await call(admin, "PATCH", `/api/db/orders?id=eq.${order1.id}`, { internal_remarks: remarkText });
+  step("admin writes internal remarks", remarkPatch.status === 200, `got ${remarkPatch.status}`);
+  const remarkRead = await call(admin, "GET", `/api/orders/${order1.id}`);
+  step("remarks read back on order detail", remarkRead.json?.order?.internal_remarks === remarkText, remarkRead.json?.order?.internal_remarks);
+  await call(admin, "PATCH", `/api/db/orders?id=eq.${order1.id}`, { internal_remarks: null });
+
+  // ── P1: order events trail exists ───────────────────────────────
+  const events = remarkRead.json?.order?.events || [];
+  step("order carries an audit events trail", events.length >= 3 && events.some((e) => e.event === "created") && events.some((e) => e.event === "payment_verified"), `events=${events.map((e) => e.event).join(",")}`);
+
+  // ── P1+P3: dispute joins the orders list; review gating ─────────
+  const dispute1 = await call(buyer, "POST", `/api/orders/${order1.id}`, { action: "dispute", reason: "E2E dispute for the disputed tab" });
+  step("completed order can be disputed", dispute1.status === 200 && dispute1.json?.order?.status === "Disputed", dispute1.json?.order?.status);
+  const disputedList = await call(admin, "GET", "/api/db/orders?status=eq.Disputed");
+  step("disputed order appears in admin Disputed list", (disputedList.json?.data || []).some((o) => o.id === order1.id));
+  const badReview = await call(buyer, "POST", "/api/reviews", { order_id: order3.id, rating: 5, comment: "Review on a canceled order" });
+  step("review on non-completed order = 409", badReview.status === 409, `got ${badReview.status}`);
+  const resolveRej = await call(admin, "POST", `/api/orders/${order1.id}`, { action: "resolve_dispute", resolution: "rejected" });
+  step("dispute rejected → order back to Completed", resolveRej.status === 200 && resolveRej.json?.order?.status === "Completed", resolveRej.json?.order?.status);
+  const goodReview = await call(buyer, "POST", "/api/reviews", { order_id: order1.id, rating: 5, comment: "E2E review — flawless delivery", delivery_rating: 5, service_rating: 4 });
+  step("review on completed order = 201", goodReview.status === 201 && !!goodReview.json?.review?.id, `got ${goodReview.status}: ${goodReview.json?.error || ""}`);
+  const dupReview = await call(buyer, "POST", "/api/reviews", { order_id: order1.id, rating: 1, comment: "Duplicate review attempt" });
+  step("second review for same order = 409", dupReview.status === 409, `got ${dupReview.status}`);
+  const reviewId = goodReview.json?.review?.id;
+  const anonReviews = await call(null, "GET", `/api/db/reviews?product_id=eq.${product.id}`);
+  step("review visible on product (public)", (anonReviews.json?.data || []).some((r) => r.id === reviewId));
+  await call(admin, "PATCH", `/api/db/reviews?id=eq.${reviewId}`, { is_hidden: true });
+  const anonReviews2 = await call(null, "GET", `/api/db/reviews?product_id=eq.${product.id}`);
+  step("hidden review disappears from public reads", !(anonReviews2.json?.data || []).some((r) => r.id === reviewId));
+  await call(admin, "PATCH", `/api/db/reviews?id=eq.${reviewId}`, { admin_reply: "Thank you! (E2E)", reply_at: new Date().toISOString(), is_hidden: false });
+
+  // ── P5: coupons end-to-end ──────────────────────────────────────
+  const couponProduct = await call(admin, "POST", "/api/db/products", { title: `E2E Coupon Widget ${uniq}`, price: 20, stock: 5, category: "E2E" });
+  const cpId = couponProduct.json?.data?.[0]?.id;
+  const couponCode = `E2E${uniq}`.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 14);
+  const couponCreate = await call(admin, "POST", "/api/coupons", { code: couponCode, type: "percent", value: 10 });
+  step("admin creates coupon", couponCreate.status === 201 && couponCreate.json?.coupon?.code === couponCode, `got ${couponCreate.status}: ${couponCreate.json?.error || ""}`);
+  const couponId = couponCreate.json?.coupon?.id;
+  const validate = await call(buyer, "POST", "/api/coupons/validate", { code: couponCode, product_id: cpId, quantity: 1 });
+  step("coupon validates with priced discount", validate.status === 200 && validate.json?.valid === true && Number(validate.json?.discount) === 2, JSON.stringify(validate.json));
+  const oc = await call(buyer, "POST", "/api/orders", { product_id: cpId, quantity: 1, customer_email: buyerEmail, coupon_code: couponCode });
+  const couponOrder = oc.json?.order;
+  step("coupon order total = discounted + fee", oc.status === 201 && Number(couponOrder?.total_price) === 18.5 && Number(couponOrder?.discount_amount) === 2 && couponOrder?.coupon_code === couponCode, `total=${couponOrder?.total_price} discount=${couponOrder?.discount_amount}`);
+  const oc2 = await call(buyer, "POST", "/api/orders", { product_id: cpId, quantity: 1, customer_email: buyerEmail, coupon_code: couponCode });
+  step("per-buyer coupon limit enforced (2nd use = 422)", oc2.status === 422, `got ${oc2.status}: ${oc2.json?.error || ""}`);
+  const couponList = await call(admin, "GET", "/api/coupons");
+  step("coupon usage tracked (used_count = 1)", (couponList.json?.coupons || []).find((c) => c.id === couponId)?.used_count === 1);
+  await call(buyer, "POST", `/api/orders/${couponOrder.id}`, { action: "cancel" });
+  const couponList2 = await call(admin, "GET", "/api/coupons");
+  step("cancel releases the coupon use", (couponList2.json?.coupons || []).find((c) => c.id === couponId)?.used_count === 0);
+
+  // ── P2: min quantity + variants ─────────────────────────────────
+  await call(admin, "PATCH", `/api/db/products?id=eq.${cpId}`, { min_quantity: 3 });
+  const underMin = await call(buyer, "POST", "/api/orders", { product_id: cpId, quantity: 2, customer_email: buyerEmail });
+  step("below min quantity = 422", underMin.status === 422, `got ${underMin.status}: ${underMin.json?.error || ""}`);
+  const atMin = await call(buyer, "POST", "/api/orders", { product_id: cpId, quantity: 3, customer_email: buyerEmail });
+  step("at min quantity = 201", atMin.status === 201, `got ${atMin.status}`);
+  await call(buyer, "POST", `/api/orders/${atMin.json?.order?.id}`, { action: "cancel" });
+  await call(admin, "PATCH", `/api/db/products?id=eq.${cpId}`, { min_quantity: 1, variants: [{ label: "Pro Pack", priceDelta: 5, stock: null }] });
+  const vOrder = await call(buyer, "POST", "/api/orders", { product_id: cpId, quantity: 1, customer_email: buyerEmail, variant_label: "Pro Pack" });
+  step("variant order priced with delta", vOrder.status === 201 && Number(vOrder.json?.order?.total_price) === 25.5 && vOrder.json?.order?.variant_label === "Pro Pack", `total=${vOrder.json?.order?.total_price}`);
+  await call(buyer, "POST", `/api/orders/${vOrder.json?.order?.id}`, { action: "cancel" });
+  const badVariant = await call(buyer, "POST", "/api/orders", { product_id: cpId, quantity: 1, customer_email: buyerEmail, variant_label: "Nope" });
+  step("unknown variant = 422", badVariant.status === 422, `got ${badVariant.status}`);
+
+  // ── P2: derived stock (single source of truth) ──────────────────
+  const derivedProd = await call(admin, "POST", "/api/db/products", { title: `E2E Derived ${uniq}`, price: 8, stock: 0, category: "E2E", use_inventory_stock: true });
+  const dpId = derivedProd.json?.data?.[0]?.id;
+  for (let i = 0; i < 2; i++) {
+    await call(admin, "POST", "/api/db/inventory", { product_id: dpId, account_login: `derived-${uniq}-${i}@vault.test`, account_password: `dpw-${i}`, status: "available" });
+  }
+  const dpRead = await call(admin, "GET", `/api/db/products?id=eq.${dpId}`);
+  step("derived stock syncs from inventory (0 → 2)", Number(dpRead.json?.data?.[0]?.stock) === 2, `stock=${dpRead.json?.data?.[0]?.stock}`);
+  const overDerived = await call(buyer, "POST", "/api/orders", { product_id: dpId, quantity: 3, customer_email: buyerEmail });
+  step("oversell of derived stock = 409", overDerived.status === 409, `got ${overDerived.status}`);
+  const dOrder = await call(buyer, "POST", "/api/orders", { product_id: dpId, quantity: 2, customer_email: buyerEmail });
+  step("derived order at exact stock = 201", dOrder.status === 201, `got ${dOrder.status}`);
+  const dpRead2 = await call(admin, "GET", `/api/db/products?id=eq.${dpId}`);
+  step("derived stock nets reservations (2 → 0)", Number(dpRead2.json?.data?.[0]?.stock) === 0, `stock=${dpRead2.json?.data?.[0]?.stock}`);
+  await call(buyer, "POST", `/api/orders/${dOrder.json?.order?.id}`, { action: "cancel" });
+
+  // ── P4: invoice page renders ────────────────────────────────────
+  const invoice = await call(buyer, "GET", `/order/${order1.id}/invoice`);
+  step("invoice page = 200 (client-rendered receipt)", invoice.status === 200 && (invoice.text || "").toLowerCase().includes("invoice"), `got ${invoice.status}`);
+
+  // ── P4: email outbox queued honestly (no provider in test env) ──
+  const outbox = await call(admin, "GET", "/api/admin/outbox");
+  step("outbox holds queued order emails, provider unconfigured", outbox.status === 200 && outbox.json?.email_configured === false && (outbox.json?.counts?.pending || 0) >= 1, JSON.stringify(outbox.json?.counts));
+
+  // ── P2/P4: CSV export carries the catalog ───────────────────────
+  const csv = await call(admin, "GET", "/api/admin/products-csv?type=products");
+  step("products CSV export contains test product", csv.status === 200 && (csv.text || "").includes(`E2E Widget ${uniq}`), `got ${csv.status}`);
+
+  // ── P3: ticket states ───────────────────────────────────────────
+  const myProfile = (await call(buyer, "GET", "/api/me")).json?.profile;
+  const ticketMsg = await call(buyer, "POST", "/api/db/messages", { message: `E2E ticket ${uniq}`, subject: "Help" });
+  step("buyer opens a ticket message", ticketMsg.status === 200, `got ${ticketMsg.status}`);
+  const adminThread = await call(admin, "GET", `/api/db/messages?username=eq.${encodeURIComponent(myProfile.username)}`);
+  step("ticket state = open on buyer message", (adminThread.json?.data || []).every((m) => m.ticket_status === "open") && (adminThread.json?.data || []).length > 0);
+  await call(admin, "PATCH", `/api/db/messages?username=eq.${encodeURIComponent(myProfile.username)}`, { ticket_status: "closed" });
+  const buyerThread = await call(buyer, "GET", `/api/db/messages?username=eq.${encodeURIComponent(myProfile.username)}`);
+  step("ticket state = closed after admin closes", (buyerThread.json?.data || []).length > 0 && (buyerThread.json?.data || []).every((m) => m.ticket_status === "closed"));
+
+  // ── P4: broadcast reaches buyers ────────────────────────────────
+  const bTitle = `E2E Announcement ${uniq}`;
+  const broadcast = await call(admin, "POST", "/api/admin/broadcast", { title: bTitle, body: "Suite broadcast — please ignore." });
+  step("broadcast created for all buyers", broadcast.status === 201 && (broadcast.json?.recipients || 0) >= 1, `recipients=${broadcast.json?.recipients}`);
+  const announcements = await call(buyer, "GET", "/api/announcements");
+  step("buyer sees the announcement", (announcements.json?.announcements || []).some((a) => a.title === bTitle));
+
+  // ── P0: hide shop gates ordering ────────────────────────────────
+  const hideRes = await call(admin, "PUT", "/api/admin/settings", { store_open: "false" });
+  step("admin hides the shop", hideRes.status === 200 && hideRes.json?.settings?.store_open === "false", `got ${hideRes.status}`);
+  const cfgClosed = await call(buyer, "GET", "/api/payments/config");
+  step("payment config reports store closed", cfgClosed.json?.store_open === false);
+  const closedOrder = await call(buyer, "POST", "/api/orders", { product_id: cpId, quantity: 1, customer_email: buyerEmail });
+  step("order while hidden = 503", closedOrder.status === 503, `got ${closedOrder.status}: ${closedOrder.json?.error || ""}`);
+  const homeClosed = await call(null, "GET", "/");
+  step("storefront still renders while hidden (closed notice)", homeClosed.status === 200, `got ${homeClosed.status}`);
+  const showRes = await call(admin, "PUT", "/api/admin/settings", { store_open: "true" });
+  step("admin reopens the shop", showRes.status === 200 && showRes.json?.settings?.store_open === "true");
+
   const failed = results.filter((r) => !r.ok);
   console.log(`\n[${label}] ${results.length - failed.length}/${results.length} steps passed`);
   if (failed.length) { console.log("FAILED:", failed.map((f) => f.name).join(" | ")); process.exit(1); }

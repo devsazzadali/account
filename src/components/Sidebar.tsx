@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 interface StoreStats {
   store_name: string;
   description: string;
+  store_logo_url: string | null;
   total_reviews: number;
   average_rating: number | null;
   positive_pct: number | null;
@@ -45,12 +46,16 @@ export function Sidebar() {
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-500 to-blue-500 opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
         <div className="flex flex-col items-center mb-6">
           <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-primary-100 mb-3 relative group-hover:border-primary-300 transition-colors duration-300 shadow-xl shadow-primary-500/10">
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-slate-200 flex items-center justify-center text-slate-800 font-bold">
-              <div className="flex flex-col items-center">
-                <Crown className="w-10 h-10 text-primary-600 mb-1 group-hover:scale-110 transition-transform duration-300" />
-                <span className="text-[10px] tracking-wider uppercase text-primary-700">StoreOne</span>
+            {stats.store_logo_url ? (
+              <img src={stats.store_logo_url} alt={stats.store_name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-slate-200 flex items-center justify-center text-slate-800 font-bold">
+                <div className="flex flex-col items-center">
+                  <Crown className="w-10 h-10 text-primary-600 mb-1 group-hover:scale-110 transition-transform duration-300" />
+                  <span className="text-[10px] tracking-wider uppercase text-primary-700">StoreOne</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           <h2 className="font-display font-bold text-xl text-slate-900 tracking-tight">{stats.store_name}</h2>
           <div className="flex items-center gap-1.5 mt-2 text-primary-600">

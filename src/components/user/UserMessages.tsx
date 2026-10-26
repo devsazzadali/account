@@ -189,7 +189,22 @@ export function UserMessages() {
                  <div className="text-[15px] font-bold text-[#404145] flex items-center gap-2">
                     Customer Support
                  </div>
-                 <p className="text-[12px] text-[#1dbf73] font-medium">Online</p>
+                 <p className="text-[12px] text-[#1dbf73] font-medium flex items-center gap-2">
+                    Online
+                    {/* Ticket state (P3) — mirrors the admin desk */}
+                    {messages.length > 0 && (() => {
+                      const st = messages[messages.length - 1]?.ticket_status || "open";
+                      return (
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                          st === "closed" ? "bg-slate-100 text-slate-400" :
+                          st === "awaiting_reply" ? "bg-emerald-50 text-emerald-600" :
+                          "bg-amber-50 text-amber-600"
+                        }`}>
+                          Ticket {st === "awaiting_reply" ? "answered" : st}
+                        </span>
+                      );
+                    })()}
+                 </p>
               </div>
            </div>
            <div className="flex items-center gap-3">

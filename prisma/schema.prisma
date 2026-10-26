@@ -59,6 +59,9 @@ model Category {
   h1Title        String?  @map("h1_title")
   contentBody    String?  @map("content_body")
   faqData        Json     @default("[]") @map("faq_data")
+  // Per-category specification attribute schema (Z2U alignment P2):
+  // [{ key, label, type: "text"|"number"|"select"|"boolean", options?: string[] }]
+  attributeSchema Json    @default("[]") @map("attribute_schema")
   createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("categories")
@@ -78,6 +81,18 @@ model Product {
   sold        Int      @default(0)
   description String?
   seoKeywords String?  @map("seo_keywords")
+  // Z2U alignment (P1/P2): listing visibility, minimum order quantity,
+  // delivery-time promise, per-category spec values, sellable variants
+  // ("Custom Programs": [{ label, priceDelta, stock? }]) and the stock
+  // source-of-truth switch. When useInventoryStock is true, `stock` is a
+  // derived cache of deliverable inventory (see order-service
+  // syncDerivedStock) and is never hand-edited.
+  isActive         Boolean @default(true) @map("is_active")
+  minQuantity      Int     @default(1) @map("min_quantity")
+  deliveryEtaHours Int?    @map("delivery_eta_hours")
+  specs            Json    @default("{}")
+  variants         Json    @default("[]")
+  useInventoryStock Boolean @default(false) @map("use_inventory_stock")
   createdAt   DateTime @default(now()) @map("created_at")
 
   orders    Order[]
@@ -109,6 +124,15 @@ model Order {
   credentialNotes    String?     @map("credential_notes")
   twoFactorSecret    String?     @map("two_factor_secret")
   recoveryEmail      String?     @map("recovery_email")
+  // Z2U alignment: seller-private remarks (searchable in the admin list),
+  // the purchased variant, coupon redemption + lifecycle timestamps for
+  // the audit timeline.
+  internalRemarks    String?     @map("internal_remarks")
+  variantLabel       String?     @map("variant_label")
+  couponCode         String?     @map("coupon_code")
+  discountAmount     Decimal     @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  paidAt             DateTime?   @map("paid_at")
+  deliveredAt        DateTime?   @map("delivered_at")
   stripeSessionId    String?     @unique @map("stripe_session_id")
   paymentIntentId    String?     @map("payment_intent_id")
   idempotencyKey     String?     @unique @map("idempotency_key") @db.Uuid
@@ -117,9 +141,27 @@ model Order {
 
   inventory Inventory[]
   dispute   Dispute?
+  events    OrderEvent[]
+  review    Review?
 
   @@index([userId])
   @@map("orders")
+}
+
+/// Append-only per-order audit trail (Z2U alignment P1). Written inside
+/// the same transaction as every state transition in order-service, so
+/// the trail can never disagree with the order's actual state.
+model OrderEvent {
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actor     String // buyer | admin | system | stripe
+  event     String // created | payment_submitted | payment_verified | payment_rejected | delivered | completed | canceled | refunded | dispute_opened | dispute_resolved
+  detail    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderId, createdAt])
+  @@map("order_events")
 }
 
 model Inventory {
@@ -235,6 +277,11 @@ model Message {
   message   String
   reply     String?
   status    String   @default("unread") // unread | replied
+  // Support-ticket state for the whole thread (kept in sync on every row
+  // of the thread by the messages write path): open = the buyer is
+  // waiting on the store; awaiting_reply = the store answered last;
+  // closed = resolved/archived.
+  ticketStatus String @default("open") @map("ticket_status")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("messages")
@@ -275,10 +322,81 @@ model Review {
   id        String   @id @default(uuid())
   productId String?  @map("product_id")
   product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // Z2U alignment P3: a review is bound to one COMPLETED order owned by
+  // the reviewer (one review per order). Legacy rows keep orderId null.
+  orderId   String?  @unique @map("order_id")
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  userId    String?  @map("user_id")
   username  String?
   rating    Int      @default(5)
+  // Z2U dimension scores (optional, 1–5): delivery speed / service / match.
+  deliveryRating    Int? @map("delivery_rating")
+  serviceRating     Int? @map("service_rating")
+  descriptionRating Int? @map("description_rating")
   comment   String?
+  // Admin Feedback desk: seller reply + moderation.
+  adminReply String?  @map("admin_reply")
+  replyAt    DateTime? @map("reply_at")
+  isHidden   Boolean  @default(false) @map("is_hidden")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("reviews")
+}
+
+/// Discount codes (Z2U alignment P5). Redemption is validated and priced
+/// server-side in order-service; usedCount is incremented when an order
+/// is created with the code and released again if that order is
+/// canceled/refunded before delivery.
+model Coupon {
+  id           String    @id @default(uuid())
+  code         String    @unique
+  type         String // percent | fixed
+  value        Decimal   @db.Decimal(10, 2)
+  scope        String    @default("store") // store | product | category
+  productId    String?   @map("product_id")
+  category     String?
+  minSpend     Decimal?  @map("min_spend") @db.Decimal(10, 2)
+  maxUses      Int?      @map("max_uses")
+  perUserLimit Int       @default(1) @map("per_user_limit")
+  usedCount    Int       @default(0) @map("used_count")
+  isPublic     Boolean   @default(true) @map("is_public")
+  isActive     Boolean   @default(true) @map("is_active")
+  expiresAt    DateTime? @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("coupons")
+}
+
+/// Transactional email outbox (Z2U alignment P4). order-service queues a
+/// row in the SAME transaction as the state change; the API layer then
+/// flushes pending rows through Resend when RESEND_API_KEY is set. With
+/// no provider configured rows stay "pending" — the queue is the honest
+/// record that an email was due, never a fake "sent".
+model EmailOutbox {
+  id        String    @id @default(uuid())
+  toEmail   String    @map("to_email")
+  subject   String
+  html      String
+  text      String
+  status    String    @default("pending") // pending | sent | failed
+  error     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  sentAt    DateTime? @map("sent_at")
+
+  @@index([status, createdAt])
+  @@map("email_outbox")
+}
+
+/// Store announcements (Z2U alignment P4 — restores the lost /api/broadcast
+/// capability): an admin composes one announcement; it fans out to buyer
+/// notifications (and email, when a provider is configured).
+model Announcement {
+  id        String   @id @default(uuid())
+  title     String
+  body      String
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("announcements")
 }

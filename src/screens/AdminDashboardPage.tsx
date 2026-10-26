@@ -16,6 +16,9 @@ import { AdminCustomers } from "../components/admin/AdminCustomers";
 import { AdminMessages } from "../components/admin/AdminMessages";
 import { AdminCategories } from "../components/admin/AdminCategories";
 import { AdminPayments } from "../components/admin/AdminPayments";
+import { AdminSellerInfo } from "../components/admin/AdminSellerInfo";
+import { AdminFeedback } from "../components/admin/AdminFeedback";
+import { AdminCoupons } from "../components/admin/AdminCoupons";
 
 import { toast } from "react-hot-toast";
 
@@ -142,26 +145,16 @@ export function AdminDashboardPage() {
         {activeTab === "payments" && <AdminPayments />}
         {activeTab === "messages" && <AdminMessages />}
         {activeTab === "customers" && <AdminCustomers setActiveTab={setActiveTab} />}
-        {activeTab === "management" && (
-           <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
-              <Store size={64} className="text-slate-900 mb-4" />
-              <h3 className="text-2xl font-black text-slate-900 uppercase italic">Store Management</h3>
-              <p className="text-slate-500 mt-2 font-medium">Configure your store settings and identity.</p>
-           </div>
-        )}
-        {activeTab === "violation" && (
-           <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
-              <ShieldAlert size={64} className="text-red-500 mb-4" />
-              <h3 className="text-2xl font-black text-slate-900 uppercase italic">Violation Center</h3>
-              <p className="text-slate-500 mt-2 font-medium">No system violations or compliance issues detected.</p>
-           </div>
-        )}
-        {activeTab === "customizer" && (
-           <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
-              <Palette size={64} className="text-emerald-500 mb-4" />
-              <h3 className="text-2xl font-black text-slate-900 uppercase italic">Store Customizer</h3>
-              <p className="text-slate-500 mt-2 font-medium">This module is currently being calibrated for your workspace.</p>
-           </div>
+        {activeTab === "seller_info" && <AdminSellerInfo setActiveTab={setActiveTab} />}
+        {activeTab === "feedback" && <AdminFeedback />}
+        {activeTab === "coupons" && <AdminCoupons />}
+        {/* Retired placeholder sections (Z2U alignment P0): "management",
+            "violation" and "customizer" were static text panels — the
+            Violation Center implied a platform disciplining the seller,
+            which does not exist in a single-seller store. Any stale link
+            to them lands on Seller Information, a real screen. */}
+        {(activeTab === "management" || activeTab === "violation" || activeTab === "customizer" || activeTab === "store_customize") && (
+          <AdminSellerInfo setActiveTab={setActiveTab} />
         )}
         {activeTab === "settings" && profile?.role === "admin" && <AdminSettings />}
         {activeTab === "settings" && profile?.role !== "admin" && (

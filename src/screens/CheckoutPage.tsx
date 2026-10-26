@@ -29,7 +29,11 @@ import { auth } from "../lib/auth-client";
 import { toast } from "react-hot-toast";
 import { PageLoader } from "../components/SkeletonUI";
 
-interface Product { id: string; title: string; price: number; image: string; stock: number; }
+interface Product {
+  id: string; title: string; price: number; image: string; stock: number;
+  min_quantity?: number;
+  variants?: { label: string; priceDelta: number; stock?: number | null }[] | null;
+}
 
 interface PaymentConfig {
   manual: {
@@ -39,6 +43,7 @@ interface PaymentConfig {
     instructions: string;
   };
   stripe: { enabled: boolean };
+  store_open?: boolean;
 }
 
 const STEPS = [
@@ -52,7 +57,8 @@ export function CheckoutPage() {
   const productId = Array.isArray(params.productId) ? params.productId[0] : params.productId;
   const router = useRouter();
   const searchParams = useSearchParams();
-  const qty = Math.max(1, parseInt(searchParams.get("quantity") || "1") || 1);
+  const qtyParam = Math.max(1, parseInt(searchParams.get("quantity") || "1") || 1);
+  const variantLabel = searchParams.get("variant") || "";
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,6 +73,10 @@ export function CheckoutPage() {
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [paidViaWallet, setPaidViaWallet] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Coupon (P5): applied only after server-side validation.
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
 
   useEffect(() => {
     if (!productId) return;
@@ -100,9 +110,17 @@ export function CheckoutPage() {
   }, [productId]);
 
   const serviceFee = 0.50;
-  const subtotal = (product?.price || 0) * qty;
-  const total = subtotal + serviceFee;
-  const outOfStock = !product || product.stock <= 0 || qty > product.stock;
+  // Variant + min-quantity rules (P2) mirror the server's pricing.
+  const activeVariant = (product?.variants || []).find((v) => v.label === variantLabel) || null;
+  const unitPrice = (product?.price || 0) + (activeVariant ? Number(activeVariant.priceDelta) || 0 : 0);
+  const minQty = Math.max(1, product?.min_quantity || 1);
+  const qty = Math.max(minQty, qtyParam);
+  const stockCap = activeVariant && activeVariant.stock != null ? Number(activeVariant.stock) : (product?.stock || 0);
+  const subtotal = unitPrice * qty;
+  const discount = appliedCoupon?.discount || 0;
+  const total = Math.max(0, subtotal - discount) + serviceFee;
+  const storeClosed = payConfig?.store_open === false;
+  const outOfStock = !product || stockCap <= 0 || qty > stockCap || storeClosed;
   const manualNumber = paymentMethod === "bkash" ? payConfig?.manual.bkashNumber : paymentMethod === "nagad" ? payConfig?.manual.nagadNumber : null;
   const walletSufficient = walletBalance !== null && walletBalance >= total;
 
@@ -118,8 +136,32 @@ export function CheckoutPage() {
     return json;
   }
 
+  async function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code || !product) return;
+    setCouponBusy(true);
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, product_id: product.id, quantity: qty, variant_label: variantLabel || undefined }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.valid) throw new Error(json.error || "This code can't be applied");
+      setAppliedCoupon({ code: json.code, discount: Number(json.discount) || 0 });
+      toast.success(`Coupon applied — you save $${Number(json.discount).toFixed(2)}`);
+    } catch (e: any) {
+      setAppliedCoupon(null);
+      toast.error(e.message);
+    } finally {
+      setCouponBusy(false);
+    }
+  }
+
   const handlePlaceOrder = async () => {
     if (!email.trim()) { toast.error("Please enter your delivery email"); return; }
+    if (storeClosed) { toast.error("The store is temporarily closed and not accepting new orders"); return; }
     if (outOfStock) { toast.error("This product is out of stock"); return; }
     if ((paymentMethod === "bkash" || paymentMethod === "nagad")) {
       if (!manualNumber) { toast.error("This payment method is not available right now"); return; }
@@ -145,6 +187,8 @@ export function CheckoutPage() {
           quantity: qty,
           customer_email: email,
           payWithWallet: paymentMethod === "wallet",
+          variant_label: variantLabel || undefined,
+          coupon_code: appliedCoupon?.code || undefined,
         });
         orderId = created.order.id;
         setCreatedOrderId(orderId);
@@ -295,11 +339,22 @@ export function CheckoutPage() {
               <div className="lg:col-span-5">
                 <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-lg sticky top-24 space-y-6">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Price Breakdown</h3>
+                  {storeClosed && (
+                    <div className="bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-[12px] font-bold text-red-600">
+                      The store is temporarily closed — new orders are paused. Please check back soon.
+                    </div>
+                  )}
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Subtotal ({qty}x)</span>
+                      <span className="text-slate-500">Subtotal ({qty}x{activeVariant ? ` · ${activeVariant.label}` : ""})</span>
                       <span className="font-bold text-slate-900">${subtotal.toFixed(2)}</span>
                     </div>
+                    {appliedCoupon && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-emerald-600 font-bold">Coupon {appliedCoupon.code}</span>
+                        <span className="font-bold text-emerald-600">-${discount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-500">Service Fee</span>
                       <span className="font-bold text-slate-900">${serviceFee.toFixed(2)}</span>
@@ -315,6 +370,27 @@ export function CheckoutPage() {
                         <p className="text-[9px] text-slate-400 font-bold uppercase">USD</p>
                       </div>
                     </div>
+                  </div>
+                  {/* Coupon (P5) */}
+                  <div>
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-3">
+                        <span className="text-[12px] font-black text-emerald-700 uppercase tracking-widest">{appliedCoupon.code} applied</span>
+                        <button onClick={() => { setAppliedCoupon(null); setCouponInput(""); }} className="text-[11px] font-black text-emerald-600 uppercase tracking-widest hover:underline">Remove</button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                          placeholder="Coupon code"
+                          className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold uppercase placeholder:normal-case placeholder:font-medium focus:outline-none focus:border-slate-400"
+                        />
+                        <button onClick={applyCoupon} disabled={couponBusy || !couponInput.trim()} className="px-5 py-3 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-40">
+                          {couponBusy ? "…" : "Apply"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <button disabled={outOfStock} onClick={() => setStep(2)} className="w-full py-4 bg-[#0C2254] text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:hover:scale-100">
                     Continue to Payment <ChevronRight size={16} />

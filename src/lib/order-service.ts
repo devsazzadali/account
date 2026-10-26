@@ -18,11 +18,121 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
+import {
+  queueOrderConfirmation,
+  queuePaymentVerified,
+  queueDelivered,
+  queueDisputeOutcome,
+  queueRefund,
+} from "./mailer";
 
 export const SERVICE_FEE = 0.5;
 export const ESCROW_HOLD_MS = 48 * 60 * 60 * 1000;
 
 type Tx = Prisma.TransactionClient;
+
+// ─── Audit trail (P1) ────────────────────────────────────────────────────
+// Every state transition writes an order_events row in the SAME
+// transaction, so the timeline in Order Details can never disagree with
+// the order's real state.
+export async function logOrderEvent(
+  tx: Tx,
+  orderId: string,
+  actor: "buyer" | "admin" | "system" | "stripe",
+  event: string,
+  detail?: string,
+) {
+  await tx.orderEvent.create({ data: { orderId, actor, event, detail: detail || null } });
+}
+
+// ─── Derived stock (P2) ─────────────────────────────────────────────────
+// For products with useInventoryStock, products.stock is a DERIVED CACHE:
+//   available inventory units − units reserved by unpaid orders.
+// It is recomputed after every mutation that can change either input, so
+// the storefront, checkout and admin always read ONE stock number.
+export async function syncDerivedStock(tx: Tx, productId: string | null | undefined) {
+  if (!productId) return;
+  const product = await tx.product.findUnique({ where: { id: productId }, select: { useInventoryStock: true } });
+  if (!product?.useInventoryStock) return;
+  const [available, reserved] = await Promise.all([
+    tx.inventory.count({ where: { productId, status: "available" } }),
+    tx.order.aggregate({
+      where: {
+        productId,
+        paymentStatus: { in: ["unpaid", "pending_verification"] },
+        status: { notIn: ["Canceled", "Refunded"] },
+      },
+      _sum: { quantity: true },
+    }),
+  ]);
+  const stock = Math.max(0, available - (reserved._sum.quantity || 0));
+  await tx.product.update({ where: { id: productId }, data: { stock } });
+}
+
+// ─── Variants (P2) ───────────────────────────────────────────────────────
+export interface ProductVariant {
+  label: string;
+  priceDelta: number;
+  stock?: number | null;
+}
+
+export function parseVariants(raw: unknown): ProductVariant[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((v): v is Record<string, unknown> => !!v && typeof v === "object")
+    .map((v) => ({
+      label: String(v.label || "").trim(),
+      priceDelta: Number(v.priceDelta ?? v.price_delta ?? 0) || 0,
+      stock: v.stock === null || v.stock === undefined ? null : Number(v.stock),
+    }))
+    .filter((v) => v.label.length > 0);
+}
+
+async function adjustVariantStock(tx: Tx, product: { id: string; variants: unknown; useInventoryStock: boolean }, label: string | null, delta: number) {
+  if (!label || product.useInventoryStock) return;
+  const variants = parseVariants(product.variants);
+  const idx = variants.findIndex((v) => v.label === label);
+  if (idx < 0 || variants[idx].stock === null || variants[idx].stock === undefined) return;
+  variants[idx].stock = Math.max(0, (variants[idx].stock as number) + delta);
+  await tx.product.update({ where: { id: product.id }, data: { variants: variants as unknown as Prisma.InputJsonValue } });
+}
+
+// ─── Coupons (P5) ────────────────────────────────────────────────────────
+// Validation + pricing are server-side only. A redemption is consumed at
+// order creation and released again if the order is canceled/refunded.
+export async function priceCoupon(
+  tx: Tx,
+  code: string,
+  userId: string,
+  product: { id: string; category: string | null },
+  subtotal: Prisma.Decimal,
+): Promise<{ coupon: NonNullable<Awaited<ReturnType<typeof prisma.coupon.findUnique>>>; discount: Prisma.Decimal }> {
+  const coupon = await tx.coupon.findUnique({ where: { code: code.trim().toUpperCase() } });
+  if (!coupon || !coupon.isActive) throw new ServiceError("This coupon code is not valid", 422);
+  if (coupon.expiresAt && coupon.expiresAt.getTime() < Date.now()) throw new ServiceError("This coupon has expired", 422);
+  if (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) throw new ServiceError("This coupon has reached its usage limit", 422);
+  if (coupon.scope === "product" && coupon.productId !== product.id) throw new ServiceError("This coupon does not apply to this product", 422);
+  if (coupon.scope === "category" && coupon.category !== product.category) throw new ServiceError("This coupon does not apply to this category", 422);
+  if (coupon.minSpend && subtotal.lt(dec(coupon.minSpend))) {
+    throw new ServiceError(`This coupon needs a minimum spend of $${dec(coupon.minSpend).toFixed(2)}`, 422);
+  }
+  const priorUses = await tx.order.count({
+    where: { userId, couponCode: coupon.code, status: { notIn: ["Canceled"] } },
+  });
+  if (priorUses >= coupon.perUserLimit) throw new ServiceError("You have already used this coupon", 422);
+  let discount = coupon.type === "percent" ? subtotal.mul(dec(coupon.value)).div(100) : dec(coupon.value);
+  if (discount.gt(subtotal)) discount = subtotal;
+  discount = discount.toDecimalPlaces(2);
+  return { coupon, discount };
+}
+
+async function releaseCoupon(tx: Tx, order: { couponCode: string | null }) {
+  if (!order.couponCode) return;
+  await tx.coupon.updateMany({
+    where: { code: order.couponCode, usedCount: { gt: 0 } },
+    data: { usedCount: { decrement: 1 } },
+  });
+}
 
 export class ServiceError extends Error {
   status: number;
@@ -126,11 +236,13 @@ async function autoDeliver(tx: Tx, order: { id: string; productId: string | null
       // Dedicated 2FA vault fields (the notes text above stays as a fallback record).
       twoFactorSecret: first.twoFactorSecret || null,
       recoveryEmail: first.recoveryEmail || null,
-      ...(fullyAssigned ? { status: "Delivering" } : {}),
+      ...(fullyAssigned ? { status: "Delivering", deliveredAt: new Date() } : {}),
     },
   });
   if (fullyAssigned) {
     await tx.product.update({ where: { id: order.productId }, data: { sold: { increment: order.quantity } } });
+    await logOrderEvent(tx, order.id, "system", "delivered", `Auto-delivered ${items.length} unit(s) from inventory`);
+    await syncDerivedStock(tx, order.productId);
   }
   return items.length;
 }
@@ -145,12 +257,16 @@ async function markPaidAndDeliver(tx: Tx, orderId: string, paymentMethod: string
     data: {
       paymentStatus: "paid",
       paymentMethod,
+      paidAt: new Date(),
       escrowState: "in_escrow",
       escrowHoldUntil: new Date(Date.now() + ESCROW_HOLD_MS),
       status: order.status === "New Order" ? "PREPARING" : order.status,
     },
   });
+  await logOrderEvent(tx, orderId, paymentMethod === "stripe" ? "stripe" : "system", "payment_verified", `Paid via ${paymentMethod}`);
   const assigned = await autoDeliver(tx, updated);
+  await queuePaymentVerified(tx, updated, assigned >= order.quantity);
+  if (assigned >= order.quantity) await queueDelivered(tx, updated);
   if (order.userId) {
     await notify(tx, order.userId, "Payment verified", assigned >= order.quantity ? "Your payment was verified and your credentials are ready in the vault." : "Your payment was verified. Your order is being prepared for delivery.", "payment");
   }
@@ -166,16 +282,74 @@ export async function createOrder(input: {
   productId: string;
   quantity: number;
   customerEmail?: string;
+  variantLabel?: string;
+  couponCode?: string;
 }) {
   const qty = Math.max(1, Math.floor(input.quantity || 1));
   return prisma.$transaction(async (tx) => {
+    // Hide Shop (P0): a closed store takes no new orders. Existing orders
+    // keep flowing (payment, delivery, disputes) — only creation stops.
+    const open = await tx.storeSetting.findUnique({ where: { key: "store_open" } });
+    if (open?.value === "false") throw new ServiceError("The store is temporarily closed and is not accepting new orders right now.", 503);
+
     const product = await tx.product.findUnique({ where: { id: input.productId } });
     if (!product) throw new ServiceError("Product not found", 404);
-    if (product.stock <= 0) throw new ServiceError("This product is out of stock", 409);
-    if (qty > product.stock) throw new ServiceError(`Only ${product.stock} unit(s) left in stock`, 409);
+    if (!product.isActive) throw new ServiceError("This product is no longer available", 409);
+    if (qty < product.minQuantity) {
+      throw new ServiceError(`Minimum order quantity for this product is ${product.minQuantity}`, 422);
+    }
 
-    await tx.product.update({ where: { id: product.id }, data: { stock: { decrement: qty } } });
-    const total = dec(product.price).mul(qty).add(SERVICE_FEE);
+    // Variant ("Custom Program") selection: adjusts the unit price and
+    // may carry its own stock pool for manually-stocked products.
+    let variant: ProductVariant | null = null;
+    if (input.variantLabel) {
+      variant = parseVariants(product.variants).find((v) => v.label === input.variantLabel) || null;
+      if (!variant) throw new ServiceError("That variant is no longer available", 422);
+    }
+    const unitPrice = dec(product.price).add(variant ? variant.priceDelta : 0);
+    if (unitPrice.lt(0)) throw new ServiceError("Invalid variant price", 422);
+
+    // Stock. Two models, one visible number:
+    //  - manual products: products.stock is the counter, decremented here
+    //    (reservation) and restored on cancel.
+    //  - inventory-derived products: sellable = available inventory −
+    //    units reserved by unpaid orders (syncDerivedStock's formula);
+    //    nothing is decremented here, the cache is re-synced instead.
+    if (product.useInventoryStock) {
+      const [available, reserved] = await Promise.all([
+        tx.inventory.count({ where: { productId: product.id, status: "available" } }),
+        tx.order.aggregate({
+          where: {
+            productId: product.id,
+            paymentStatus: { in: ["unpaid", "pending_verification"] },
+            status: { notIn: ["Canceled", "Refunded"] },
+          },
+          _sum: { quantity: true },
+        }),
+      ]);
+      const sellable = available - (reserved._sum.quantity || 0);
+      if (sellable <= 0) throw new ServiceError("This product is out of stock", 409);
+      if (qty > sellable) throw new ServiceError(`Only ${sellable} unit(s) left in stock`, 409);
+    } else {
+      if (product.stock <= 0) throw new ServiceError("This product is out of stock", 409);
+      if (qty > product.stock) throw new ServiceError(`Only ${product.stock} unit(s) left in stock`, 409);
+      if (variant && variant.stock !== null && variant.stock !== undefined && qty > variant.stock) {
+        throw new ServiceError(`Only ${variant.stock} unit(s) left for this variant`, 409);
+      }
+      await tx.product.update({ where: { id: product.id }, data: { stock: { decrement: qty } } });
+      if (variant) await adjustVariantStock(tx, product, variant.label, -qty);
+    }
+
+    const subtotal = unitPrice.mul(qty);
+    let discount = dec(0);
+    let couponCode: string | null = null;
+    if (input.couponCode && input.couponCode.trim()) {
+      const priced = await priceCoupon(tx, input.couponCode, input.userId, product, subtotal);
+      discount = priced.discount;
+      couponCode = priced.coupon.code;
+      await tx.coupon.update({ where: { id: priced.coupon.id }, data: { usedCount: { increment: 1 } } });
+    }
+    const total = subtotal.sub(discount).add(SERVICE_FEE);
     const order = await tx.order.create({
       data: {
         productId: product.id,
@@ -184,11 +358,17 @@ export async function createOrder(input: {
         customerEmail: input.customerEmail || input.email,
         quantity: qty,
         totalPrice: total,
+        variantLabel: variant?.label || null,
+        couponCode,
+        discountAmount: discount,
         status: "New Order",
         paymentStatus: "unpaid",
         escrowState: "pending_payment",
       },
     });
+    if (product.useInventoryStock) await syncDerivedStock(tx, product.id);
+    await logOrderEvent(tx, order.id, "buyer", "created", `Order placed × ${qty}${variant ? ` · ${variant.label}` : ""}${couponCode ? ` · coupon ${couponCode}` : ""}`);
+    await queueOrderConfirmation(tx, order, product.title);
     await notifyAdmins(tx, "New order", `${input.username} ordered ${product.title} × ${qty} ($${total.toFixed(2)}) — awaiting payment.`, "order");
     return order;
   });
@@ -245,6 +425,7 @@ export async function submitManualPayment(input: {
         },
       });
       await tx.order.update({ where: { id: order.id }, data: { paymentStatus: "pending_verification", paymentMethod: method } });
+      await logOrderEvent(tx, order.id, "buyer", "payment_submitted", `${method} TrxID ${trxId}`);
       await notifyAdmins(tx, "Payment awaiting verification", `${order.username || "A buyer"} submitted a ${method} payment (TrxID ${trxId}) for order ${order.id.slice(0, 8)}.`, "payment");
       return pr;
     }
@@ -277,6 +458,8 @@ export async function reviewPaymentRequest(prId: string, approve: boolean, admin
         const order = await tx.order.findUnique({ where: { id: pr.orderId } });
         if (order && order.paymentStatus === "pending_verification") {
           await tx.order.update({ where: { id: order.id }, data: { paymentStatus: "unpaid" } });
+          await logOrderEvent(tx, order.id, "admin", "payment_rejected", adminNote || "Payment could not be verified");
+          await syncDerivedStock(tx, order.productId);
           if (order.userId) await notify(tx, order.userId, "Payment not verified", "We could not verify your payment. Please check the Transaction ID and submit again, or contact support.", "payment");
         }
       }
@@ -301,13 +484,21 @@ async function refundOrderToWallet(tx: Tx, order: NonNullable<Awaited<ReturnType
   // Credentials already exposed → stock units are consumed, never resold.
   await releaseAssignedInventory(tx, order.id, wasDelivered ? "used" : "available");
   if (!wasDelivered && order.productId) {
-    // Nothing was delivered: the stock reserved at order time goes back.
-    await tx.product.update({ where: { id: order.productId }, data: { stock: { increment: order.quantity } } });
+    const product = await tx.product.findUnique({ where: { id: order.productId } });
+    if (product && !product.useInventoryStock) {
+      // Nothing was delivered: the stock reserved at order time goes back.
+      await tx.product.update({ where: { id: order.productId }, data: { stock: { increment: order.quantity } } });
+      await adjustVariantStock(tx, product, order.variantLabel, order.quantity);
+    }
   }
+  await releaseCoupon(tx, order);
   const updated = await tx.order.update({
     where: { id: order.id },
     data: { status: "Refunded", paymentStatus: "refunded", escrowState: "refunded" },
   });
+  await syncDerivedStock(tx, order.productId);
+  await logOrderEvent(tx, order.id, "system", "refunded", reason);
+  await queueRefund(tx, updated);
   if (order.userId) await notify(tx, order.userId, "Refund issued", `$${dec(order.totalPrice).toFixed(2)} was refunded to your wallet.`, "payment");
   return updated;
 }
@@ -325,8 +516,18 @@ export async function cancelOrder(orderId: string, actor: { userId: string; isAd
     }
     // Unpaid / pending: reject any pending payment + restore reserved stock.
     await tx.paymentRequest.updateMany({ where: { orderId: order.id, status: "pending" }, data: { status: "rejected", adminNote: "Order cancelled", reviewedAt: new Date() } });
-    if (order.productId) await tx.product.update({ where: { id: order.productId }, data: { stock: { increment: order.quantity } } });
-    return tx.order.update({ where: { id: order.id }, data: { status: "Canceled" } });
+    if (order.productId) {
+      const product = await tx.product.findUnique({ where: { id: order.productId } });
+      if (product && !product.useInventoryStock) {
+        await tx.product.update({ where: { id: order.productId }, data: { stock: { increment: order.quantity } } });
+        await adjustVariantStock(tx, product, order.variantLabel, order.quantity);
+      }
+    }
+    await releaseCoupon(tx, order);
+    const updated = await tx.order.update({ where: { id: order.id }, data: { status: "Canceled" } });
+    await syncDerivedStock(tx, order.productId);
+    await logOrderEvent(tx, order.id, actor.isAdmin ? "admin" : "buyer", "canceled", "Unpaid order canceled; reserved stock restored");
+    return updated;
   });
 }
 
@@ -345,9 +546,28 @@ export async function deliverManually(orderId: string, creds: { username: string
         twoFactorSecret: creds.twoFactorSecret?.trim() || null,
         recoveryEmail: creds.recoveryEmail?.trim() || null,
         status: "Delivering",
+        deliveredAt: new Date(),
       },
     });
-    if (order.productId) await tx.product.update({ where: { id: order.productId }, data: { sold: { increment: order.quantity } } });
+    if (order.productId) {
+      await tx.product.update({ where: { id: order.productId }, data: { sold: { increment: order.quantity } } });
+      // Inventory-derived products: a manual delivery consumes real units
+      // so the derived stock can never oversell what was handed over.
+      const product = await tx.product.findUnique({ where: { id: order.productId }, select: { useInventoryStock: true } });
+      if (product?.useInventoryStock) {
+        const spare = await tx.inventory.findMany({
+          where: { productId: order.productId, status: "available" },
+          orderBy: { createdAt: "asc" },
+          take: order.quantity,
+        });
+        for (const item of spare) {
+          await tx.inventory.update({ where: { id: item.id }, data: { status: "used", orderId: order.id, assignedAt: new Date() } });
+        }
+        await syncDerivedStock(tx, order.productId);
+      }
+    }
+    await logOrderEvent(tx, orderId, "admin", "delivered", "Credentials delivered manually by the store");
+    await queueDelivered(tx, updated);
     if (order.userId) await notify(tx, order.userId, "Order delivered", "Your credentials are ready in the order vault.", "delivery");
     return updated;
   });
@@ -361,6 +581,7 @@ async function completeOrder(tx: Tx, orderId: string) {
     where: { id: orderId },
     data: { status: "Completed", escrowState: "completed", fundsReleasedAt: new Date() },
   });
+  await logOrderEvent(tx, orderId, "system", "completed", "Escrow released — order completed");
   if (order.userId) await notify(tx, order.userId, "Order completed", "Your order is complete. Escrow funds have been released.", "order");
   return updated;
 }
@@ -403,6 +624,7 @@ export async function openDispute(orderId: string, userId: string, reason: strin
       ? await tx.dispute.update({ where: { orderId }, data: { reason: reason.trim(), status: "open", resolution: null, prevStatus: order.status } })
       : await tx.dispute.create({ data: { orderId, userId, reason: reason.trim(), prevStatus: order.status } });
     await tx.order.update({ where: { id: orderId }, data: { status: "Disputed", escrowState: "disputed", disputedAt: new Date() } });
+    await logOrderEvent(tx, orderId, "buyer", "dispute_opened", reason.trim().slice(0, 200));
     await notifyAdmins(tx, "Dispute opened", `A dispute was opened for order ${orderId.slice(0, 8)}: ${reason.trim().slice(0, 120)}`, "alert");
     return dispute;
   });
@@ -417,6 +639,8 @@ export async function resolveDispute(orderId: string, resolution: "refunded" | "
     if (resolution === "refunded") {
       const updated = await refundOrderToWallet(tx, order, `Dispute refund for order ${order.id.slice(0, 8)}`);
       await tx.dispute.update({ where: { orderId }, data: { status: "resolved", resolution: "refunded" } });
+      await logOrderEvent(tx, orderId, "admin", "dispute_resolved", "Resolved: refunded to wallet");
+      await queueDisputeOutcome(tx, order, "refunded");
       return updated;
     }
     if (resolution === "replaced") {
@@ -429,6 +653,9 @@ export async function resolveDispute(orderId: string, resolution: "refunded" | "
       const assigned = await autoDeliver(tx, fresh);
       if (assigned < order.quantity) throw new ServiceError("No replacement stock available for this product", 409);
       await tx.dispute.update({ where: { orderId }, data: { status: "resolved", resolution: "replaced" } });
+      await logOrderEvent(tx, orderId, "admin", "dispute_resolved", "Resolved: replacement delivered");
+      await queueDisputeOutcome(tx, order, "replaced");
+      await queueDelivered(tx, order);
       if (order.userId) await notify(tx, order.userId, "Replacement delivered", "Fresh credentials were delivered for your disputed order.", "delivery");
       return tx.order.findUnique({ where: { id: orderId } });
     }
@@ -439,6 +666,8 @@ export async function resolveDispute(orderId: string, resolution: "refunded" | "
       data: { status: back, escrowState: back === "Completed" ? "completed" : "in_escrow" },
     });
     await tx.dispute.update({ where: { orderId }, data: { status: "resolved", resolution: "rejected" } });
+    await logOrderEvent(tx, orderId, "admin", "dispute_resolved", "Resolved: dispute rejected, order restored");
+    await queueDisputeOutcome(tx, order, "rejected");
     if (order.userId) await notify(tx, order.userId, "Dispute reviewed", "Your dispute was reviewed and closed. If you still need help, contact support.", "alert");
     return updated;
   });
@@ -452,6 +681,9 @@ export async function maybeReleaseEscrow<T extends { id: string; status: string;
       where: { id: order.id },
       data: { status: "Completed", escrowState: "completed", fundsReleasedAt: new Date() },
     });
+    await prisma.orderEvent
+      .create({ data: { orderId: order.id, actor: "system", event: "completed", detail: "Escrow hold lapsed after delivery — auto-completed" } })
+      .catch(() => {});
     return updated as unknown as T;
   }
   return order;

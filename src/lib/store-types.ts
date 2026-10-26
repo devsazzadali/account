@@ -15,6 +15,13 @@ export interface StoreProduct {
   sold: number;
   description: string | null;
   createdAt: string; // ISO string
+  // Z2U alignment P1/P2: delivery promise, min quantity, spec values
+  // (label resolved server-side from the category's attribute schema),
+  // sellable variants ([{ label, priceDelta, stock? }]).
+  deliveryEtaHours: number | null;
+  minQuantity: number;
+  specs: { key: string; label: string; value: string }[];
+  variants: { label: string; priceDelta: number; stock?: number | null }[];
 }
 
 export interface StoreCategory {

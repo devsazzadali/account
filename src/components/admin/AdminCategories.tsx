@@ -25,7 +25,9 @@ export function AdminCategories() {
     name: "",
     slug: "",
     description: "",
+    attribute_schema: [] as { key: string; label: string; type: string; options: string }[],
   });
+  const [productsCount, setProductsCount] = useState(0);
 
   useEffect(() => {
     fetchCategories();
@@ -53,6 +55,8 @@ export function AdminCategories() {
       } else {
         setCategories(data || []);
       }
+      const prodRes = await db.from("products").select("id");
+      setProductsCount((prodRes.data || []).length);
     } catch (e: any) {
       console.error(e.message);
     } finally {
@@ -63,14 +67,19 @@ export function AdminCategories() {
   const handleOpenDrawer = (category?: any) => {
     if (category) {
       setEditingId(category.id);
+      const schema = Array.isArray(category.attribute_schema) ? category.attribute_schema : [];
       setFormData({
         name: category.name,
         slug: category.slug || "",
         description: category.description || "",
+        attribute_schema: schema.map((f: any) => ({
+          key: f.key || "", label: f.label || "", type: f.type || "text",
+          options: Array.isArray(f.options) ? f.options.join(", ") : "",
+        })),
       });
     } else {
       setEditingId(null);
-      setFormData({ name: "", slug: "", description: "" });
+      setFormData({ name: "", slug: "", description: "", attribute_schema: [] });
     }
     setShowDrawer(true);
   };
@@ -79,10 +88,23 @@ export function AdminCategories() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      // Attribute schema (P2): [{ key, label, type, options? }] — keys are
+      // normalised to snake_case identifiers; empty rows are dropped.
+      const schema = formData.attribute_schema
+        .filter((f) => f.key.trim() && f.label.trim())
+        .map((f) => ({
+          key: f.key.trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_"),
+          label: f.label.trim(),
+          type: ["text", "number", "select", "boolean"].includes(f.type) ? f.type : "text",
+          ...(f.type === "select"
+            ? { options: f.options.split(",").map((o) => o.trim()).filter(Boolean) }
+            : {}),
+        }));
       const payload = {
         name: formData.name,
         slug: formData.slug || formData.name.toLowerCase().replace(/ /g, "-"),
         description: formData.description,
+        attribute_schema: schema.length ? schema : null,
       };
 
       if (editingId) {
@@ -154,8 +176,8 @@ export function AdminCategories() {
             <Layers size={20} />
           </div>
           <div>
-            <div className="text-2xl font-display font-black text-slate-900">12</div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Listings</div>
+            <div className="text-2xl font-display font-black text-slate-900">{productsCount}</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Listings</div>
           </div>
         </div>
         <div className="px-6 py-4 flex items-center gap-4">
@@ -163,8 +185,8 @@ export function AdminCategories() {
             <ListFilter size={20} />
           </div>
           <div>
-            <div className="text-2xl font-display font-black text-slate-900">8</div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">System Filters</div>
+            <div className="text-2xl font-display font-black text-slate-900">{categories.filter(c => Array.isArray(c.attribute_schema) && c.attribute_schema.length > 0).length}</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">With Spec Schema</div>
           </div>
         </div>
       </div>
@@ -289,6 +311,67 @@ export function AdminCategories() {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-medium focus:outline-none focus:border-primary-600 focus:bg-white transition-all"
                     placeholder="Short description for this collection..."
                   />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-2 ml-1">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Specification Attributes</label>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, attribute_schema: [...formData.attribute_schema, { key: "", label: "", type: "text", options: "" }] })}
+                      className="text-[10px] font-black text-primary-600 uppercase tracking-widest hover:underline"
+                    >
+                      + Add field
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-medium mb-3 ml-1 leading-relaxed">
+                    Fields defined here appear in the offer form for this category and as the spec list on product pages (Z2U per-category specs).
+                  </p>
+                  <div className="space-y-2">
+                    {formData.attribute_schema.length === 0 && (
+                      <p className="text-[12px] text-slate-300 font-bold py-2">No spec fields — offers in this category use plain text only.</p>
+                    )}
+                    {formData.attribute_schema.map((f, i) => (
+                      <div key={i} className="flex gap-2 items-center">
+                        <input
+                          value={f.key}
+                          onChange={e => { const arr = [...formData.attribute_schema]; arr[i] = { ...arr[i], key: e.target.value }; setFormData({ ...formData, attribute_schema: arr }); }}
+                          placeholder="key (e.g. region)"
+                          className="w-[26%] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-600"
+                        />
+                        <input
+                          value={f.label}
+                          onChange={e => { const arr = [...formData.attribute_schema]; arr[i] = { ...arr[i], label: e.target.value }; setFormData({ ...formData, attribute_schema: arr }); }}
+                          placeholder="Label (e.g. Region)"
+                          className="w-[26%] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-600"
+                        />
+                        <select
+                          value={f.type}
+                          onChange={e => { const arr = [...formData.attribute_schema]; arr[i] = { ...arr[i], type: e.target.value }; setFormData({ ...formData, attribute_schema: arr }); }}
+                          className="w-[18%] bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-[12px] font-medium focus:outline-none"
+                        >
+                          <option value="text">Text</option>
+                          <option value="number">Number</option>
+                          <option value="select">Select</option>
+                          <option value="boolean">Yes/No</option>
+                        </select>
+                        {f.type === "select" ? (
+                          <input
+                            value={f.options}
+                            onChange={e => { const arr = [...formData.attribute_schema]; arr[i] = { ...arr[i], options: e.target.value }; setFormData({ ...formData, attribute_schema: arr }); }}
+                            placeholder="Options, comma separated"
+                            className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-600"
+                          />
+                        ) : <span className="flex-1" />}
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, attribute_schema: formData.attribute_schema.filter((_, j) => j !== i) })}
+                          className="text-slate-300 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </form>
 

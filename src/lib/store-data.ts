@@ -18,7 +18,17 @@ import type {
 
 type ProductRow = Awaited<ReturnType<typeof prisma.product.findFirst>>;
 
-function toStoreProduct(row: NonNullable<ProductRow>): StoreProduct {
+function toStoreProduct(
+  row: NonNullable<ProductRow>,
+  schema: { key: string; label: string }[] = []
+): StoreProduct {
+  const rawSpecs =
+    row.specs && typeof row.specs === "object" && !Array.isArray(row.specs)
+      ? (row.specs as Record<string, unknown>)
+      : {};
+  const labelFor = (key: string) =>
+    schema.find((f) => f.key === key)?.label ||
+    key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   return {
     id: row.id,
     title: row.title,
@@ -30,7 +40,27 @@ function toStoreProduct(row: NonNullable<ProductRow>): StoreProduct {
     sold: row.sold,
     description: row.description,
     createdAt: row.createdAt.toISOString(),
+    deliveryEtaHours: row.deliveryEtaHours,
+    minQuantity: row.minQuantity,
+    specs: Object.entries(rawSpecs)
+      .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "")
+      .map(([key, v]) => ({ key, label: labelFor(key), value: String(v) })),
+    variants: Array.isArray(row.variants)
+      ? (row.variants as { label: string; priceDelta: number; stock?: number | null }[])
+      : [],
   };
+}
+
+async function schemaForCategory(name: string | null) {
+  if (!name) return [];
+  try {
+    const cat = await prisma.category.findFirst({ where: { name } });
+    return Array.isArray(cat?.attributeSchema)
+      ? (cat.attributeSchema as { key: string; label: string }[])
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Home page data: latest products, categories, recent reviews. */
@@ -38,17 +68,19 @@ export async function getHomeData(limit = 30): Promise<HomeData> {
   try {
     const [products, categories, reviews] = await Promise.all([
       prisma.product.findMany({
+        where: { isActive: true },
         orderBy: { createdAt: "desc" },
         take: limit,
       }),
       prisma.category.findMany({ orderBy: { name: "asc" } }),
       prisma.review.findMany({
+        where: { isHidden: false },
         orderBy: { createdAt: "desc" },
         take: 6,
       }),
     ]);
     return {
-      products: products.map(toStoreProduct),
+      products: products.map((p) => toStoreProduct(p)),
       categories: categories.map(
         (c): StoreCategory => ({ id: c.id, name: c.name, slug: c.slug }),
       ),
@@ -77,7 +109,8 @@ export const getProductById = cache(async function getProductById(
   if (!id) return null;
   try {
     const row = await prisma.product.findUnique({ where: { id } });
-    return row ? toStoreProduct(row) : null;
+    if (!row || !row.isActive) return null;
+    return toStoreProduct(row, await schemaForCategory(row.category));
   } catch (err) {
     // e.g. a malformed (non-uuid) id makes Postgres reject the query —
     // treat any failure as "not found" for rendering purposes.
@@ -92,7 +125,7 @@ export const getProductRating = cache(async function getProductRating(
 ): Promise<ProductRating> {
   try {
     const agg = await prisma.review.aggregate({
-      where: { productId },
+      where: { productId, isHidden: false },
       _count: true,
       _avg: { rating: true },
     });
@@ -109,6 +142,7 @@ export async function getSitemapProducts(): Promise<
 > {
   try {
     return await prisma.product.findMany({
+      where: { isActive: true },
       select: { id: true, createdAt: true },
       orderBy: { createdAt: "desc" },
     });

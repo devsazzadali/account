@@ -7,7 +7,7 @@
 // rejecting returns an order to "unpaid" so the buyer can resubmit.
 
 import React, { useEffect, useState } from "react";
-import { CheckCircle2, XCircle, RefreshCw, Wallet, ShoppingBag, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, RefreshCw, Wallet, ShoppingBag, Loader2, Download } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 interface PaymentRequestRow {
@@ -30,6 +30,34 @@ export function AdminPayments() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [filter, setFilter] = useState("pending");
+  const [outbox, setOutbox] = useState<{ configured: boolean; counts: Record<string, number> } | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/outbox", { credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((j) => setOutbox({ configured: !!j.email_configured, counts: j.counts || {} }))
+      .catch(() => {});
+  }, []);
+
+  async function exportFinance() {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/admin/finance-export", { credentials: "same-origin" });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `finance-export-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -88,8 +116,24 @@ export function AdminPayments() {
           <button onClick={load} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 transition-all">
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           </button>
+          <button onClick={exportFinance} disabled={exporting} className="px-4 py-2.5 bg-[#0C2254] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2">
+            <Download size={14} /> Finance CSV
+          </button>
         </div>
       </div>
+
+      {outbox && (
+        <div className={`rounded-2xl border px-5 py-3.5 text-[12px] font-bold flex items-center justify-between flex-wrap gap-2 ${outbox.configured ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-amber-50 border-amber-100 text-amber-700"}`}>
+          <span>
+            Transactional email: {outbox.configured
+              ? "provider configured — order emails are being sent."
+              : "provider NOT configured (RESEND_API_KEY / STORE_FROM_EMAIL) — order emails stay queued, nothing is faked as sent."}
+          </span>
+          <span className="text-[11px] uppercase tracking-widest">
+            Outbox · pending {outbox.counts.pending || 0} · sent {outbox.counts.sent || 0} · failed {outbox.counts.failed || 0}
+          </span>
+        </div>
+      )}
 
       <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (

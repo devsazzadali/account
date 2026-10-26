@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { 
   MessageCircle, 
   Mail, 
@@ -34,6 +34,53 @@ const STEPS = [
   { id: 3, label: "Delivering" },
   { id: 4, label: "Completed" }
 ];
+
+const EVENT_LABELS: Record<string, string> = {
+  created: "Order placed",
+  payment_submitted: "Payment submitted by buyer",
+  payment_verified: "Payment verified — escrow started",
+  payment_rejected: "Payment rejected",
+  delivered: "Credentials delivered",
+  completed: "Order completed — escrow released",
+  canceled: "Order canceled",
+  refunded: "Refunded to buyer wallet",
+  dispute_opened: "Dispute opened by buyer",
+  dispute_resolved: "Dispute resolved",
+};
+
+/** Audit trail: the order_events rows when present; older orders fall
+ *  back to the order's own timestamps. */
+function OrderTimeline({ order }: { order: any }) {
+  const events: { at: string; label: string; detail?: string | null }[] = [];
+  if (Array.isArray(order?.events) && order.events.length > 0) {
+    for (const e of order.events) {
+      events.push({ at: e.created_at, label: EVENT_LABELS[e.event] || e.event, detail: e.detail });
+    }
+  } else {
+    if (order?.created_at) events.push({ at: order.created_at, label: "Order placed" });
+    if (order?.paid_at) events.push({ at: order.paid_at, label: "Payment verified — escrow started" });
+    if (order?.delivered_at) events.push({ at: order.delivered_at, label: "Credentials delivered" });
+    if (order?.funds_released_at) events.push({ at: order.funds_released_at, label: "Escrow released" });
+    if (order?.status === "Canceled") events.push({ at: order.created_at, label: "Order canceled" });
+  }
+  if (events.length === 0) return <p className="text-[12px] font-bold text-slate-400">No timeline entries yet.</p>;
+  return (
+    <div className="space-y-4">
+      {events.map((e, i) => (
+        <div key={i} className="flex gap-4">
+          <div className="flex flex-col items-center">
+            <span className={`w-2.5 h-2.5 rounded-full mt-1 ${i === events.length - 1 ? "bg-[#E62E04]" : "bg-slate-300"}`} />
+            {i < events.length - 1 && <span className="w-px flex-1 bg-slate-200 mt-1" />}
+          </div>
+          <div className="pb-1">
+            <p className="text-[13px] font-black text-slate-900">{e.label}</p>
+            <p className="text-[11px] font-bold text-slate-400">{new Date(e.at).toLocaleString()}{e.detail ? ` · ${e.detail}` : ""}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function MetadataItem({ label, value }: any) {
   return (
@@ -86,6 +133,41 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   const [isSubmittingInfo, setIsSubmittingInfo] = useState(false);
   const [showDeliverModal, setShowDeliverModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+
+  // P1: fresh detail (events trail, dispute record, remarks, variant,
+  // coupon, ETA timestamps) — the list row only carries table columns.
+  const [detail, setDetail] = useState<any>(null);
+  const [remarks, setRemarks] = useState(order?.internal_remarks || "");
+  const [savingRemarks, setSavingRemarks] = useState(false);
+
+  useEffect(() => {
+    if (!order?.id) return;
+    fetch(`/api/orders/${order.id}`, { credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.order) {
+          setDetail(j.order);
+          if (typeof j.order.internal_remarks === "string") setRemarks(j.order.internal_remarks);
+        }
+      })
+      .catch(() => {});
+  }, [order?.id]);
+
+  const d = detail || order;
+  const disputeReason = d?.dispute?.reason || order?.dispute_reason || null;
+
+  async function saveRemarks() {
+    setSavingRemarks(true);
+    try {
+      const { error } = await db.from("orders").update({ internal_remarks: remarks }).eq("id", order.id);
+      if (error) throw error;
+      toast.success("Internal remarks saved");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSavingRemarks(false);
+    }
+  }
 
   if (!order) return null;
 
@@ -315,8 +397,8 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                                 </>
                             )}
                         </div>
-                        {status === "Disputed" && order.dispute_reason && (
-                            <p className="mt-4 text-[12px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-2xl px-5 py-4">Buyer dispute: {order.dispute_reason}</p>
+                        {status === "Disputed" && disputeReason && (
+                            <p className="mt-4 text-[12px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-2xl px-5 py-4">Buyer dispute: {disputeReason}</p>
                         )}
                     </div>
                 </div>
@@ -327,8 +409,16 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                     <div className="space-y-6">
                         <LedgerItem label="Order Total (one canonical field)" value={`$${Number(order?.total_price || 0).toFixed(2)}`} />
                         <LedgerItem label="Quantity" value={`${order?.quantity || 1} unit(s)`} />
+                        {d?.variant_label && <LedgerItem label="Variant" value={d.variant_label} />}
+                        {d?.coupon_code && <LedgerItem label={`Coupon ${d.coupon_code}`} value={`-$${Number(d.discount_amount || 0).toFixed(2)}`} />}
                         <LedgerItem label="Payment" value={`${order?.payment_status || "unpaid"}${order?.payment_method ? ` · ${order.payment_method}` : ""}`} />
                         <LedgerItem label="Escrow" value={order?.escrow_state || "pending_payment"} />
+                        {product?.delivery_eta_hours != null && (
+                            <LedgerItem label="Delivery ETA" value={`${product.delivery_eta_hours}h from order`} />
+                        )}
+                        {d?.delivered_at && (
+                            <LedgerItem label="Delivered" value={new Date(d.delivered_at).toLocaleString()} />
+                        )}
                         <div className="pt-6 mt-6 border-t border-slate-200">
                              <div className="flex justify-between items-center">
                                   <span className="text-[11px] font-black text-slate-900 uppercase">Buyer Paid</span>
@@ -336,6 +426,34 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
                              </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* Internal remarks + audit timeline (P1) */}
+            <div className="mt-12 grid grid-cols-12 gap-10">
+                <div className="col-span-12 lg:col-span-6 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-200/60">
+                    <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest italic mb-4">Internal Remarks</h3>
+                    <p className="text-[11px] font-bold text-slate-400 mb-4">Visible to the store team only — never shown to the buyer. The orders list filter searches this text.</p>
+                    <textarea
+                        value={remarks}
+                        onChange={(e) => setRemarks(e.target.value)}
+                        rows={4}
+                        placeholder="e.g. Buyer asked for EU region; supplier restock pending…"
+                        className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-[13px] font-medium outline-none focus:border-[#E62E04] transition-all resize-none"
+                    />
+                    <button
+                        onClick={saveRemarks}
+                        disabled={savingRemarks}
+                        className="mt-4 px-8 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-50"
+                    >
+                        {savingRemarks ? "Saving…" : "Save Remarks"}
+                    </button>
+                </div>
+                <div className="col-span-12 lg:col-span-6 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-200/60">
+                    <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest italic mb-6 flex items-center gap-2">
+                        <Activity size={14} className="text-[#E62E04]" /> Order Timeline
+                    </h3>
+                    <OrderTimeline order={d} />
                 </div>
             </div>
 

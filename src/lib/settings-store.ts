@@ -10,6 +10,10 @@ export const SETTING_KEYS = {
   storeName: "store_name",
   storeDescription: "store_description",
   supportEmail: "support_email",
+  storeLogoUrl: "store_logo_url",
+  storeBannerUrl: "store_banner_url",
+  storeOpen: "store_open",
+  supportHours: "support_hours",
   bkashNumber: "payment_number_bkash",
   nagadNumber: "payment_number_nagad",
   paymentInstructions: "payment_instructions",
@@ -29,6 +33,10 @@ const DEFAULTS: Record<string, string> = {
   store_description:
     "Premium digital accounts and subscriptions, delivered by a single verified seller with escrow buyer protection.",
   support_email: "",
+  store_logo_url: "",
+  store_banner_url: "",
+  store_open: "true",
+  support_hours: "",
   payment_number_bkash: "",
   payment_number_nagad: "",
   payment_instructions:
@@ -71,6 +79,7 @@ export async function getPaymentConfig(forSignedInUser: boolean) {
   const nagad = s[SETTING_KEYS.nagadNumber];
   const stripeEnabled = !!process.env.STRIPE_SECRET_KEY;
   return {
+    store_open: s[SETTING_KEYS.storeOpen] !== "false",
     manual: {
       enabled: !!(bkash || nagad),
       bkashNumber: forSignedInUser ? bkash || null : null,
@@ -80,4 +89,10 @@ export async function getPaymentConfig(forSignedInUser: boolean) {
     stripe: { enabled: stripeEnabled },
     wallet: { enabled: true },
   };
+}
+
+/** Whether the storefront is accepting new orders (Hide Shop switch). */
+export async function isStoreOpen(): Promise<boolean> {
+  const v = await getSetting(SETTING_KEYS.storeOpen);
+  return v !== "false";
 }

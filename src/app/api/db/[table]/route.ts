@@ -16,6 +16,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/src/lib/db";
 import { fetchAuthUser, ensureProfile } from "@/src/lib/auth-server";
 import { serializeRow, serializeRows } from "@/src/lib/serialize";
+import { syncDerivedStock } from "@/src/lib/order-service";
 
 type Row = Record<string, unknown>;
 
@@ -34,6 +35,10 @@ const TABLES: Record<string, { model: string }> = {
   payment_requests: { model: "paymentRequest" },
   user_risk_profiles: { model: "userRiskProfile" },
   audit_logs: { model: "auditLog" },
+  coupons: { model: "coupon" },
+  order_events: { model: "orderEvent" },
+  email_outbox: { model: "emailOutbox" },
+  announcements: { model: "announcement" },
 };
 
 const STRING_COLS = new Set([
@@ -157,12 +162,15 @@ function policyFor(table: string, method: string, ctx: Ctx): Policy {
   const t = table;
   if (method === "GET") {
     if (["products", "categories", "reviews"].includes(t)) return "public";
-    if (["inventory", "user_risk_profiles", "audit_logs"].includes(t)) return "admin";
+    if (["inventory", "user_risk_profiles", "audit_logs", "coupons", "email_outbox", "announcements"].includes(t)) return "admin";
+    if (t === "order_events") return "user"; // scoped to own orders below
     return "user";
   }
   // writes
   if (["products", "categories"].includes(t)) return "admin";
-  if (t === "reviews" && method === "POST") return "user";
+  // Reviews are created ONLY through /api/reviews (bound to a completed
+  // order); the generic endpoint handles admin moderation (PATCH/DELETE).
+  if (t === "reviews" && method === "POST") return "deny";
   if (t === "reviews") return "admin";
   if (t === "messages" && method === "POST") return "user";
   if (t === "messages") return "admin";
@@ -175,7 +183,11 @@ function policyFor(table: string, method: string, ctx: Ctx): Policy {
 
 /** Extra scoping applied to reads/writes for non-admin users. */
 function scopeFor(table: string, ctx: Ctx): Row | null {
-  if (!ctx.user || ctx.isAdmin) return null;
+  // Hidden reviews are never readable by non-admins (incl. anonymous).
+  if (table === "reviews" && !ctx.isAdmin) return { isHidden: false };
+  if (!ctx.user) return null;
+  if (table === "order_events" && !ctx.isAdmin) return { order: { userId: ctx.user.id } };
+  if (ctx.isAdmin) return null;
   const uid = ctx.user.id;
   switch (table) {
     case "profiles":
@@ -264,6 +276,22 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
       }
       const created: Row[] = [];
       for (const it of items) created.push(await model.create({ data: it }));
+
+      // Thread ticket state (P3): a buyer message (re)opens the thread;
+      // a store reply moves it to awaiting_reply. The state is kept on
+      // every row of the thread so any reader sees one consistent value.
+      if (table === "messages") {
+        const usernames = [...new Set(items.map((it) => it.username as string).filter(Boolean))];
+        const next = ctx.isAdmin ? "awaiting_reply" : "open";
+        for (const uname of usernames) {
+          await prisma.message.updateMany({ where: { username: uname }, data: { ticketStatus: next } });
+        }
+      }
+      // Derived stock (P2): new inventory changes the sellable count.
+      if (table === "inventory") {
+        const pids = [...new Set(items.map((it) => it.productId as string).filter(Boolean))];
+        for (const pid of pids) await prisma.$transaction((tx) => syncDerivedStock(tx, pid));
+      }
       return ok(serializeRows(created as unknown as Row[]));
     }
 
@@ -292,6 +320,10 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
       const existing = await model.findMany({ where });
       for (const row of existing as { id: string }[]) {
         await model.delete({ where: { id: row.id } });
+      }
+      if (table === "inventory") {
+        const pids = [...new Set((existing as Row[]).map((r) => r.productId as string).filter(Boolean))];
+        for (const pid of pids) await prisma.$transaction((tx) => syncDerivedStock(tx, pid));
       }
       return ok(serializeRows(existing as unknown as Row[]));
     }

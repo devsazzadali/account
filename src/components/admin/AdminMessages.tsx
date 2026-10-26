@@ -32,9 +32,13 @@ export function AdminMessages() {
   // Mobile navigation state
   const [viewMode, setViewMode] = useState<"list" | "chat">("list");
 
-  // Broadcast state
+  // Broadcast state (P4: announcements via /api/admin/broadcast)
+  const [broadcastTitle, setBroadcastTitle] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  // Ticket queue filter (P3): open / awaiting_reply / closed
+  const [ticketFilter, setTicketFilter] = useState<"all" | "open" | "awaiting_reply" | "closed">("all");
 
   useEffect(() => {
     fetchMessages();
@@ -133,28 +137,38 @@ export function AdminMessages() {
   }
 
   async function handleBroadcast() {
-    if (!broadcastMessage.trim()) return;
+    if (!broadcastTitle.trim() || !broadcastMessage.trim()) return;
     setIsBroadcasting(true);
     try {
-       const promises = allProfiles.map(profile => {
-         return db.from('messages').insert({
-           username: profile.username,
-           subject: "Global Announcement",
-           message: "[ADMIN_INITIATED]",
-           reply: broadcastMessage,
-           status: 'replied',
-           replied_at: new Date().toISOString()
-         });
+       // Real broadcast (P4): one announcement + a notification per buyer
+       // (+ queued email when the provider is configured) — server-side.
+       const res = await fetch("/api/admin/broadcast", {
+         method: "POST",
+         credentials: "same-origin",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({ title: broadcastTitle.trim(), body: broadcastMessage.trim() }),
        });
-       await Promise.all(promises);
-       toast.success(`Broadcast sent to ${allProfiles.length} users!`);
+       const json = await res.json();
+       if (!res.ok) throw new Error(json.error || "Broadcast failed");
+       toast.success(`Announcement sent to ${json.recipients} buyer(s)${json.emailed ? `, ${json.emailed} email(s) queued` : ""}`);
+       setBroadcastTitle("");
        setBroadcastMessage("");
        setShowBroadcastModal(false);
-       fetchMessages();
     } catch (e: any) {
       toast.error("Broadcast Error: " + e.message);
     } finally {
       setIsBroadcasting(false);
+    }
+  }
+
+  async function setTicketStatus(username: string, status: "closed" | "open") {
+    try {
+      const { error } = await db.from('messages').update({ ticket_status: status }).eq('username', username);
+      if (error) throw error;
+      toast.success(status === "closed" ? "Ticket closed" : "Ticket reopened");
+      fetchMessages();
+    } catch (e: any) {
+      toast.error(e.message);
     }
   }
 
@@ -167,9 +181,16 @@ export function AdminMessages() {
       return map;
   }, [messages]);
 
+  const threadStatus = (user: string) => {
+    const msgs = groupedUsers.get(user) || [];
+    const last = msgs[msgs.length - 1];
+    return (last?.ticket_status as string) || "open";
+  };
+
   const sortedUserList = useMemo(() => {
     return Array.from(groupedUsers.keys())
       .filter(u => u && (u as string).toLowerCase().includes(searchQuery.toLowerCase()))
+      .filter(u => ticketFilter === "all" || threadStatus(u as string) === ticketFilter)
       .sort((a, b) => {
           const msgsA = groupedUsers.get(a) || [];
           const msgsB = groupedUsers.get(b) || [];
@@ -178,7 +199,7 @@ export function AdminMessages() {
           if (!lastMsgA || !lastMsgB) return 0;
           return new Date(lastMsgB.created_at).getTime() - new Date(lastMsgA.created_at).getTime();
       });
-  }, [groupedUsers, searchQuery]);
+  }, [groupedUsers, searchQuery, ticketFilter]);
 
   const activeThread = selectedUser ? groupedUsers.get(selectedUser) || [] : [];
   const selectedProfile = allProfiles.find(p => p.username === selectedUser);
@@ -211,13 +232,30 @@ export function AdminMessages() {
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[12px] focus:outline-none focus:border-[#E62E04]/30"
             />
+          </div>
+          {/* Ticket queue (P3) */}
+          <div className="flex gap-1.5 mt-3">
+            {([
+              ["all", "All"],
+              ["open", "Open"],
+              ["awaiting_reply", "Awaiting reply"],
+              ["closed", "Closed"],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setTicketFilter(id)}
+                className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${ticketFilter === id ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -250,6 +288,13 @@ export function AdminMessages() {
                   <div className="text-[11px] text-slate-500 truncate leading-tight">
                     {lastMsg.message === '[ADMIN_INITIATED]' ? `You: ${lastMsg.reply}` : lastMsg.message}
                   </div>
+                  <span className={`inline-block mt-1.5 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                    threadStatus(user) === 'closed' ? 'bg-slate-100 text-slate-400' :
+                    threadStatus(user) === 'awaiting_reply' ? 'bg-blue-50 text-blue-600' :
+                    'bg-amber-50 text-amber-600'
+                  }`}>
+                    {threadStatus(user) === 'awaiting_reply' ? 'Awaiting reply' : threadStatus(user)}
+                  </span>
                 </div>
                 {isUnread && <div className="w-2 h-2 bg-[#E62E04] rounded-full mt-2 animate-pulse" />}
               </button>
@@ -279,6 +324,25 @@ export function AdminMessages() {
                         <span className="text-[13px] text-slate-500 font-medium">Offline</span>
                       </div>
                     </div>
+                  </div>
+                  {/* Ticket state controls (P3) */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg ${
+                      threadStatus(selectedUser) === 'closed' ? 'bg-slate-100 text-slate-400' :
+                      threadStatus(selectedUser) === 'awaiting_reply' ? 'bg-blue-50 text-blue-600' :
+                      'bg-amber-50 text-amber-600'
+                    }`}>
+                      Ticket: {threadStatus(selectedUser) === 'awaiting_reply' ? 'Awaiting reply' : threadStatus(selectedUser)}
+                    </span>
+                    {threadStatus(selectedUser) === 'closed' ? (
+                      <button onClick={() => setTicketStatus(selectedUser, 'open')} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50">
+                        Reopen
+                      </button>
+                    ) : (
+                      <button onClick={() => setTicketStatus(selectedUser, 'closed')} className="px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-800">
+                        Close ticket
+                      </button>
+                    )}
                   </div>
               </div>
               <div className="flex gap-6">
@@ -463,19 +527,28 @@ export function AdminMessages() {
                 </div>
                 <button onClick={() => setShowBroadcastModal(false)} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><X size={20} /></button>
               </div>
-              <div className="p-6 lg:p-8 space-y-6">
-                <textarea 
+              <div className="p-6 lg:p-8 space-y-4">
+                <p className="text-[12px] text-slate-400 font-medium leading-relaxed">
+                  Creates an announcement on every buyer's dashboard plus an in-app notification. Email copies are sent too when the email provider is configured (Settings → Integrations).
+                </p>
+                <input
+                  value={broadcastTitle}
+                  onChange={e => setBroadcastTitle(e.target.value)}
+                  placeholder="Announcement title (e.g. Weekend maintenance)"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold"
+                />
+                <textarea
                   value={broadcastMessage}
                   onChange={e => setBroadcastMessage(e.target.value)}
-                  placeholder="Global message..."
+                  placeholder="Announcement message..."
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm min-h-[150px] resize-none"
                 />
-                <button 
-                  disabled={isBroadcasting || !broadcastMessage.trim()}
+                <button
+                  disabled={isBroadcasting || !broadcastTitle.trim() || !broadcastMessage.trim()}
                   onClick={handleBroadcast}
-                  className="w-full py-4 bg-primary-600 text-white rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-primary-700 shadow-xl shadow-primary-600/20"
+                  className="w-full py-4 bg-primary-600 text-white rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-primary-700 shadow-xl shadow-primary-600/20 disabled:opacity-40"
                 >
-                  {isBroadcasting ? <Loader2 size={16} className="animate-spin" /> : "Dispatch Message"}
+                  {isBroadcasting ? <Loader2 size={16} className="animate-spin" /> : "Send Announcement"}
                 </button>
               </div>
             </motion.div>

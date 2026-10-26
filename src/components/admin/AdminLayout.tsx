@@ -23,7 +23,7 @@ import {
   AlertCircle,
   ChevronDown,
   ExternalLink,
-  Palette,
+  Star,
   Store,
   ShoppingBag
 } from "lucide-react";
@@ -261,54 +261,61 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
               <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
           </div>
 
-          <CollapsibleMenu 
-            label="Store Management" 
-            icon={<Settings size={20} />} 
+          <CollapsibleMenu
+            label="Store Management"
+            icon={<Settings size={20} />}
             collapsed={isSidebarCollapsed}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             items={[
                 { id: "categories", label: "Categories" },
-                { id: "settings", label: "General Config" },
-                { id: "performance", label: "Performance Hub" },
-                { id: "store_customize", label: "Store Customizer" }
+                { id: "seller_info", label: "Seller Information" },
+                { id: "settings", label: "General Config" }
             ]}
           />
-          
+
           <div className="pt-6 px-3 pb-2">
               <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
           </div>
 
-          <MenuItem 
-            id="messages" 
-            label="Messages" 
-            icon={<MessageSquare size={20} />} 
-            activeTab={activeTab} 
+          <MenuItem
+            id="messages"
+            label="Messages"
+            icon={<MessageSquare size={20} />}
+            activeTab={activeTab}
             setActiveTab={setActiveTab}
             badge={unreadCount > 0 ? String(unreadCount) : undefined}
             collapsed={isSidebarCollapsed}
           />
-          <MenuItem 
-            id="customers" 
-            label="Seller Information" 
-            icon={<Users size={20} />} 
-            activeTab={activeTab} 
+          <MenuItem
+            id="customers"
+            label="Customers"
+            icon={<Users size={20} />}
+            activeTab={activeTab}
             setActiveTab={setActiveTab}
             collapsed={isSidebarCollapsed}
           />
-          <MenuItem 
-            id="violation" 
-            label="Violation Center" 
-            icon={<AlertCircle size={20} />} 
-            activeTab={activeTab} 
+          <MenuItem
+            id="seller_info"
+            label="Seller Information"
+            icon={<ShieldCheck size={20} />}
+            activeTab={activeTab}
             setActiveTab={setActiveTab}
             collapsed={isSidebarCollapsed}
           />
-          <MenuItem 
-            id="store_customize" 
-            label="Store Customizer" 
-            icon={<Palette size={20} />} 
-            activeTab={activeTab} 
+          <MenuItem
+            id="feedback"
+            label="Feedback"
+            icon={<Star size={20} />}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem
+            id="coupons"
+            label="Coupons"
+            icon={<Tag size={20} />}
+            activeTab={activeTab}
             setActiveTab={setActiveTab}
             collapsed={isSidebarCollapsed}
           />

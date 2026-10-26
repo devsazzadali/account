@@ -6,6 +6,7 @@
 
 import { getSessionContext, unauthorized, isResponse, requireAdmin } from "@/src/lib/auth-server";
 import { createOrder, payOrderWithWallet, maybeReleaseEscrow, ServiceError } from "@/src/lib/order-service";
+import { flushEmailOutbox } from "@/src/lib/mailer";
 import { prisma } from "@/src/lib/db";
 import { serializeRow, serializeRows } from "@/src/lib/serialize";
 
@@ -21,6 +22,8 @@ export async function POST(req: Request) {
       productId: String(body.product_id || body.productId || ""),
       quantity: Number(body.quantity || 1),
       customerEmail: body.customer_email || body.customerEmail,
+      variantLabel: body.variant_label || body.variantLabel || undefined,
+      couponCode: body.coupon_code || body.couponCode || undefined,
     });
     let final = order;
     if (body.payment_method === "wallet" || body.paymentMethod === "wallet" || body.payWithWallet === true || body.pay_with_wallet === true) {
@@ -29,6 +32,7 @@ export async function POST(req: Request) {
     const withProduct = await prisma.order.findUnique({ where: { id: final.id }, include: { product: true } });
     const shaped = serializeRow(withProduct as unknown as Record<string, unknown>);
     const { product, ...rest } = shaped;
+    void flushEmailOutbox();
     return Response.json({ order: { ...rest, products: product } }, { status: 201 });
   } catch (err) {
     if (err instanceof ServiceError) return Response.json({ error: err.message }, { status: err.status });

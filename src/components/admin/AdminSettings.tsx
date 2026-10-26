@@ -22,11 +22,17 @@ interface Settings {
   payment_number_bkash: string;
   payment_number_nagad: string;
   payment_instructions: string;
+  // Z2U alignment P0: storefront appearance + visibility controls.
+  store_logo_url: string;
+  store_banner_url: string;
+  store_open: string; // "true" | "false"
+  support_hours: string;
 }
 
 interface Integrations {
   stripe: { configured: boolean; publishable_key_set: boolean; webhook_secret_set: boolean };
   manual_payments: { bkash_configured: boolean; nagad_configured: boolean };
+  email?: { configured: boolean; provider: string };
   auth: { provider: string };
   storage: { mode: string; note: string };
 }
@@ -82,6 +88,21 @@ export function AdminSettings() {
     setSettings((s) => (s ? { ...s, [key]: value } : s));
   }
 
+  async function uploadImage(key: "store_logo_url" | "store_banner_url", file: File | undefined) {
+    if (!file) return;
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", credentials: "same-origin", body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Upload failed");
+      set(key, json.url);
+      toast.success("Image uploaded — remember to Save");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
   return (
     <div className="flex gap-8 items-start">
       <div className="w-52 shrink-0 bg-white rounded-3xl border border-slate-100 shadow-sm p-3 space-y-1">
@@ -116,6 +137,53 @@ export function AdminSettings() {
             </Field>
             <Field label="Support email" source={sources.support_email}>
               <input value={settings.support_email} onChange={(e) => set("support_email", e.target.value)} placeholder="support@yourstore.com" className={inputCls} />
+            </Field>
+            <Field label="Support hours (shown on your seller profile)" source={sources.support_hours}>
+              <input value={settings.support_hours || ""} onChange={(e) => set("support_hours", e.target.value)} placeholder="e.g. 9:00–23:00 (GMT+6), every day" className={inputCls} />
+            </Field>
+            <Field label="Store logo" source={sources.store_logo_url}>
+              <div className="flex items-center gap-3">
+                {settings.store_logo_url ? (
+                  <img src={settings.store_logo_url} alt="Store logo" className="w-14 h-14 rounded-2xl object-cover border border-slate-100" />
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl bg-[#0C2254] flex items-center justify-center text-white text-[10px] font-black uppercase">No logo</div>
+                )}
+                <input value={settings.store_logo_url || ""} onChange={(e) => set("store_logo_url", e.target.value)} placeholder="https://… or upload →" className={`${inputCls} flex-1`} />
+                <label className="px-4 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-slate-800 transition-all whitespace-nowrap">
+                  Upload
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadImage("store_logo_url", e.target.files?.[0])} />
+                </label>
+              </div>
+            </Field>
+            <Field label="Store banner (wide image shown on your seller profile)" source={sources.store_banner_url}>
+              <div className="space-y-3">
+                {settings.store_banner_url && (
+                  <img src={settings.store_banner_url} alt="Store banner" className="w-full h-28 rounded-2xl object-cover border border-slate-100" />
+                )}
+                <div className="flex items-center gap-3">
+                  <input value={settings.store_banner_url || ""} onChange={(e) => set("store_banner_url", e.target.value)} placeholder="https://… or upload →" className={`${inputCls} flex-1`} />
+                  <label className="px-4 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-slate-800 transition-all whitespace-nowrap">
+                    Upload
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadImage("store_banner_url", e.target.files?.[0])} />
+                  </label>
+                </div>
+              </div>
+            </Field>
+            <Field label="Store visibility (Hide Shop)" source={sources.store_open}>
+              <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4">
+                <div>
+                  <p className="text-sm font-black text-slate-900">{settings.store_open === "false" ? "Store is HIDDEN" : "Store is OPEN"}</p>
+                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">Hidden = visitors see a “temporarily closed” notice and no new orders can be placed. Existing orders, messages and reviews stay reachable for signed-in customers.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => set("store_open", settings.store_open === "false" ? "true" : "false")}
+                  className={`relative w-14 h-8 rounded-full transition-all shrink-0 ${settings.store_open === "false" ? "bg-slate-300" : "bg-emerald-500"}`}
+                  aria-label="Toggle store visibility"
+                >
+                  <span className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow transition-all ${settings.store_open === "false" ? "left-1" : "left-7"}`} />
+                </button>
+              </div>
             </Field>
             <SaveBar saving={saving} saved={saved} onSave={handleSave} />
           </SectionCard>
@@ -159,6 +227,15 @@ export function AdminSettings() {
                   ok={integrations.manual_payments.bkash_configured || integrations.manual_payments.nagad_configured}
                   detail={`bKash ${integrations.manual_payments.bkash_configured ? "configured" : "not set"} · Nagad ${integrations.manual_payments.nagad_configured ? "configured" : "not set"}`}
                 />
+                {integrations.email && (
+                  <StatusRow
+                    label="Transactional email (Resend)"
+                    ok={integrations.email.configured}
+                    detail={integrations.email.configured
+                      ? "Live — order confirmations and delivery emails are sent"
+                      : "Not configured — set RESEND_API_KEY + STORE_FROM_EMAIL to send order emails (they stay queued in the outbox until then)"}
+                  />
+                )}
                 <StatusRow label="Customer accounts" ok detail={integrations.auth.provider} />
                 <StatusRow label="File uploads" ok detail={`${integrations.storage.mode} — ${integrations.storage.note}`} />
               </div>

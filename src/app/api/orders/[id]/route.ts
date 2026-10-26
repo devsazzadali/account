@@ -7,6 +7,7 @@
 
 import { getSessionContext, unauthorized, forbidden } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
+import { flushEmailOutbox } from "@/src/lib/mailer";
 import { serializeRow } from "@/src/lib/serialize";
 import {
   ServiceError,
@@ -23,7 +24,10 @@ import {
 } from "@/src/lib/order-service";
 
 async function loadOrder(id: string) {
-  return prisma.order.findUnique({ where: { id }, include: { product: true, dispute: true } });
+  return prisma.order.findUnique({
+    where: { id },
+    include: { product: true, dispute: true, events: { orderBy: { createdAt: "asc" } }, review: { select: { id: true } } },
+  });
 }
 
 function shape(row: Record<string, unknown>) {
@@ -105,6 +109,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
     }
     const fresh = await loadOrder(id);
+    void flushEmailOutbox();
     return Response.json({
       ok: true,
       result: result ? serializeRow(result as Record<string, unknown>) : null,

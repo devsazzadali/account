@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { MainContent } from "../components/MainContent";
 import { Banner } from "../components/Banner";
+import { StoreClosedBanner } from "../components/StoreClosedBanner";
 import { ActivityFeed } from "../components/ActivityFeed";
 import { useSearch } from "../components/SearchContext";
 import type { HomeData } from "../lib/store-types";
@@ -16,7 +17,10 @@ export function StorePage({ initialData }: { initialData?: HomeData } = {}) {
     <div className="relative flex flex-col">
       {/* Banner - Full Width */}
       <Banner />
-      
+
+      {/* Shown only while the admin has the store hidden (Hide Shop) */}
+      <StoreClosedBanner />
+
       {/* Main Content Container */}
       <div className="container mx-auto px-4 max-w-7xl relative">
            <div className="flex flex-col md:flex-row gap-6">

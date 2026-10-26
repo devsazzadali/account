@@ -163,6 +163,8 @@ function OperationalOverview({ profile, orders, setActiveTab }: any) {
           <StatNode label="Security Tier" value={profile?.is_premium ? "ELITE" : "BASIC"} icon={<Crown size={24} />} color="text-amber-500" />
        </div>
 
+       <AnnouncementsCard />
+
        <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm">
           <div className="flex items-center justify-between mb-8">
              <h3 className="text-xl font-black text-slate-900">Recent Transactions</h3>
@@ -241,3 +243,31 @@ function StatNode({ label, value, icon, color }: any) {
   );
 }
 
+
+/** Store announcements (P4 broadcast) — renders nothing when empty. */
+function AnnouncementsCard() {
+  const [items, setItems] = useState<any[]>([]);
+  useEffect(() => {
+    fetch("/api/announcements", { credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((j) => setItems(j.announcements || []))
+      .catch(() => {});
+  }, []);
+  if (items.length === 0) return null;
+  return (
+    <div className="bg-[#0C2254] rounded-[3rem] p-10 shadow-sm text-white">
+      <h3 className="text-xl font-black mb-6">Store Announcements</h3>
+      <div className="space-y-5">
+        {items.map((a) => (
+          <div key={a.id} className="border-b border-white/10 pb-5 last:border-0 last:pb-0">
+            <div className="flex items-baseline justify-between gap-4">
+              <h4 className="text-[15px] font-black">{a.title}</h4>
+              <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest shrink-0">{new Date(a.created_at).toLocaleDateString()}</span>
+            </div>
+            <p className="text-sm text-white/70 font-medium leading-relaxed mt-1 whitespace-pre-wrap">{a.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
