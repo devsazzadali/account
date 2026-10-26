@@ -5,7 +5,8 @@ import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "../lib/supabase";
+import { db } from "../lib/dbclient";
+import { auth } from "../lib/auth-client";
 
 interface FeaturedItem {
   id: string;
@@ -67,8 +68,8 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
                 </div>
             </div>
             <div className="flex flex-col min-w-0">
-                <span className="text-[10px] text-slate-500 truncate leading-tight mb-0.5">Verified Seller</span>
-                <span className="text-xs text-slate-900 font-medium truncate">TitanGames_Global</span>
+                <span className="text-[10px] text-slate-500 truncate leading-tight mb-0.5">Sold by</span>
+                <span className="text-xs text-slate-900 font-medium truncate">Account Store One</span>
             </div>
           </div>
         </div>
@@ -114,13 +115,19 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
                   <Plus size={14} />
               </button>
           </div>
-          <Link 
-            href={`/checkout/${item.id}?quantity=${quantity}`}
-            className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white text-[11px] font-bold uppercase tracking-widest py-3 rounded-xl shadow-lg shadow-primary-500/20 transition-all flex items-center justify-center gap-2 group/btn"
-          >
-            Buy Now
-            <Zap className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform fill-current" />
-          </Link>
+          {item.stock !== undefined && item.stock <= 0 ? (
+            <span className="flex-1 bg-slate-100 text-slate-400 text-[11px] font-bold uppercase tracking-widest py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed">
+              Out of Stock
+            </span>
+          ) : (
+            <Link
+              href={`/checkout/${item.id}?quantity=${quantity}`}
+              className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white text-[11px] font-bold uppercase tracking-widest py-3 rounded-xl shadow-lg shadow-primary-500/20 transition-all flex items-center justify-center gap-2 group/btn"
+            >
+              Buy Now
+              <Zap className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform fill-current" />
+            </Link>
+          )}
       </div>
     </div>
   );
@@ -129,31 +136,91 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
 interface MainContentProps {
   selectedCategory: string;
   setSelectedCategory: (category: string) => void;
+  /** Server-rendered data from Prisma (SEO port). When provided, the
+   *  component renders it immediately (including in SSR HTML) and skips
+   *  the legacy client fetch. When undefined, behaviour is unchanged. */
+  initialProducts?: StoreProduct[];
+  initialCategories?: StoreCategory[];
+  initialReviews?: StoreReview[];
 }
 
 import { useSearch } from "./SearchContext";
+import type {
+  StoreProduct,
+  StoreCategory,
+  StoreReview,
+} from "../lib/store-types";
 
-export function MainContent({ selectedCategory, setSelectedCategory }: MainContentProps) {
+function toFeaturedItem(p: StoreProduct): FeaturedItem {
+  return {
+    id: p.id,
+    title: p.title,
+    sold: p.sold,
+    price: p.price,
+    image: p.image ?? "",
+    badge: p.badge ?? "",
+    category: p.category ?? undefined,
+    stock: p.stock,
+  };
+}
+
+/** Map a Prisma-shaped review onto the shape this component renders. */
+function toUiReview(r: StoreReview) {
+  return {
+    buyer: r.username ?? "Anonymous",
+    text: r.comment ?? "",
+    date: r.createdAt.slice(0, 10),
+    type: r.rating >= 4 ? "positive" : "negative",
+  };
+}
+
+export function MainContent({
+  selectedCategory,
+  setSelectedCategory,
+  initialProducts,
+  initialCategories,
+  initialReviews,
+}: MainContentProps) {
   const { searchQuery } = useSearch();
-  const [loading, setLoading] = useState(true);
-  const [allProducts, setAllProducts] = useState<FeaturedItem[]>([]);
-  const [dbCategories, setDbCategories] = useState<any[]>([]);
-  const [dbReviews, setDbReviews] = useState<any[]>([]);
+  // Server data only short-circuits the legacy client fetch when it
+  // actually contains products; while the Neon products table is still
+  // empty (pre data-migration) the component keeps its previous behaviour.
+  const hasServerData = (initialProducts?.length ?? 0) > 0;
+  const [loading, setLoading] = useState(!hasServerData);
+  const [allProducts, setAllProducts] = useState<FeaturedItem[]>(() =>
+    (initialProducts ?? []).map(toFeaturedItem),
+  );
+  const [dbCategories, setDbCategories] = useState<any[]>(
+    () => initialCategories ?? [],
+  );
+  const [dbReviews, setDbReviews] = useState<any[]>(() =>
+    (initialReviews ?? []).map(toUiReview),
+  );
 
   useEffect(() => {
+    // Server-rendered data was passed in — nothing to fetch client-side.
+    if (hasServerData) {
+      setLoading(false);
+      return;
+    }
     async function fetchData() {
         try {
             setLoading(true);
             const [prodRes, catRes, revRes] = await Promise.all([
-                supabase.from('products').select('*').order('created_at', { ascending: false }),
-                supabase.from('categories').select('*').order('name', { ascending: true }),
-                supabase.from('reviews').select('*').order('created_at', { ascending: false }).limit(6)
+                db.from('products').select('*').order('created_at', { ascending: false }),
+                db.from('categories').select('*').order('name', { ascending: true }),
+                db.from('reviews').select('*').order('created_at', { ascending: false }).limit(6)
             ]);
 
             if (prodRes.error) throw prodRes.error;
             setAllProducts(prodRes.data || []);
             setDbCategories(catRes.data || []);
-            setDbReviews(revRes.data || []);
+            setDbReviews((revRes.data || []).map((r: any) => ({
+                buyer: r.username || "Anonymous",
+                text: r.comment || "",
+                date: (r.created_at || "").slice(0, 10),
+                type: r.rating >= 4 ? "positive" : "negative",
+            })));
         } catch (err: any) {
             console.error("Fetch Error:", err.message);
         } finally {

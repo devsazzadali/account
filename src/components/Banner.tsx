@@ -1,10 +1,25 @@
 "use client";
 
+import React, { useEffect, useState } from "react";
 import { Sparkles, Crown } from "lucide-react";
 
 export function Banner() {
+  // When the admin sets a store banner image (Settings → Store Identity),
+  // it becomes the hero background; otherwise the designed hero renders
+  // exactly as before.
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/store/stats")
+      .then((r) => r.json())
+      .then((j) => { if (j?.store_banner_url) setBannerUrl(j.store_banner_url); })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="relative overflow-hidden h-[240px] md:h-[320px] w-full bg-slate-50 border-b border-slate-200">
+      {bannerUrl && (
+        <img src={bannerUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+      )}
       {/* Background Gradient Orbs */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[150%] bg-primary-500/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="absolute top-[20%] right-[-10%] w-[50%] h-[150%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none"></div>

@@ -1,19 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://yourdomain.com/</loc>
-    <lastmod>2026-05-08</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://yourdomain.com/login</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://yourdomain.com/signup</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
+  <url><loc>https://www.accountstoreone.com/</loc><priority>1.0</priority></url>
+  <url><loc>https://www.accountstoreone.com/about</loc><priority>0.6</priority></url>
+  <url><loc>https://www.accountstoreone.com/faq</loc><priority>0.6</priority></url>
+  <url><loc>https://www.accountstoreone.com/terms</loc><priority>0.4</priority></url>
+  <url><loc>https://www.accountstoreone.com/privacy</loc><priority>0.4</priority></url>
+  <url><loc>https://www.accountstoreone.com/buyer-protection</loc><priority>0.6</priority></url>
+  <url><loc>https://www.accountstoreone.com/login</loc><priority>0.3</priority></url>
+  <url><loc>https://www.accountstoreone.com/signup</loc><priority>0.3</priority></url>
+  <url><loc>https://www.accountstoreone.com/product/f88d7c6b-fe26-4c1c-8e59-14152c4a749b</loc><priority>0.8</priority></url>
+  <url><loc>https://www.accountstoreone.com/product/b1b48b33-9891-4b45-a6cb-7eb3f23c72a6</loc><priority>0.8</priority></url>
+  <url><loc>https://www.accountstoreone.com/product/83915756-8832-4d75-8dc9-adc700981894</loc><priority>0.8</priority></url>
 </urlset>

@@ -1,0 +1,10 @@
+import { neon } from "@neondatabase/serverless";
+const sql = neon(process.env.DATABASE_URL);
+const schemas = await sql`SELECT schema_name FROM information_schema.schemata ORDER BY 1`;
+console.log("schemas:", schemas.map(s=>s.schema_name).join(", "));
+const tables = await sql`SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema IN ('public','neon_auth') ORDER BY 1,2`;
+for (const t of tables) console.log(t.table_schema + "." + t.table_name);
+const cols = await sql`SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='neon_auth' AND table_name='user' ORDER BY ordinal_position`;
+console.log("neon_auth.user cols:", cols.map(c=>c.column_name).join(", "));
+const counts = await sql`SELECT (SELECT count(*) FROM public.products) p, (SELECT count(*) FROM public.profiles) pr, (SELECT count(*) FROM public.orders) o`;
+console.log("counts:", JSON.stringify(counts[0]));

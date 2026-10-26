@@ -23,13 +23,14 @@ import {
   AlertCircle,
   ChevronDown,
   ExternalLink,
-  Palette,
+  Star,
   Store,
   ShoppingBag
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
 
 // ── Web Audio Chime ──────────────────────────────────────────
@@ -122,7 +123,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
 
   // ── Real-time new order watcher ──────────────────────────
   useEffect(() => {
-    const channel = supabase
+    const channel = db
       .channel("admin_new_order_alert")
       .on(
         "postgres_changes",
@@ -143,7 +144,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
       )
       .subscribe();
     isFirstLoad.current = false;
-    return () => { supabase.removeChannel(channel); };
+    return () => { db.removeChannel(channel); };
   }, []);
 
   useEffect(() => {
@@ -156,19 +157,19 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
 
   async function fetchUnreadCount() {
     try {
-      const { count, error } = await supabase
+      const { data, error } = await db
         .from('messages')
-        .select('*', { count: 'exact', head: true })
+        .select('id')
         .eq('status', 'unread');
-      
-      if (!error) setUnreadCount(count || 0);
+
+      if (!error) setUnreadCount((data || []).length);
     } catch (e) {
       console.error("Error fetching unread count:", e);
     }
   }
 
   function handleLogout() {
-    supabase.auth.signOut().then(() => {
+    auth.signOut().then(() => {
       (typeof window !== "undefined" ? localStorage.clear : () => {})();
       router.push("/login");
     });
@@ -231,9 +232,17 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             setActiveTab={setActiveTab}
             collapsed={isSidebarCollapsed}
           />
-          <MenuItem 
-            id="products" 
-            label="Create New Offers" 
+          <MenuItem
+            id="payments"
+            label="Payment Verification"
+            icon={<DollarSign size={20} />}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem
+            id="products"
+            label="Create New Offers"
             icon={<Plus size={20} />} 
             activeTab={activeTab} 
             setActiveTab={setActiveTab}
@@ -252,54 +261,61 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
               <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
           </div>
 
-          <CollapsibleMenu 
-            label="Store Management" 
-            icon={<Settings size={20} />} 
+          <CollapsibleMenu
+            label="Store Management"
+            icon={<Settings size={20} />}
             collapsed={isSidebarCollapsed}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             items={[
                 { id: "categories", label: "Categories" },
-                { id: "settings", label: "General Config" },
-                { id: "performance", label: "Performance Hub" },
-                { id: "store_customize", label: "Store Customizer" }
+                { id: "seller_info", label: "Seller Information" },
+                { id: "settings", label: "General Config" }
             ]}
           />
-          
+
           <div className="pt-6 px-3 pb-2">
               <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
           </div>
 
-          <MenuItem 
-            id="messages" 
-            label="Messages" 
-            icon={<MessageSquare size={20} />} 
-            activeTab={activeTab} 
+          <MenuItem
+            id="messages"
+            label="Messages"
+            icon={<MessageSquare size={20} />}
+            activeTab={activeTab}
             setActiveTab={setActiveTab}
             badge={unreadCount > 0 ? String(unreadCount) : undefined}
             collapsed={isSidebarCollapsed}
           />
-          <MenuItem 
-            id="customers" 
-            label="Seller Information" 
-            icon={<Users size={20} />} 
-            activeTab={activeTab} 
+          <MenuItem
+            id="customers"
+            label="Customers"
+            icon={<Users size={20} />}
+            activeTab={activeTab}
             setActiveTab={setActiveTab}
             collapsed={isSidebarCollapsed}
           />
-          <MenuItem 
-            id="violation" 
-            label="Violation Center" 
-            icon={<AlertCircle size={20} />} 
-            activeTab={activeTab} 
+          <MenuItem
+            id="seller_info"
+            label="Seller Information"
+            icon={<ShieldCheck size={20} />}
+            activeTab={activeTab}
             setActiveTab={setActiveTab}
             collapsed={isSidebarCollapsed}
           />
-          <MenuItem 
-            id="store_customize" 
-            label="Store Customizer" 
-            icon={<Palette size={20} />} 
-            activeTab={activeTab} 
+          <MenuItem
+            id="feedback"
+            label="Feedback"
+            icon={<Star size={20} />}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            collapsed={isSidebarCollapsed}
+          />
+          <MenuItem
+            id="coupons"
+            label="Coupons"
+            icon={<Tag size={20} />}
+            activeTab={activeTab}
             setActiveTab={setActiveTab}
             collapsed={isSidebarCollapsed}
           />

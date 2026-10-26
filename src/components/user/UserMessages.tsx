@@ -30,7 +30,8 @@ import {
   MoreHorizontal
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
 
 export function UserMessages() {
@@ -46,7 +47,7 @@ export function UserMessages() {
     fetchSessionAndData();
     
     // Real-time Subscription
-    const channel = supabase
+    const channel = db
       .channel('user_messages_fiverr')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
         fetchMessages();
@@ -54,7 +55,7 @@ export function UserMessages() {
       .subscribe();
 
     return () => {
-        supabase.removeChannel(channel);
+        db.removeChannel(channel);
     };
   }, []);
 
@@ -63,9 +64,9 @@ export function UserMessages() {
   }, [messages]);
 
   async function fetchSessionAndData() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await auth.getSession();
     if (session?.user) {
-        const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
+        const { data: profile } = await db.from('profiles').select('username').eq('id', session.user.id).single();
         if (profile?.username) {
             setUsername(profile.username);
             fetchMessages(profile.username);
@@ -82,7 +83,7 @@ export function UserMessages() {
   async function fetchMessages(overrideUser?: string) {
     const targetUser = overrideUser || username;
     try {
-        const { data, error } = await supabase
+        const { data, error } = await db
             .from('messages')
             .select('*')
             .eq('username', targetUser)
@@ -99,7 +100,7 @@ export function UserMessages() {
   async function fetchLastOrder(overrideUser?: string) {
     const targetUser = overrideUser || username;
     try {
-      const { data } = await supabase
+      const { data } = await db
         .from('orders')
         .select('*, products(title, image)')
         .eq('username', targetUser)
@@ -116,7 +117,7 @@ export function UserMessages() {
 
     setIsSending(true);
     try {
-        const { error } = await supabase.from('messages').insert({
+        const { error } = await db.from('messages').insert({
             username: username,
             subject: "Inbox Inquiry",
             message: newMessage,
@@ -188,7 +189,22 @@ export function UserMessages() {
                  <div className="text-[15px] font-bold text-[#404145] flex items-center gap-2">
                     Customer Support
                  </div>
-                 <p className="text-[12px] text-[#1dbf73] font-medium">Online</p>
+                 <p className="text-[12px] text-[#1dbf73] font-medium flex items-center gap-2">
+                    Online
+                    {/* Ticket state (P3) — mirrors the admin desk */}
+                    {messages.length > 0 && (() => {
+                      const st = messages[messages.length - 1]?.ticket_status || "open";
+                      return (
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                          st === "closed" ? "bg-slate-100 text-slate-400" :
+                          st === "awaiting_reply" ? "bg-emerald-50 text-emerald-600" :
+                          "bg-amber-50 text-amber-600"
+                        }`}>
+                          Ticket {st === "awaiting_reply" ? "answered" : st}
+                        </span>
+                      );
+                    })()}
+                 </p>
               </div>
            </div>
            <div className="flex items-center gap-3">

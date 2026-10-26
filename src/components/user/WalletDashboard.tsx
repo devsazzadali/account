@@ -1,91 +1,110 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Wallet, TrendingUp, ArrowDownLeft, ArrowUpRight, Clock,
-  ShoppingBag, RefreshCw, DollarSign, BarChart2, Shield, ChevronRight
-} from "lucide-react";
-import { supabase } from "../../lib/supabase";
+// AccountStoreOne — wallet dashboard (REAL wallet, completion build).
+// Balance and history come from /api/wallet: the balance is the wallets
+// row, the history is the append-only wallet_transactions ledger. Top-ups
+// use the same manual TrxID verification as order payments: the buyer
+// sends money to the store number, submits the TrxID, and the balance is
+// credited only after an admin approves it in the verification queue.
+// Refunds from orders/disputes also land here as ledger credits.
 
-interface TxItem {
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Wallet, ArrowDownLeft, ArrowUpRight, Clock,
+  ShoppingBag, RefreshCw, DollarSign, Shield, Loader2, Copy, Check
+} from "lucide-react";
+import { toast } from "react-hot-toast";
+
+interface LedgerTx {
   id: string;
-  type: "purchase" | "refund" | "topup";
-  title: string;
+  type: string;
   amount: number;
+  balance_after: number | null;
+  description: string | null;
   created_at: string;
-  status: string;
 }
 
-interface SpendPoint { month: string; total: number; }
+interface PendingTopup {
+  id: string;
+  method: string;
+  amount: number;
+  trx_id: string;
+  created_at: string;
+}
 
-const txColor = {
-  purchase: { bg: "bg-red-50",     border: "border-red-100",     icon: <ArrowUpRight size={16} className="text-red-500" />,     text: "text-red-600",   sign: "-" },
-  refund:   { bg: "bg-emerald-50", border: "border-emerald-100", icon: <ArrowDownLeft size={16} className="text-emerald-500" />, text: "text-emerald-600",sign: "+" },
-  topup:    { bg: "bg-blue-50",    border: "border-blue-100",    icon: <DollarSign size={16} className="text-blue-500" />,       text: "text-blue-600",  sign: "+" },
+const txStyle: Record<string, { bg: string; border: string; icon: React.ReactNode; text: string }> = {
+  topup: { bg: "bg-blue-50", border: "border-blue-100", icon: <ArrowDownLeft size={16} className="text-blue-500" />, text: "text-blue-600" },
+  refund: { bg: "bg-emerald-50", border: "border-emerald-100", icon: <ArrowDownLeft size={16} className="text-emerald-500" />, text: "text-emerald-600" },
+  purchase: { bg: "bg-red-50", border: "border-red-100", icon: <ArrowUpRight size={16} className="text-red-500" />, text: "text-red-600" },
+  adjustment: { bg: "bg-slate-50", border: "border-slate-100", icon: <DollarSign size={16} className="text-slate-500" />, text: "text-slate-600" },
 };
 
 export function WalletDashboard() {
-  const [transactions, setTransactions] = useState<TxItem[]>([]);
-  const [spendPoints, setSpendPoints] = useState<SpendPoint[]>([]);
+  const [balance, setBalance] = useState(0);
+  const [ledger, setLedger] = useState<LedgerTx[]>([]);
+  const [pending, setPending] = useState<PendingTopup[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totalSpent, setTotalSpent] = useState(0);
-  const [totalOrders, setTotalOrders] = useState(0);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const [payConfig, setPayConfig] = useState<any>(null);
+  const [method, setMethod] = useState("bkash");
+  const [amount, setAmount] = useState("");
+  const [trxId, setTrxId] = useState("");
+  const [senderNumber, setSenderNumber] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   async function fetchData() {
     setLoading(true);
-    const username = (typeof window !== "undefined" ? localStorage.getItem : () => null)("username") || "";
-
-    const { data: orders } = await supabase
-      .from("orders")
-      .select("id, status, total_price, created_at, products(title)")
-      .eq("username", username)
-      .order("created_at", { ascending: false })
-      .limit(20);
-
-    if (orders) {
-      // Build transaction list
-      const txs: TxItem[] = orders.map((o: any) => ({
-        id: o.id,
-        type: o.status === "refunded" ? "refund" : "purchase",
-        title: o.products?.title || "Digital Product",
-        amount: Number(o.total_price),
-        created_at: o.created_at,
-        status: o.status,
-      }));
-      setTransactions(txs);
-      setTotalOrders(orders.length);
-
-      // Total spent (purchases only)
-      const spent = orders
-        .filter((o: any) => o.status !== "refunded")
-        .reduce((acc: number, o: any) => acc + Number(o.total_price), 0);
-      setTotalSpent(spent);
-
-      // Build monthly spend chart for last 6 months
-      const now = new Date();
-      const monthly: Record<string, number> = {};
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = d.toLocaleString("default", { month: "short" });
-        monthly[key] = 0;
+    try {
+      const [w, cfg] = await Promise.all([
+        fetch("/api/wallet", { credentials: "same-origin" }).then((r) => r.json()),
+        fetch("/api/payments/config").then((r) => r.json()).catch(() => null),
+      ]);
+      setBalance(Number(w.wallet?.balance ?? w.balance) || 0);
+      setLedger(w.transactions || []);
+      setPending(w.pending_topups || []);
+      if (cfg) {
+        setPayConfig(cfg);
+        if (!cfg.manual?.bkashNumber && cfg.manual?.nagadNumber) setMethod("nagad");
       }
-      orders.forEach((o: any) => {
-        if (o.status !== "refunded") {
-          const month = new Date(o.created_at).toLocaleString("default", { month: "short" });
-          if (monthly[month] !== undefined) monthly[month] += Number(o.total_price);
-        }
-      });
-      setSpendPoints(Object.entries(monthly).map(([month, total]) => ({ month, total })));
+    } catch {
+      toast.error("Could not load wallet");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
-  const maxSpend = Math.max(...spendPoints.map(p => p.total), 1);
+  useEffect(() => { fetchData(); }, []);
+
+  const manualNumber = method === "bkash" ? payConfig?.manual?.bkashNumber : payConfig?.manual?.nagadNumber;
+  const totalIn = ledger.filter((t) => Number(t.amount) > 0).reduce((a, t) => a + Number(t.amount), 0);
+  const totalOut = ledger.filter((t) => Number(t.amount) < 0).reduce((a, t) => a + Math.abs(Number(t.amount)), 0);
+
+  async function submitTopup() {
+    const amt = Number(amount);
+    if (!amt || amt <= 0) { toast.error("Enter an amount"); return; }
+    if (trxId.trim().length < 6) { toast.error("Enter the Transaction ID"); return; }
+    if (senderNumber.trim().length < 6) { toast.error("Enter your sender number"); return; }
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/wallet", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amt, method, trxId: trxId.trim(), senderNumber: senderNumber.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Top-up failed");
+      toast.success("Top-up submitted — balance updates after verification");
+      setAmount(""); setTrxId(""); setSenderNumber("");
+      await fetchData();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   function timeAgo(iso: string) {
     const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -106,29 +125,27 @@ export function WalletDashboard() {
 
   return (
     <div className="space-y-6 font-sans pb-10">
-
-      {/* Wallet Hero Card */}
-      <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-[2.5rem] p-8 overflow-hidden shadow-2xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 blur-[80px] rounded-full" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 blur-[60px] rounded-full" />
+      {/* Balance hero */}
+      <div className="relative bg-[#0C2254] rounded-[2.5rem] p-8 overflow-hidden shadow-2xl">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#F4751F]/15 blur-[80px] rounded-full" />
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center">
               <Wallet size={20} className="text-white" />
             </div>
             <div>
-              <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Total Spending</p>
-              <p className="text-[10px] font-bold text-white/70">Your Activity Overview</p>
+              <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Wallet Balance</p>
+              <p className="text-[10px] font-bold text-white/70">Spendable on any order</p>
             </div>
           </div>
-          <div className="text-4xl font-black text-white mb-1">${totalSpent.toFixed(2)}</div>
-          <p className="text-[11px] text-white/50 font-bold uppercase tracking-widest">USD · All Time</p>
+          <div className="text-4xl font-black text-white mb-1">${balance.toFixed(2)}</div>
+          <p className="text-[11px] text-white/50 font-bold uppercase tracking-widest">USD · Updated in real time</p>
 
           <div className="grid grid-cols-3 gap-4 mt-8">
             {[
-              { label: "Orders",       value: totalOrders,                  icon: <ShoppingBag size={14} /> },
-              { label: "Delivered",    value: transactions.filter(t => t.status === "Completed").length, icon: <Shield size={14} /> },
-              { label: "Avg. Order",   value: `$${totalOrders > 0 ? (totalSpent / totalOrders).toFixed(2) : "0.00"}`, icon: <TrendingUp size={14} /> },
+              { label: "Total Credited", value: `$${totalIn.toFixed(2)}`, icon: <ArrowDownLeft size={14} /> },
+              { label: "Total Spent", value: `$${totalOut.toFixed(2)}`, icon: <ShoppingBag size={14} /> },
+              { label: "Pending Top-ups", value: pending.length, icon: <Clock size={14} /> },
             ].map((s, i) => (
               <div key={i} className="bg-white/10 border border-white/10 rounded-2xl p-4 text-center">
                 <div className="text-white/50 flex justify-center mb-1">{s.icon}</div>
@@ -140,78 +157,85 @@ export function WalletDashboard() {
         </div>
       </div>
 
-      {/* Spending Chart */}
-      <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-6">
-          <BarChart2 size={16} className="text-primary-600" />
-          <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Monthly Spending (6 Months)</h3>
+      {/* Top-up */}
+      <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm space-y-4">
+        <div className="flex items-center gap-2">
+          <DollarSign size={16} className="text-primary-600" />
+          <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Add Money (Manual Verification)</h3>
         </div>
-        {spendPoints.every(p => p.total === 0) ? (
-          <div className="h-32 flex items-center justify-center">
-            <p className="text-sm font-bold text-slate-300">No spending data yet</p>
-          </div>
+        {payConfig && !payConfig.manual?.bkashNumber && !payConfig.manual?.nagadNumber ? (
+          <p className="text-sm text-slate-400 font-medium">Top-ups are unavailable right now — the store has not published a payment number. Refunds still credit here automatically.</p>
         ) : (
-          <div className="flex items-end gap-3 h-32">
-            {spendPoints.map((p, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                <div className="w-full flex flex-col justify-end" style={{ height: "96px" }}>
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: `${Math.max((p.total / maxSpend) * 96, p.total > 0 ? 4 : 0)}px` }}
-                    transition={{ delay: i * 0.08, duration: 0.5, ease: "easeOut" }}
-                    className={`w-full rounded-xl ${p.total > 0 ? "bg-primary-500" : "bg-slate-100"}`}
-                    title={`$${p.total.toFixed(2)}`}
-                  />
-                </div>
-                <span className="text-[9px] font-black text-slate-400 uppercase">{p.month}</span>
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              {payConfig?.manual?.bkashNumber && (
+                <button onClick={() => setMethod("bkash")} className={`p-3.5 rounded-2xl border text-xs font-bold uppercase tracking-widest transition-all ${method === "bkash" ? "bg-primary-50 border-primary-300 text-primary-700" : "bg-slate-50 border-slate-200 text-slate-500"}`}>bKash</button>
+              )}
+              {payConfig?.manual?.nagadNumber && (
+                <button onClick={() => setMethod("nagad")} className={`p-3.5 rounded-2xl border text-xs font-bold uppercase tracking-widest transition-all ${method === "nagad" ? "bg-primary-50 border-primary-300 text-primary-700" : "bg-slate-50 border-slate-200 text-slate-500"}`}>Nagad</button>
+              )}
+            </div>
+            {manualNumber && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-bold text-slate-500">Send money to:</span>
+                <span className="text-base font-black tracking-wider text-[#0C2254] bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">{manualNumber}</span>
+                <button onClick={() => { navigator.clipboard.writeText(manualNumber); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 hover:text-slate-900 transition-all">
+                  {copied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
+                </button>
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" step="0.01" placeholder="Amount (USD)" className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 transition-all" />
+              <input value={trxId} onChange={(e) => setTrxId(e.target.value.toUpperCase())} placeholder="Transaction ID (TrxID)" className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 transition-all" />
+              <input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} placeholder="Your sender number" className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 transition-all" />
+            </div>
+            <button disabled={submitting} onClick={submitTopup} className="w-full py-3.5 bg-[#0C2254] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40 flex items-center justify-center gap-2">
+              {submitting ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} />} Submit Top-up for Verification
+            </button>
+            <p className="text-[10px] text-slate-400 font-medium">Your balance is credited only after the store verifies the Transaction ID — usually within a few hours.</p>
+          </>
+        )}
+
+        {pending.length > 0 && (
+          <div className="space-y-2 pt-2">
+            {pending.map((p) => (
+              <div key={p.id} className="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3">
+                <span className="text-xs font-bold text-amber-800">${Number(p.amount).toFixed(2)} via {p.method} · TrxID {p.trx_id}</span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-1.5"><Clock size={11} /> Awaiting verification</span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Transaction Feed */}
+      {/* Ledger */}
       <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Clock size={15} className="text-primary-600" />
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Transaction History</h3>
+            <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Wallet Ledger</h3>
           </div>
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{transactions.length} Records</span>
+          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{ledger.length} Records</span>
         </div>
-
-        {transactions.length === 0 ? (
+        {ledger.length === 0 ? (
           <div className="py-16 text-center">
             <Wallet size={40} className="mx-auto text-slate-200 mb-3" />
-            <p className="text-sm font-bold text-slate-400">No transactions yet</p>
+            <p className="text-sm font-bold text-slate-400">No wallet activity yet</p>
+            <p className="text-[11px] text-slate-300 mt-1">Top-ups, purchases and refunds will appear here.</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-50 max-h-[420px] overflow-y-auto custom-scrollbar">
-            {transactions.map((tx, i) => {
-              const cfg = txColor[tx.type];
+            {ledger.map((tx, i) => {
+              const cfg = txStyle[tx.type] || txStyle.adjustment;
+              const amt = Number(tx.amount);
               return (
-                <motion.div
-                  key={tx.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                  className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-all"
-                >
-                  <div className={`w-10 h-10 rounded-2xl ${cfg.bg} border ${cfg.border} flex items-center justify-center shrink-0`}>
-                    {cfg.icon}
-                  </div>
+                <motion.div key={tx.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-all">
+                  <div className={`w-9 h-9 rounded-xl ${cfg.bg} border ${cfg.border} flex items-center justify-center shrink-0`}>{cfg.icon}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-900 truncate">{tx.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${cfg.bg} ${cfg.border} ${cfg.text}`}>
-                        {tx.type}
-                      </span>
-                      <span className="text-[9px] font-bold text-slate-400">{timeAgo(tx.created_at)}</span>
-                    </div>
+                    <p className="text-sm font-bold text-slate-900 truncate">{tx.description || tx.type}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{tx.type} · {timeAgo(tx.created_at)}{tx.balance_after !== null && ` · Balance $${Number(tx.balance_after).toFixed(2)}`}</p>
                   </div>
-                  <div className={`text-sm font-black ${cfg.text} shrink-0`}>
-                    {cfg.sign}${tx.amount.toFixed(2)}
-                  </div>
+                  <span className={`text-sm font-black ${cfg.text}`}>{amt >= 0 ? "+" : "−"}${Math.abs(amt).toFixed(2)}</span>
                 </motion.div>
               );
             })}
@@ -221,4 +245,3 @@ export function WalletDashboard() {
     </div>
   );
 }
-

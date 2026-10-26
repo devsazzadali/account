@@ -2,6 +2,9 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /dashboard
-Disallow: /api/
+Disallow: /checkout
+Disallow: /order
+Disallow: /seller
+Disallow: /api
 
-Sitemap: https://yourdomain.com/sitemap.xml
+Sitemap: https://www.accountstoreone.com/sitemap.xml

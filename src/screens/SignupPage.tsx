@@ -3,9 +3,10 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Lock, Mail, Shield, Zap, ArrowRight, CheckCircle2, Globe, Github, Facebook, Loader2 } from "lucide-react";
+import { User, Lock, Mail, Shield, Zap, ArrowRight, CheckCircle2, Globe, Github, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { supabase } from "../lib/supabase";
+import { db } from "../lib/dbclient";
+import { auth } from "../lib/auth-client";
 import { toast } from "react-hot-toast";
 
 
@@ -16,9 +17,9 @@ export function SignupPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSocialLogin = async (provider: 'google' | 'github' | 'facebook') => {
+  const handleSocialLogin = async (provider: 'google' | 'github') => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: window.location.origin + '/dashboard'
@@ -39,7 +40,7 @@ export function SignupPage() {
 
     setLoading(true);
     try {
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await auth.signUp({
             email,
             password,
             options: {
@@ -204,7 +205,7 @@ export function SignupPage() {
                 <div className="flex items-start gap-3 ml-1">
                     <input type="checkbox" id="terms" required className="w-4 h-4 mt-0.5 rounded border-slate-200 bg-slate-50 text-primary-600 focus:ring-primary-500/20" />
                     <label htmlFor="terms" className="text-xs text-slate-500 cursor-pointer select-none leading-relaxed">
-                        I agree to the <a href="#" className="text-primary-600 hover:text-primary-500 transition-colors underline">Terms of Service</a> and <a href="#" className="text-primary-600 hover:text-primary-500 transition-colors underline">Privacy Policy</a>.
+                        I agree to the <a href="/terms" className="text-primary-600 hover:text-primary-500 transition-colors underline">Terms of Service</a> and <a href="/privacy" className="text-primary-600 hover:text-primary-500 transition-colors underline">Privacy Policy</a>.
                     </label>
                 </div>
 
@@ -249,14 +250,7 @@ export function SignupPage() {
                         <Github className="w-4 h-4 mb-1" />
                         <span className="text-[10px] font-bold uppercase tracking-widest">Github</span>
                     </button>
-                    <button 
-                        type="button" 
-                        onClick={() => handleSocialLogin('facebook')}
-                        className="flex flex-col items-center justify-center py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-blue-50 hover:text-blue-600"
-                    >
-                        <Facebook className="w-4 h-4 mb-1" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Facebook</span>
-                    </button>
+                    
                 </div>
             </form>
 

@@ -6,7 +6,8 @@ import {
   ExternalLink, ShieldAlert, Users, RefreshCw, MessageSquare,
   Edit2, Trash2, X, Check, Shield, Crown, Star
 } from "lucide-react";
-import { supabase } from "../../lib/supabase";
+import { db } from "../../lib/dbclient";
+import { auth } from "../../lib/auth-client";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 
@@ -25,7 +26,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
   async function fetchProfiles() {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("profiles")
         .select("*")
         .order("created_at", { ascending: false });
@@ -54,7 +55,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
     if (!selectedUser) return;
     setEditLoading(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from("profiles")
         .update(updatedData)
         .eq("id", selectedUser.id);

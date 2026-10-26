@@ -1,7 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { CreateListingPage } from "@/src/screens/Seller/CreateListingPage";
-
+// Single-seller store: product creation lives in the admin console.
 export default function CreateListingRoute() {
-  return <CreateListingPage />;
+  redirect("/admin/products");
 }

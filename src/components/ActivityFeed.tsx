@@ -3,8 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag } from "lucide-react";
-import { supabase } from "../lib/supabase";
-
 interface Activity {
   id: string;
   username: string;
@@ -17,51 +15,18 @@ export function ActivityFeed() {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
+    // Public, privacy-safe feed: only payment-verified orders, served by
+    // /api/store/activity (orders themselves are never publicly readable).
     async function fetchRecent() {
-      const { data } = await supabase
-        .from("orders")
-        .select("id, username, products(title), created_at")
-        .order("created_at", { ascending: false })
-        .limit(8);
-
-      if (data && data.length > 0) {
-        setActivities(
-          data.map((o: any) => ({
-            id: o.id,
-            username: o.username || "Someone",
-            product_title: o.products?.title || "a product",
-            created_at: o.created_at,
-          }))
-        );
-      }
+      try {
+        const res = await fetch("/api/store/activity");
+        const json = await res.json();
+        if (json.activity?.length) setActivities(json.activity);
+      } catch { /* feed simply stays hidden */ }
     }
     fetchRecent();
-
-    // Real-time: push new orders to the front
-    const channel = supabase
-      .channel("activity_feed_live")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "orders" },
-        (payload) => {
-          const o = payload.new as any;
-          setActivities((prev) =>
-            [
-              {
-                id: o.id,
-                username: o.username || "Someone",
-                product_title: "a product",
-                created_at: o.created_at,
-              },
-              ...prev,
-            ].slice(0, 8)
-          );
-          setIndex(0);
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    const timer = setInterval(fetchRecent, 60000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
