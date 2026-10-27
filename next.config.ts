@@ -20,6 +20,15 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'transparenttextures.com' },
     ],
   },
+  // Browsers probe /favicon.ico by default. On Vercel the app-router route
+  // at src/app/favicon.ico/route.ts is shadowed by the platform's static
+  // favicon handling (bare 404), so redirect at the config/platform level
+  // instead — /icon (app/icon.tsx) is the site's real icon and serves 200.
+  async redirects() {
+    return [
+      { source: '/favicon.ico', destination: '/icon', permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;
