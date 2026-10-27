@@ -20,7 +20,13 @@ interface StoreStats {
   dispute_rate_90d: number | null;
 }
 
-export function Sidebar() {
+export function Sidebar({
+  aboutEnabled = true,
+  aboutTitle = "About the store",
+}: {
+  aboutEnabled?: boolean;
+  aboutTitle?: string;
+} = {}) {
   const [stats, setStats] = useState<StoreStats | null>(null);
 
   useEffect(() => {
@@ -105,15 +111,17 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Description Card */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-        <h3 className="font-display font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3 flex items-center gap-2">
-          About the store
-        </h3>
-        <p className="text-sm text-slate-600 leading-relaxed break-words font-light">
-          {stats.description}
-        </p>
-      </div>
+      {/* Description Card — the "About the store" homepage block (CMS) */}
+      {aboutEnabled && (
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <h3 className="font-display font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3 flex items-center gap-2">
+            {aboutTitle}
+          </h3>
+          <p className="text-sm text-slate-600 leading-relaxed break-words font-light">
+            {stats.description}
+          </p>
+        </div>
+      )}
 
       {/* Buyer protection card */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">

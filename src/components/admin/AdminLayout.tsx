@@ -35,9 +35,34 @@ import { toast } from "react-hot-toast";
 import { lsGet, lsClear } from "@/src/lib/storage";
 
 // ── Web Audio Chime ──────────────────────────────────────────
-function playOrderChime() {
+// One shared AudioContext for the whole admin session. Browsers start an
+// AudioContext in "suspended" state until the user has interacted with
+// the page, and a brand-new context per chime would stay silent — so the
+// context is created lazily, resumed on the first pointer/key gesture,
+// and resumed again before every chime. Fully self-contained (WebAudio
+// oscillators); no external audio file is ever fetched.
+let sharedAudioCtx: AudioContext | null = null;
+function getAudioCtx(): AudioContext | null {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (!sharedAudioCtx) {
+      sharedAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (sharedAudioCtx.state === "suspended") void sharedAudioCtx.resume();
+    return sharedAudioCtx;
+  } catch {
+    return null;
+  }
+}
+if (typeof window !== "undefined") {
+  const unlockAudio = () => { getAudioCtx(); };
+  window.addEventListener("pointerdown", unlockAudio, { once: true });
+  window.addEventListener("keydown", unlockAudio, { once: true });
+}
+
+function playOrderChime() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  try {
     const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
@@ -271,6 +296,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             items={[
                 { id: "categories", label: "Categories" },
                 { id: "seller_info", label: "Seller Information" },
+                { id: "storefront", label: "Storefront" },
                 { id: "settings", label: "General Config" }
             ]}
           />

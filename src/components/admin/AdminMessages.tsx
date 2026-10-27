@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useMemo } from "react";
+import { orderCode } from "../../lib/order-ref";
 import { 
   Search, User, Send, CheckCheck, Loader2, MoreVertical, Paperclip, 
   ShieldCheck, CheckCircle2, MessageSquare, RefreshCw, Clock, 
@@ -124,8 +125,11 @@ export function AdminMessages() {
             subject: "Helpdesk Ticket",
             message: "[ADMIN_INITIATED]",
             reply: textToSend,
-            status: 'replied',
-            replied_at: new Date().toISOString()
+            status: 'replied'
+            // NOTE: no replied_at — the messages table has no such column;
+            // sending it makes Prisma reject the whole insert, so admin
+            // replies silently never reached customers (found by QA round 5;
+            // created_at is the reply timestamp).
         });
         if (error) throw error;
         setReplyText("");
@@ -395,7 +399,7 @@ export function AdminMessages() {
                                      <h4 className="font-bold text-slate-900 uppercase tracking-tight">{order.products?.title || 'Unknown Product'}</h4>
                                  </div>
                                  <div className="flex justify-between items-center text-[13px] text-slate-500">
-                                     <div>Order ID: <span className="bg-slate-50 px-2 py-0.5 rounded text-slate-700 font-mono">{order.id.split('-')[0].toUpperCase()}</span></div>
+                                     <div>Order ID: <span className="bg-slate-50 px-2 py-0.5 rounded text-slate-700 font-mono">{orderCode(order.id)}</span></div>
                                      <div>Time: {new Date(order.created_at).toLocaleString('en-CA')}</div>
                                  </div>
                                  <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
@@ -497,7 +501,7 @@ export function AdminMessages() {
                               </div>
                               <div className="flex items-center justify-between text-[9px] font-bold text-slate-400 uppercase tracking-[0.1em]">
                                   <span>{order.status}</span>
-                                  <span className="font-mono">#{order.id.split('-')[0].substring(0, 4)}</span>
+                                  <span className="font-mono">#{orderCode(order.id)}</span>
                               </div>
                           </div>
                         ))}

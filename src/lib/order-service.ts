@@ -17,14 +17,24 @@
 // a wallet_transactions ledger row in the same transaction.
 
 import { Prisma } from "@prisma/client";
-import { prisma } from "./db";
+import { prisma, withTx } from "./db";
 import {
-  queueOrderConfirmation,
-  queuePaymentVerified,
+  queueOrderReceived,
+  queueAdminNewOrder,
+  queuePaymentConfirmed,
+  queueProcessingStarted,
   queueDelivered,
+  queueOrderCompleted,
+  queueCompletedOnRead,
+  queueOrderCancelled,
+  queueRefundIssued,
+  queueDisputeOpened,
+  queueAdminDisputeAlert,
   queueDisputeOutcome,
-  queueRefund,
+  queueAdminLowStock,
 } from "./mailer";
+import { LOW_STOCK_THRESHOLD } from "./email-templates";
+import { orderCode } from "./order-ref";
 
 export const SERVICE_FEE = 0.5;
 export const ESCROW_HOLD_MS = 48 * 60 * 60 * 1000;
@@ -68,6 +78,24 @@ export async function syncDerivedStock(tx: Tx, productId: string | null | undefi
   ]);
   const stock = Math.max(0, available - (reserved._sum.quantity || 0));
   await tx.product.update({ where: { id: productId }, data: { stock } });
+}
+
+// ─── Low-stock admin alert (email) ───────────────────────────────────
+// Fires ONCE per crossing: when a product's available inventory drops
+// from above LOW_STOCK_THRESHOLD to at/below it, the admins get one
+// warning email (see mailer.queueAdminLowStock). Restocking above the
+// threshold re-arms the warning. Inventory-derived products only —
+// SERVICE products hold no inventory by design.
+async function maybeQueueLowStock(tx: Tx, productId: string | null | undefined, availableBefore: number, availableAfter: number) {
+  if (!productId) return;
+  if (!(availableBefore > LOW_STOCK_THRESHOLD && availableAfter <= LOW_STOCK_THRESHOLD)) return;
+  const product = await tx.product.findUnique({
+    where: { id: productId },
+    select: { id: true, title: true, fulfilmentType: true, useInventoryStock: true },
+  });
+  if (product && product.useInventoryStock && product.fulfilmentType !== "service") {
+    await queueAdminLowStock(tx, product, availableAfter);
+  }
 }
 
 // ─── Variants (P2) ───────────────────────────────────────────────────────
@@ -285,6 +313,7 @@ async function assignInventoryUnits(
   const want = Math.min(maxUnits, remaining);
   if (want <= 0) return 0;
 
+  const availableBefore = await tx.inventory.count({ where: { productId: order.productId, status: "available" } });
   const items = await tx.inventory.findMany({
     where: { productId: order.productId, status: "available" },
     orderBy: { createdAt: "asc" },
@@ -354,6 +383,7 @@ async function assignInventoryUnits(
       : `Partial delivery: ${newDelivered} of ${order.quantity} unit(s) delivered from inventory`,
   );
   await syncDerivedStock(tx, order.productId);
+  await maybeQueueLowStock(tx, order.productId, availableBefore, availableBefore - items.length);
   return items.length;
 }
 
@@ -387,8 +417,14 @@ async function markPaidAndDeliver(tx: Tx, orderId: string, paymentMethod: string
   const deliveredQty = after?.deliveredQuantity ?? 0;
   const fullyDelivered = deliveredQty >= order.quantity;
   const partiallyDelivered = !fullyDelivered && deliveredQty > 0;
-  await queuePaymentVerified(tx, updated, fullyDelivered);
-  if (fullyDelivered) await queueDelivered(tx, updated);
+  await queuePaymentConfirmed(tx, updated);
+  if (fullyDelivered) {
+    await queueDelivered(tx, updated);
+  } else if (partiallyDelivered) {
+    await queueDelivered(tx, updated, { partial: true, deliveredQuantity: deliveredQty });
+  } else {
+    await queueProcessingStarted(tx, updated);
+  }
   if (order.userId) {
     await notify(
       tx,
@@ -420,7 +456,7 @@ export async function createOrder(input: {
   intakeData?: unknown;
 }) {
   const qty = Math.max(1, Math.floor(input.quantity || 1));
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     // Hide Shop (P0): a closed store takes no new orders. Existing orders
     // keep flowing (payment, delivery, disputes) — only creation stops.
     const open = await tx.storeSetting.findUnique({ where: { key: "store_open" } });
@@ -514,7 +550,8 @@ export async function createOrder(input: {
     });
     if (product.useInventoryStock && !isService) await syncDerivedStock(tx, product.id);
     await logOrderEvent(tx, order.id, "buyer", "created", `Order placed × ${qty}${variant ? ` · ${variant.label}` : ""}${couponCode ? ` · coupon ${couponCode}` : ""}${isService ? " · service intake received" : ""}`);
-    await queueOrderConfirmation(tx, order, product.title);
+    await queueOrderReceived(tx, order);
+    await queueAdminNewOrder(tx, order);
     await notifyAdmins(tx, "New order", `${input.username} ordered ${product.title} × ${qty} ($${total.toFixed(2)}) — awaiting payment.`, "order");
     return order;
   });
@@ -528,13 +565,13 @@ async function releaseAssignedInventory(tx: Tx, orderId: string, toStatus: "avai
 }
 
 export async function payOrderWithWallet(orderId: string, userId: string) {
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (order.userId !== userId) throw new ServiceError("Not your order", 403);
     if (order.paymentStatus === "paid") throw new ServiceError("Order is already paid", 409);
     if (order.status === "Canceled" || order.status === "Refunded") throw new ServiceError("Order is closed", 409);
-    await debitWallet(tx, userId, dec(order.totalPrice), "purchase", { note: `Payment for order ${order.id.slice(0, 8)}`, referenceId: order.id });
+    await debitWallet(tx, userId, dec(order.totalPrice), "purchase", { note: `Payment for order ${orderCode(order.id)}`, referenceId: order.id });
     return markPaidAndDeliver(tx, orderId, "wallet");
   });
 }
@@ -550,7 +587,7 @@ export async function submitManualPayment(input: {
   const method = input.method === "nagad" ? "nagad" : "bkash";
   const trxId = (input.trxId || "").trim();
   if (trxId.length < 6) throw new ServiceError("Please enter a valid Transaction ID", 422);
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     if (input.orderId) {
       const order = await tx.order.findUnique({ where: { id: input.orderId } });
       if (!order) throw new ServiceError("Order not found", 404);
@@ -572,7 +609,7 @@ export async function submitManualPayment(input: {
       });
       await tx.order.update({ where: { id: order.id }, data: { paymentStatus: "pending_verification", paymentMethod: method } });
       await logOrderEvent(tx, order.id, "buyer", "payment_submitted", `${method} TrxID ${trxId}`);
-      await notifyAdmins(tx, "Payment awaiting verification", `${order.username || "A buyer"} submitted a ${method} payment (TrxID ${trxId}) for order ${order.id.slice(0, 8)}.`, "payment");
+      await notifyAdmins(tx, "Payment awaiting verification", `${order.username || "A buyer"} submitted a ${method} payment (TrxID ${trxId}) for order ${orderCode(order.id)}.`, "payment");
       return pr;
     }
     // Wallet top-up
@@ -587,7 +624,7 @@ export async function submitManualPayment(input: {
 }
 
 export async function reviewPaymentRequest(prId: string, approve: boolean, adminNote?: string) {
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const pr = await tx.paymentRequest.findUnique({ where: { id: prId } });
     if (!pr) throw new ServiceError("Payment request not found", 404);
     if (pr.status !== "pending") throw new ServiceError("This payment was already reviewed", 409);
@@ -622,7 +659,14 @@ export async function reviewPaymentRequest(prId: string, approve: boolean, admin
 }
 
 /** Refund a paid order to the buyer's wallet (shared by cancel/dispute/admin refund). */
-async function refundOrderToWallet(tx: Tx, order: NonNullable<Awaited<ReturnType<typeof prisma.order.findUnique>>>, reason: string) {
+async function refundOrderToWallet(
+  tx: Tx,
+  order: NonNullable<Awaited<ReturnType<typeof prisma.order.findUnique>>>,
+  reason: string,
+  // "cancel" → cancelled-&-refunded mail; "refund" → refund mail;
+  // "none" → the dispute-outcome mail already covers the refund.
+  emailMode: "cancel" | "refund" | "none" = "refund",
+) {
   const wasDelivered =
     order.status === "Delivering" || order.status === "Completed" || order.deliveredQuantity > 0 || !!order.deliveredAt;
   if (order.userId) {
@@ -650,13 +694,14 @@ async function refundOrderToWallet(tx: Tx, order: NonNullable<Awaited<ReturnType
   });
   await syncDerivedStock(tx, order.productId);
   await logOrderEvent(tx, order.id, "system", "refunded", reason);
-  await queueRefund(tx, updated);
+  if (emailMode === "cancel") await queueRefundIssued(tx, updated, { cancelled: true });
+  else if (emailMode === "refund") await queueRefundIssued(tx, updated);
   if (order.userId) await notify(tx, order.userId, "Refund issued", `$${dec(order.totalPrice).toFixed(2)} was refunded to your wallet.`, "payment");
   return updated;
 }
 
 export async function cancelOrder(orderId: string, actor: { userId: string; isAdmin: boolean }) {
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (!actor.isAdmin && order.userId !== actor.userId) throw new ServiceError("Not your order", 403);
@@ -664,7 +709,7 @@ export async function cancelOrder(orderId: string, actor: { userId: string; isAd
 
     if (order.paymentStatus === "paid") {
       // Paid orders are refunded to the wallet, never silently cancelled.
-      return refundOrderToWallet(tx, order, `Refund for cancelled order ${order.id.slice(0, 8)}`);
+      return refundOrderToWallet(tx, order, `Refund for cancelled order ${orderCode(order.id)}`, "cancel");
     }
     // Unpaid / pending: reject any pending payment + restore reserved stock.
     await tx.paymentRequest.updateMany({ where: { orderId: order.id, status: "pending" }, data: { status: "rejected", adminNote: "Order cancelled", reviewedAt: new Date() } });
@@ -679,12 +724,13 @@ export async function cancelOrder(orderId: string, actor: { userId: string; isAd
     const updated = await tx.order.update({ where: { id: order.id }, data: { status: "Canceled" } });
     await syncDerivedStock(tx, order.productId);
     await logOrderEvent(tx, order.id, actor.isAdmin ? "admin" : "buyer", "canceled", "Unpaid order canceled; reserved stock restored");
+    await queueOrderCancelled(tx, updated);
     return updated;
   });
 }
 
 export async function deliverManually(orderId: string, creds: { username: string; password: string; notes?: string; twoFactorSecret?: string; recoveryEmail?: string }) {
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (order.paymentStatus !== "paid") throw new ServiceError("Order is not paid yet — verify payment before delivering", 409);
@@ -717,6 +763,7 @@ export async function deliverManually(orderId: string, creds: { username: string
       // auto-delivery already assigned are not double-counted).
       const product = await tx.product.findUnique({ where: { id: order.productId }, select: { useInventoryStock: true } });
       if (product?.useInventoryStock) {
+        const availableBefore = await tx.inventory.count({ where: { productId: order.productId, status: "available" } });
         const spare = await tx.inventory.findMany({
           where: { productId: order.productId, status: "available" },
           orderBy: { createdAt: "asc" },
@@ -726,6 +773,7 @@ export async function deliverManually(orderId: string, creds: { username: string
           await tx.inventory.update({ where: { id: item.id }, data: { status: "used", orderId: order.id, assignedAt: new Date() } });
         }
         await syncDerivedStock(tx, order.productId);
+        await maybeQueueLowStock(tx, order.productId, availableBefore, availableBefore - spare.length);
       }
     }
     await logOrderEvent(tx, orderId, "admin", "delivered", "Credentials delivered manually by the store");
@@ -745,7 +793,7 @@ export async function deliverManually(orderId: string, creds: { username: string
 export async function addOrderProgress(orderId: string, note: string) {
   const text = (note || "").trim();
   if (!text) throw new ServiceError("A progress note is required", 422);
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (order.paymentStatus !== "paid") throw new ServiceError("Order is not paid yet", 409);
@@ -768,7 +816,7 @@ export async function addDeliveryProof(
   const note = (input.note || "").trim() || null;
   if (!fileUrl && !note) throw new ServiceError("Attach a proof file or write a proof note", 422);
   const kind = input.kind === "progress" ? "progress" : "completion";
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (["Canceled", "Refunded", "Completed"].includes(order.status)) {
@@ -794,7 +842,7 @@ export async function addDeliveryProof(
  *  exactly like credential delivery: buyer confirms, or the existing
  *  48h escrow rule completes it. */
 export async function deliverServiceOrder(orderId: string, input: { note?: string; createdBy?: string } = {}) {
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (order.paymentStatus !== "paid") throw new ServiceError("Order is not paid yet — verify payment before delivering", 409);
@@ -835,7 +883,7 @@ export async function deliverServiceOrder(orderId: string, input: { note?: strin
 /** Admin delivers MORE inventory units to a partially delivered order
  *  (e.g. stock arrived after the first batch). */
 export async function deliverMoreUnits(orderId: string, units: number) {
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (order.paymentStatus !== "paid") throw new ServiceError("Order is not paid yet", 409);
@@ -849,6 +897,7 @@ export async function deliverMoreUnits(orderId: string, units: number) {
     const fresh = await tx.order.findUnique({ where: { id: orderId } });
     const full = (fresh?.deliveredQuantity ?? 0) >= order.quantity;
     if (full && fresh) await queueDelivered(tx, fresh);
+    else if (fresh) await queueDelivered(tx, fresh, { partial: true, deliveredQuantity: fresh.deliveredQuantity });
     if (order.userId) {
       await notify(
         tx,
@@ -869,7 +918,7 @@ export async function deliverMoreUnits(orderId: string, units: number) {
  *  delivered or cancelled — confirmation is recorded as an event so it
  *  can happen exactly once. */
 export async function confirmPartialReceipt(orderId: string, userId: string) {
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (order.userId !== userId) throw new ServiceError("Not your order", 403);
@@ -884,7 +933,7 @@ export async function confirmPartialReceipt(orderId: string, userId: string) {
     const already = await tx.orderEvent.findFirst({ where: { orderId, event: "partial_confirmed" } });
     if (already) throw new ServiceError("You already confirmed the delivered part of this order", 409);
     await logOrderEvent(tx, orderId, "buyer", "partial_confirmed", `Buyer confirmed receipt of ${order.deliveredQuantity} of ${order.quantity} unit(s)`);
-    await notifyAdmins(tx, "Partial delivery confirmed", `Buyer confirmed ${order.deliveredQuantity} of ${order.quantity} unit(s) on order ${order.id.slice(0, 8)}.`, "order");
+    await notifyAdmins(tx, "Partial delivery confirmed", `Buyer confirmed ${order.deliveredQuantity} of ${order.quantity} unit(s) on order ${orderCode(order.id)}.`, "order");
     return tx.order.findUnique({ where: { id: orderId } });
   });
 }
@@ -896,7 +945,7 @@ export async function confirmPartialReceipt(orderId: string, userId: string) {
  *  was earned by processing the order; coupons are NOT released (the
  *  delivered part consumed the redemption). */
 export async function cancelRemainder(orderId: string, actor: { userId: string; isAdmin: boolean }) {
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (!actor.isAdmin && order.userId !== actor.userId) throw new ServiceError("Not your order", 403);
@@ -911,7 +960,7 @@ export async function cancelRemainder(orderId: string, actor: { userId: string; 
     const refund = dec(order.totalPrice).sub(SERVICE_FEE).mul(remaining).div(order.quantity).toDecimalPlaces(2);
     if (refund.gt(0) && order.userId) {
       await creditWallet(tx, order.userId, refund, "refund", {
-        note: `Partial refund — ${remaining} undelivered unit(s) of order ${order.id.slice(0, 8)} cancelled`,
+        note: `Partial refund — ${remaining} undelivered unit(s) of order ${orderCode(order.id)} cancelled`,
         referenceId: order.id,
       });
     }
@@ -936,6 +985,7 @@ export async function cancelRemainder(orderId: string, actor: { userId: string; 
       "partial_canceled",
       `Remainder cancelled: ${remaining} undelivered unit(s) refunded $${refund.toFixed(2)} to wallet; ${order.deliveredQuantity} delivered unit(s) stay sold`,
     );
+    if (refund.gt(0)) await queueRefundIssued(tx, updated, { amount: Number(refund), partial: true });
     if (order.userId) {
       await notify(
         tx,
@@ -959,11 +1009,12 @@ async function completeOrder(tx: Tx, orderId: string) {
   });
   await logOrderEvent(tx, orderId, "system", "completed", "Escrow released — order completed");
   if (order.userId) await notify(tx, order.userId, "Order completed", "Your order is complete. Escrow funds have been released.", "order");
+  await queueOrderCompleted(tx, updated);
   return updated;
 }
 
 export async function confirmReceipt(orderId: string, userId: string) {
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (order.userId !== userId) throw new ServiceError("Not your order", 403);
@@ -972,15 +1023,15 @@ export async function confirmReceipt(orderId: string, userId: string) {
 }
 
 export async function adminCompleteOrder(orderId: string) {
-  return prisma.$transaction((tx) => completeOrder(tx, orderId));
+  return withTx((tx) => completeOrder(tx, orderId));
 }
 
 export async function adminRefundOrder(orderId: string) {
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (order.paymentStatus !== "paid") throw new ServiceError("Only a paid order can be refunded", 409);
-    return refundOrderToWallet(tx, order, `Admin refund for order ${order.id.slice(0, 8)}`);
+    return refundOrderToWallet(tx, order, `Admin refund for order ${orderCode(order.id)}`);
   });
 }
 
@@ -988,7 +1039,7 @@ export async function adminRefundOrder(orderId: string) {
 
 export async function openDispute(orderId: string, userId: string, reason: string) {
   if (!reason.trim()) throw new ServiceError("Please describe the problem", 422);
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (order.userId !== userId) throw new ServiceError("Not your order", 403);
@@ -1001,19 +1052,21 @@ export async function openDispute(orderId: string, userId: string, reason: strin
       : await tx.dispute.create({ data: { orderId, userId, reason: reason.trim(), prevStatus: order.status } });
     await tx.order.update({ where: { id: orderId }, data: { status: "Disputed", escrowState: "disputed", disputedAt: new Date() } });
     await logOrderEvent(tx, orderId, "buyer", "dispute_opened", reason.trim().slice(0, 200));
-    await notifyAdmins(tx, "Dispute opened", `A dispute was opened for order ${orderId.slice(0, 8)}: ${reason.trim().slice(0, 120)}`, "alert");
+    await notifyAdmins(tx, "Dispute opened", `A dispute was opened for order ${orderCode(orderId)}: ${reason.trim().slice(0, 120)}`, "alert");
+    await queueDisputeOpened(tx, order, reason.trim());
+    await queueAdminDisputeAlert(tx, order, reason.trim());
     return dispute;
   });
 }
 
 export async function resolveDispute(orderId: string, resolution: "refunded" | "replaced" | "rejected") {
-  return prisma.$transaction(async (tx) => {
+  return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId }, include: { dispute: true } });
     if (!order) throw new ServiceError("Order not found", 404);
     if (order.status !== "Disputed" || !order.dispute) throw new ServiceError("No open dispute on this order", 409);
 
     if (resolution === "refunded") {
-      const updated = await refundOrderToWallet(tx, order, `Dispute refund for order ${order.id.slice(0, 8)}`);
+      const updated = await refundOrderToWallet(tx, order, `Dispute refund for order ${orderCode(order.id)}`, "none");
       await tx.dispute.update({ where: { orderId }, data: { status: "resolved", resolution: "refunded" } });
       await logOrderEvent(tx, orderId, "admin", "dispute_resolved", "Resolved: refunded to wallet");
       await queueDisputeOutcome(tx, order, "refunded");
@@ -1072,6 +1125,7 @@ export async function maybeReleaseEscrow<T extends { id: string; status: string;
     await prisma.orderEvent
       .create({ data: { orderId: order.id, actor: "system", event: "completed", detail: "Escrow hold lapsed after delivery — auto-completed" } })
       .catch(() => {});
+    await queueCompletedOnRead(updated);
     return updated as unknown as T;
   }
   return order;
@@ -1080,5 +1134,5 @@ export async function maybeReleaseEscrow<T extends { id: string; status: string;
 export async function markStripePaid(sessionId: string) {
   const order = await prisma.order.findUnique({ where: { stripeSessionId: sessionId } });
   if (!order) throw new ServiceError("No order for this Stripe session", 404);
-  return prisma.$transaction((tx) => markPaidAndDeliver(tx, order.id, "stripe"));
+  return withTx((tx) => markPaidAndDeliver(tx, order.id, "stripe"));
 }

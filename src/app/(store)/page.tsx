@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { StorePage } from "@/src/screens/StorePage";
 import { JsonLd } from "@/src/components/seo/JsonLd";
 import { getHomeData } from "@/src/lib/store-data";
+import { getStorefrontSettings } from "@/src/lib/settings-store";
 import {
   SITE_DESCRIPTION,
   organizationJsonLd,
@@ -39,6 +40,8 @@ export default async function HomePage() {
   // products table is still empty (live-data migration is a later phase),
   // in which case the client screen falls back to its existing behaviour.
   const data = await getHomeData();
+  // Storefront CMS — resolved per request so admin edits show immediately.
+  const cms = await getStorefrontSettings();
 
   const schemas: Record<string, unknown>[] = [
     organizationJsonLd(),
@@ -51,7 +54,7 @@ export default async function HomePage() {
   return (
     <>
       <JsonLd data={schemas} />
-      <StorePage initialData={data} />
+      <StorePage initialData={data} cms={cms} />
     </>
   );
 }

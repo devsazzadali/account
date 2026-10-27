@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { orderCode } from "../../lib/order-ref";
 import { 
   Plus, 
   PlusCircle,
@@ -830,7 +831,7 @@ function InventoryManager({ productId }: { productId: string }) {
             {item.recovery_email && (
               <span className="text-[11px] text-slate-400 font-medium hidden lg:block shrink-0">{item.recovery_email}</span>
             )}
-            <span className="text-[11px] text-slate-400 font-medium hidden md:block">{item.order_id ? `Order #${String(item.order_id).slice(0, 8).toUpperCase()}` : "—"}</span>
+            <span className="text-[11px] text-slate-400 font-medium hidden md:block">{item.order_id ? `Order #${orderCode(item.order_id)}` : "—"}</span>
             {item.status === "available" && (
               <button onClick={() => removeItem(item)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={15} /></button>
             )}

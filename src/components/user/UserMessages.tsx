@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { orderCode } from "../../lib/order-ref";
 import { 
   Send, 
   User,
@@ -332,7 +333,7 @@ export function UserMessages() {
                   <div className="text-[13px] font-bold text-[#404145] truncate">{lastOrder.products?.title}</div>
                   <div className="flex justify-between items-center">
                      <span className="text-[12px] text-[#74767e]">Order ID</span>
-                     <span className="text-[12px] font-bold text-[#404145]">#{lastOrder.id.split('-')[0].toUpperCase()}</span>
+                     <span className="text-[12px] font-bold text-[#404145]">#{orderCode(lastOrder.id)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                      <span className="text-[12px] text-[#74767e]">Status</span>

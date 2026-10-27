@@ -9,6 +9,7 @@
 // completed orders (see /api/reviews).
 
 import React, { useEffect, useMemo, useState } from "react";
+import { orderCode } from "../../lib/order-ref";
 import { Star, Loader2, Reply, Eye, EyeOff, Trash2, MessageSquare } from "lucide-react";
 import { db } from "../../lib/dbclient";
 import { toast } from "react-hot-toast";
@@ -204,7 +205,7 @@ export function AdminFeedback() {
                     <p className="text-sm text-slate-600 font-medium mt-2 leading-relaxed">{r.comment}</p>
                     <p className="text-[11px] font-bold text-slate-400 mt-2">
                       {r.product_id ? (products[r.product_id] || "Product") : "Product"}
-                      {r.order_id ? <> · Order #{String(r.order_id).slice(0, 8).toUpperCase()}</> : <> · legacy review (no linked order)</>}
+                      {r.order_id ? <> · Order #{orderCode(r.order_id)}</> : <> · legacy review (no linked order)</>}
                     </p>
                     {(r.delivery_rating || r.service_rating || r.description_rating) && (
                       <p className="text-[11px] font-bold text-slate-400 mt-1">

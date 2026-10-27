@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { orderCode } from "../../lib/order-ref";
 import { Download, Search, ShoppingBag, ExternalLink, Copy, CheckCircle2, Package, Clock, ShieldCheck, AlertCircle, RefreshCw } from "lucide-react";
 import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
@@ -183,7 +184,7 @@ export function UserOrders() {
                                 </div>
                                 <h4 className="text-[17px] font-black text-slate-900 mb-2 leading-tight group-hover:text-[#1dbf73] transition-colors">{order.products?.title}</h4>
                                 <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-[12px] text-slate-400 font-medium">
-                                    <span className="flex items-center gap-1.5"><Package size={14} /> ID: <span className="text-slate-900 font-bold">#{order.id.split('-')[0].toUpperCase()}</span></span>
+                                    <span className="flex items-center gap-1.5"><Package size={14} /> ID: <span className="text-slate-900 font-bold">#{orderCode(order.id)}</span></span>
                                     <span className="flex items-center gap-1.5"><Clock size={14} /> {new Date(order.created_at).toLocaleString()}</span>
                                 </div>
                             </div>

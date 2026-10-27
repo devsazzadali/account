@@ -6,6 +6,7 @@
 // dialog ("Save as PDF") — no PDF library, no server rendering tricks.
 
 import React, { useEffect, useState } from "react";
+import { orderCode } from "../lib/order-ref";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Printer, Loader2, Store } from "lucide-react";
@@ -84,7 +85,7 @@ export function InvoicePage() {
             </div>
             <div className="text-right">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Invoice</p>
-              <p className="text-sm font-black text-slate-900">#{String(order.id).slice(0, 12).toUpperCase()}</p>
+              <p className="text-sm font-black text-slate-900">#{orderCode(order.id)}</p>
               <p className="text-xs font-bold text-slate-400">{new Date(order.created_at).toLocaleDateString()}</p>
             </div>
           </div>

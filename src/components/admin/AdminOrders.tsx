@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { orderCode } from "../../lib/order-ref";
 import { 
   Search, 
   RefreshCw, 
@@ -360,7 +361,7 @@ function OrderRow({ order, onDetail }: { order: any, onDetail: () => void, key?:
           <div className="min-w-0">
             <h4 className="font-bold text-slate-900 text-[13px] leading-tight truncate mb-1">{order.product_title || 'Netflix Premium 1 Month'}</h4>
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <span>#{order.id.slice(0, 8).toUpperCase()}</span>
+                <span>#{orderCode(order.id)}</span>
                 {showWarning && <AlertCircle size={10} className="text-[#E62E04]" />}
             </div>
           </div>

@@ -5,8 +5,13 @@
 
 import Link from "next/link";
 import { ArrowUp, Zap, ShieldCheck } from "lucide-react";
+import { BrandWordmark, DEFAULT_STORE_NAME } from "./BrandMark";
 
-export function Footer() {
+export function Footer({
+  brand,
+}: {
+  brand?: { name: string; logoUrl: string | null; footerTagline: string };
+}) {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -19,13 +24,28 @@ export function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 pb-12 border-b border-slate-100">
           <div className="mb-8 md:mb-0">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#0C2254] flex items-center justify-center shadow-lg">
-                <Zap className="w-6 h-6 text-white fill-current" />
-              </div>
-              <span className="text-2xl font-display font-bold tracking-tight text-slate-900">Account<span className="text-[#F4751F]">Store</span></span>
+              {brand?.logoUrl ? (
+                <img
+                  src={brand.logoUrl}
+                  alt={brand.name}
+                  className="w-10 h-10 rounded-xl object-cover shadow-lg"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-[#0C2254] flex items-center justify-center shadow-lg">
+                  <Zap className="w-6 h-6 text-white fill-current" />
+                </div>
+              )}
+              <span className="text-2xl font-display font-bold tracking-tight text-slate-900">
+                <BrandWordmark
+                  brand={brand}
+                  accentClassName="text-[#F4751F]"
+                  builtin={<>Account<span className="text-[#F4751F]">Store</span></>}
+                />
+              </span>
             </div>
             <p className="text-slate-500 text-sm max-w-md leading-relaxed">
-              Premium digital accounts and subscriptions from a single verified seller — every order protected by escrow until delivery is confirmed.
+              {brand?.footerTagline ??
+                "Premium digital accounts and subscriptions from a single verified seller — every order protected by escrow until delivery is confirmed."}
             </p>
           </div>
 
@@ -87,7 +107,7 @@ export function Footer() {
             <Link href="/privacy" className="hover:text-primary-600 transition-colors">Privacy</Link>
           </div>
           <div className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-            © 2026 Account Store One. All rights reserved.
+            © 2026 {brand?.name ?? DEFAULT_STORE_NAME}. All rights reserved.
           </div>
         </div>
       </div>

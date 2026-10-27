@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { orderCode } from "../../lib/order-ref";
 import { 
   MessageCircle, 
   Mail, 
@@ -307,7 +308,7 @@ export function AdminOrderDetails({ order, onBack }: OrderDetailsProps) {
   const exceededHours = exceededHoursVal.toFixed(2);
   const showWarning = exceededHoursVal > 24;
 
-  const orderIdShort = (order.id || "").toString().split("-")[0].toUpperCase() || "N/A";
+  const orderIdShort = orderCode(order.id) || "N/A";
   const orderDate = order.created_at ? new Date(order.created_at).toLocaleString() : "N/A";
 
   return (

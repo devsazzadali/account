@@ -11,14 +11,22 @@ import { GlobalSearch } from "./GlobalSearch";
 import { NotificationCenter } from "./NotificationCenter";
 import { useRealtimeNotifications } from "../lib/useRealtimeNotifications";
 import { lsGet, lsSet, lsRemove } from "@/src/lib/storage";
+import { BrandWordmark } from "./BrandMark";
 
-export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
+export function Header({
+  onSearch,
+  brand,
+}: {
+  onSearch?: (query: string) => void;
+  brand?: { name: string; logoUrl: string | null };
+}) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [searchValue, setSearchValue] = useState("");
   const [revenue, setRevenue] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const { notifications, unreadCount, markAllRead, markRead } = useRealtimeNotifications(user?.id);
 
@@ -130,11 +138,23 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
         {/* Logo */}
         <div className="flex items-center gap-2 shrink-0">
           <Link href="/" className="flex items-center gap-2 group">
-            <span className="bg-primary-500/10 p-1.5 rounded-lg border border-primary-500/20 group-hover:bg-primary-500/20 transition-colors">
-               <Crown className="w-5 h-5 text-primary-600" />
-            </span>
+            {brand?.logoUrl ? (
+              <img
+                src={brand.logoUrl}
+                alt={brand.name}
+                className="w-9 h-9 rounded-lg object-cover border border-primary-500/20"
+              />
+            ) : (
+              <span className="bg-primary-500/10 p-1.5 rounded-lg border border-primary-500/20 group-hover:bg-primary-500/20 transition-colors">
+                 <Crown className="w-5 h-5 text-primary-600" />
+              </span>
+            )}
             <span className="font-display font-bold text-xl tracking-tight text-slate-900 group-hover:text-primary-600 transition-colors">
-              Account<span className="text-gradient">Store</span>
+              <BrandWordmark
+                brand={brand}
+                accentClassName="text-gradient"
+                builtin={<>Account<span className="text-gradient">Store</span></>}
+              />
             </span>
           </Link>
         </div>
@@ -252,18 +272,49 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                <Link href="/login" className="hidden lg:block text-slate-600 hover:text-primary-600 font-bold text-sm px-4 py-2 transition-colors">
                  Login
                </Link>
-               <Link href="/signup" className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-slate-900/20 active:scale-95">
+               <Link href="/signup" className="bg-slate-900 hover:bg-slate-800 text-white px-4 sm:px-6 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-slate-900/20 active:scale-95">
                  <User className="w-4 h-4" />
-                 Initialize Account
+                 <span className="hidden sm:inline">Initialize Account</span>
+                 <span className="sm:hidden">Sign Up</span>
                </Link>
             </div>
           )}
           
-          <button className="md:hidden text-slate-600 hover:text-slate-900 transition-colors">
-            <Menu className="w-6 h-6" />
+          <button
+            className="md:hidden text-slate-600 hover:text-slate-900 transition-colors"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label="Toggle menu"
+            aria-expanded={mobileOpen}
+          >
+            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
+      {mobileOpen && (
+        <nav className="md:hidden border-t border-slate-100 bg-white px-4 py-2 flex flex-col">
+          {[
+            { href: "/", label: "Home" },
+            { href: "/about", label: "About" },
+            { href: "/faq", label: "FAQ" },
+            { href: "/buyer-protection", label: "Buyer Protection" },
+            ...(user
+              ? [{ href: "/dashboard", label: "My Dashboard" }]
+              : [
+                  { href: "/login", label: "Login" },
+                  { href: "/signup", label: "Sign Up" },
+                ]),
+          ].map((l) => (
+            <Link
+              key={l.href + l.label}
+              href={l.href}
+              onClick={() => setMobileOpen(false)}
+              className="py-2.5 text-sm font-semibold text-slate-700 hover:text-primary-600 border-b border-slate-50 last:border-0"
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+      )}
     </header>
     </>
   );

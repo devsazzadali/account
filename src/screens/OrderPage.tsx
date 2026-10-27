@@ -11,6 +11,7 @@
 //    transition via /api/orders/[id].
 
 import React, { useEffect, useState, useCallback } from "react";
+import { orderCode } from "../lib/order-ref";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -187,7 +188,7 @@ export function OrderPage() {
             </Link>
             <div>
               <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">Order Tracking</h1>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">#{orderId?.slice(0, 12).toUpperCase()}</p>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">#{orderCode(orderId)}</p>
             </div>
           </div>
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest ${badge.cls}`}>

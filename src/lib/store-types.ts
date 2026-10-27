@@ -51,3 +51,42 @@ export interface ProductRating {
   count: number;
   average: number; // 0 when count is 0
 }
+
+/** ── Storefront CMS (admin-editable storefront, resolved server-side) ──
+ * Every value falls back to the current design copy when the admin has not
+ * customized it, so the default look is preserved exactly. `headline: null`
+ * means "render the built-in stylized hero headline". Section titles are
+ * always resolved to a concrete string (design copy when unset). */
+export type HomeSectionId = "featured" | "trending" | "categories" | "reviews";
+
+export interface CmsSectionConfig {
+  enabled: boolean;
+  /** Resolved title (design copy when the admin has not overridden it). */
+  title: string;
+}
+
+export interface StorefrontSettings {
+  brand: {
+    name: string;
+    logoUrl: string | null;
+    description: string;
+    footerTagline: string;
+  };
+  announcement: {
+    enabled: boolean;
+    text: string;
+    link: string;
+  };
+  hero: {
+    enabled: boolean;
+    badgeText: string;
+    /** null → built-in stylized headline ("Account" + gradient "Store"). */
+    headline: string | null;
+    subheadline: string;
+    imageUrl: string | null;
+    primaryCta: { text: string; link: string } | null;
+    secondaryCta: { text: string; link: string } | null;
+  };
+  sections: Record<HomeSectionId | "about", CmsSectionConfig>;
+  sectionOrder: HomeSectionId[];
+}

@@ -46,6 +46,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
     reviewCount: 0
   });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [productTitles, setProductTitles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const username = lsGet("username") || "ACCCOUNTSTOREONE";
 
@@ -54,7 +55,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
       setLoading(true);
       const [ordersRes, productsRes, recentRes, disputesRes, inventoryRes, storeStats] = await Promise.all([
         db.from("orders").select("total_price, status, payment_status"),
-        db.from("products").select("id, stock, is_active"),
+        db.from("products").select("id, title, stock, is_active"),
         db.from("orders")
           .select("*")
           .order("created_at", { ascending: false })
@@ -99,6 +100,10 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
       });
 
       setRecentOrders(recentRes.data || []);
+      // Orders carry product_id only — resolve display titles from the
+      // products fetch so the activity ledger shows real product names
+      // instead of "Unknown Asset" for every row.
+      setProductTitles(Object.fromEntries((productsRes.data || []).map((p: any) => [p.id, p.title])));
     } catch (error) {
       console.error("Error fetching stats:", error);
     } finally {
@@ -261,7 +266,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
                 recentOrders.map((order) => (
                   <TransactionItem 
                     key={order.id}
-                    title={order.product_title || "Unknown Asset"}
+                    title={productTitles[order.product_id] || order.product_title || "Unknown Asset"}
                     buyer={order.customer_name || order.username || "Anonymous"}
                     price={`$${(Number(order.total_price) || 0).toFixed(2)}`}
                     status={order.status || "Pending"}

@@ -5,7 +5,7 @@
 
 import { requireAdmin, isResponse } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
-import { emailConfigured, flushEmailOutbox } from "@/src/lib/mailer";
+import { getEmailConfig, flushEmailOutbox } from "@/src/lib/mailer";
 import { serializeRows } from "@/src/lib/serialize";
 
 export async function GET(req: Request) {
@@ -22,8 +22,9 @@ export async function GET(req: Request) {
     prisma.emailOutbox.count({ where: { status: "sent" } }),
     prisma.emailOutbox.count({ where: { status: "failed" } }),
   ]);
+  const cfg = await getEmailConfig();
   return Response.json({
-    email_configured: emailConfigured(),
+    email_configured: cfg.configured,
     counts: { pending, sent, failed },
     emails: serializeRows(rows as unknown as Record<string, unknown>[]),
   });
@@ -34,5 +35,6 @@ export async function POST(req: Request) {
   const gate = await requireAdmin(req);
   if (isResponse(gate)) return gate;
   await flushEmailOutbox(100);
-  return Response.json({ ok: true, email_configured: emailConfigured() });
+  const cfg = await getEmailConfig();
+  return Response.json({ ok: true, email_configured: cfg.configured });
 }

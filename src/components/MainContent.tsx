@@ -142,6 +142,10 @@ interface MainContentProps {
   initialProducts?: StoreProduct[];
   initialCategories?: StoreCategory[];
   initialReviews?: StoreReview[];
+  /** Storefront CMS: per-section visibility + resolved titles, and the
+   *  admin-chosen ordering of the homepage sections. */
+  sections: StorefrontSettings["sections"];
+  sectionOrder: HomeSectionId[];
 }
 
 import { useSearch } from "./SearchContext";
@@ -149,7 +153,23 @@ import type {
   StoreProduct,
   StoreCategory,
   StoreReview,
+  StorefrontSettings,
+  HomeSectionId,
 } from "../lib/store-types";
+
+/** Section heading with the design's two-tone treatment: all words but
+ *  the last in ink, the last word accented. With the design's default
+ *  titles this reproduces the original headings exactly. */
+function SplitTitle({ title, accentClassName }: { title: string; accentClassName: string }) {
+  const parts = title.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return <>{title}</>;
+  return (
+    <>
+      {parts.slice(0, -1).join(" ")}{" "}
+      <span className={accentClassName}>{parts[parts.length - 1]}</span>
+    </>
+  );
+}
 
 function toFeaturedItem(p: StoreProduct): FeaturedItem {
   return {
@@ -180,7 +200,10 @@ export function MainContent({
   initialProducts,
   initialCategories,
   initialReviews,
+  sections,
+  sectionOrder,
 }: MainContentProps) {
+  const orderOf = (id: HomeSectionId) => sectionOrder.indexOf(id) + 1;
   const { searchQuery } = useSearch();
   // Server data only short-circuits the legacy client fetch when it
   // actually contains products; while the Neon products table is still
@@ -265,8 +288,8 @@ export function MainContent({
   };
 
   return (
-    <div className="flex-1 min-w-0">
-      {/* Featured List / Search Results */}
+    <div className="flex-1 min-w-0 flex flex-col">
+      {/* Search Results (homepage sections render below in CMS order) */}
       <AnimatePresence mode="wait">
       {searchQuery ? (
           <motion.div 
@@ -303,19 +326,23 @@ export function MainContent({
                 </div>
              )}
           </motion.div>
-      ) : selectedCategory === 'All' && (
-          <motion.div 
+      ) : null}
+      </AnimatePresence>
+
+      {/* Featured List — homepage section (CMS: visibility, title, order) */}
+      {!searchQuery && selectedCategory === 'All' && sections.featured.enabled && (
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.5 }}
+            style={{ order: orderOf("featured") }}
           >
             <div className="mb-12">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">
                         <TrendingUp className="w-5 h-5 text-primary-600" />
                     </div>
-                    <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">Featured <span className="text-primary-600">List</span></h2>
+                    <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight"><SplitTitle title={sections.featured.title} accentClassName="text-primary-600" /></h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {featuredItems.map((item) => (
@@ -323,13 +350,23 @@ export function MainContent({
                 ))}
                 </div>
             </div>
+          </motion.div>
+      )}
 
+      {/* Trending Products — homepage section (CMS: visibility, title, order) */}
+      {!searchQuery && selectedCategory === 'All' && sections.trending.enabled && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            style={{ order: orderOf("trending") }}
+          >
             <div className="mb-12">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
                         <Zap className="w-5 h-5 text-blue-600" />
                     </div>
-                    <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">Trending <span className="text-blue-600">Products</span></h2>
+                    <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight"><SplitTitle title={sections.trending.title} accentClassName="text-blue-600" /></h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {trendingItems.map((item) => (
@@ -339,11 +376,13 @@ export function MainContent({
             </div>
           </motion.div>
       )}
-      </AnimatePresence>
 
-      {/* All Categories / Products List - Hide when searching */}
-      {!searchQuery && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 mb-12 relative overflow-hidden shadow-sm">
+      {/* All Categories / Products List - Hide when searching. In the
+          'All' view this card is the CMS "categories" homepage section
+          (toggleable + orderable); in a category view it is the product
+          listing itself and always renders. */}
+      {!searchQuery && (selectedCategory !== 'All' || sections.categories.enabled) && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 mb-12 relative overflow-hidden shadow-sm" style={{ order: orderOf("categories") }}>
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/5 blur-[100px] rounded-full pointer-events-none"></div>
           
           {selectedCategory === 'All' ? (
@@ -352,7 +391,7 @@ export function MainContent({
                     <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">
                         <Award className="w-5 h-5 text-primary-600" />
                     </div>
-                    <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">Browse <span className="text-primary-600">Categories</span></h2>
+                    <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight"><SplitTitle title={sections.categories.title} accentClassName="text-primary-600" /></h2>
                 </div>
 
                 <div className="flex gap-6 overflow-x-auto pb-4 mb-8 border-b border-slate-100 scrollbar-hide">
@@ -497,14 +536,15 @@ export function MainContent({
       </div>
       )}
 
-      {/* Customer Reviews */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-8 mb-12 shadow-sm">
+      {/* Customer Reviews — homepage section (CMS: visibility, title, order) */}
+      {sections.reviews.enabled && (
+      <div className="bg-white rounded-2xl border border-slate-200 p-8 mb-12 shadow-sm" style={{ order: orderOf("reviews") }}>
         <div className="flex justify-between items-center mb-10">
             <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">
                     <Star className="w-5 h-5 text-primary-600 fill-current" />
                 </div>
-                <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">Customer <span className="text-primary-600">Reviews</span></h2>
+                <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight"><SplitTitle title={sections.reviews.title} accentClassName="text-primary-600" /></h2>
             </div>
             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                 <span className="text-primary-600">{reviews.length}</span> Total Reviews
@@ -561,6 +601,7 @@ export function MainContent({
             </button>
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { orderCode } from "../lib/order-ref";
 import { 
   Package, Clock, CheckCircle2, ChevronRight, MessageSquare, 
   Settings, ShoppingBag, Loader2, AlertCircle, ShieldAlert,
@@ -178,7 +179,7 @@ function OperationalOverview({ profile, orders, setActiveTab }: any) {
                       <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 overflow-hidden shrink-0"><img src={order.products?.image} className="w-full h-full object-cover" alt="" /></div>
                       <div>
                          <div className="text-[14px] font-black text-slate-900">{order.products?.title}</div>
-                         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">#{order.id.split('-')[0]}</div>
+                         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">#{orderCode(order.id)}</div>
                       </div>
                    </div>
                    <div className="text-right">
@@ -213,7 +214,7 @@ function OrderManifest({ orders }: any) {
                       <div>
                          <h4 className="text-lg font-black text-slate-900">{order.products?.title}</h4>
                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: #{order.id.split('-')[0].toUpperCase()}</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: #{orderCode(order.id)}</span>
                             <span className={`px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${order.status === 'Completed' ? 'bg-emerald-50 text-emerald-500' : 'bg-amber-50 text-amber-500'}`}>{order.status}</span>
                          </div>
                       </div>

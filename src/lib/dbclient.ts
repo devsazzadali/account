@@ -142,6 +142,13 @@ interface ChannelHandler {
   table: string;
   filter?: string;
   callback: (payload: { new: any; old: any; eventType: string }) => void;
+  // False until the handler's first successful poll has built its
+  // baseline snapshot. INSERT callbacks must never fire for rows that
+  // already existed when the subscription started — the previous
+  // size-based guard only suppressed the FIRST row of the first tick,
+  // so every other pre-existing row replayed as a phantom "new" event
+  // (e.g. a stale "New Order!" toast + chime on every admin login).
+  initialized?: boolean;
 }
 
 export class PollingChannel {
@@ -169,14 +176,12 @@ export class PollingChannel {
           const res = await fetch(url, { credentials: "same-origin" });
           const json = await res.json();
           const rows: any[] = json.data || [];
-          const seen = new Set<string>();
           for (const row of rows) {
             const key = `${h.table}:${row.id}`;
-            seen.add(key);
             const serialized = JSON.stringify(row);
             const prev = this.snapshot.get(key);
             if (prev === undefined) {
-              if (this.snapshot.size > 0 && (h.event === "INSERT" || h.event === "*")) {
+              if (h.initialized && (h.event === "INSERT" || h.event === "*")) {
                 h.callback({ new: row, old: null, eventType: "INSERT" });
               }
             } else if (prev !== serialized && (h.event === "UPDATE" || h.event === "*")) {
@@ -184,6 +189,10 @@ export class PollingChannel {
             }
             this.snapshot.set(key, serialized);
           }
+          // Baseline for this handler is only trusted after a full,
+          // successful first poll — a failed first fetch must not turn
+          // history into "new" events on the next tick either.
+          h.initialized = true;
         } catch {
           // polling is best-effort; next tick retries
         }

@@ -9,9 +9,12 @@ import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
 import { toast } from "react-hot-toast";
 import { lsGet, lsSet } from "@/src/lib/storage";
+import { BrandWordmark } from "@/src/components/BrandMark";
+import { useStoreBrand } from "@/src/lib/useStoreBrand";
 
 
 export function LoginPage() {
+  const brand = useStoreBrand();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -83,10 +86,14 @@ export function LoginPage() {
         
         <div className="relative z-10">
             <Link href="/" className="flex items-center gap-2 mb-12 group">
-                <div className="w-10 h-10 rounded-xl bg-white backdrop-blur-md border border-slate-200 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                    <Zap className="w-6 h-6 text-[#1dbf73] fill-current" />
-                </div>
-                <span className="text-2xl font-display font-bold text-slate-900 tracking-tight">Account<span className="text-[#1dbf73]">Store</span></span>
+                {brand.logoUrl ? (
+                    <img src={brand.logoUrl} alt={brand.name} className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-sm group-hover:scale-110 transition-transform" />
+                ) : (
+                    <div className="w-10 h-10 rounded-xl bg-white backdrop-blur-md border border-slate-200 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                        <Zap className="w-6 h-6 text-[#1dbf73] fill-current" />
+                    </div>
+                )}
+                <span className="text-2xl font-display font-bold text-slate-900 tracking-tight"><BrandWordmark brand={brand} accentClassName="text-[#1dbf73]" builtin={<>Account<span className="text-[#1dbf73]">Store</span></>} /></span>
             </Link>
 
             <motion.div 
@@ -138,8 +145,12 @@ export function LoginPage() {
         {/* Mobile Header */}
         <div className="md:hidden absolute top-8 left-8">
             <Link href="/" className="flex items-center gap-2">
-                <Zap className="w-6 h-6 text-[#1dbf73] fill-current" />
-                <span className="text-xl font-display font-bold text-slate-900">Account<span className="text-[#1dbf73]">Store</span></span>
+                {brand.logoUrl ? (
+                    <img src={brand.logoUrl} alt={brand.name} className="w-8 h-8 rounded-lg object-cover" />
+                ) : (
+                    <Zap className="w-6 h-6 text-[#1dbf73] fill-current" />
+                )}
+                <span className="text-xl font-display font-bold text-slate-900"><BrandWordmark brand={brand} accentClassName="text-[#1dbf73]" builtin={<>Account<span className="text-[#1dbf73]">Store</span></>} /></span>
             </Link>
         </div>
 

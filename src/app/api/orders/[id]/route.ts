@@ -11,6 +11,7 @@ import { getSessionContext, unauthorized, forbidden } from "@/src/lib/auth-serve
 import { prisma } from "@/src/lib/db";
 import { flushEmailOutbox } from "@/src/lib/mailer";
 import { serializeRow } from "@/src/lib/serialize";
+import { orderCode } from "@/src/lib/order-ref";
 import {
   ServiceError,
   maybeReleaseEscrow,
@@ -46,7 +47,7 @@ async function loadOrder(id: string) {
 
 function shape(row: Record<string, unknown>) {
   const { product, ...rest } = serializeRow(row);
-  return { ...rest, products: product };
+  return { ...rest, order_number: orderCode(String(row.id ?? "")), products: product };
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0C2254"/>
+      <stop offset="1" stop-color="#123069"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <rect x="0" y="0" width="800" height="10" fill="#F4751F"/>
+  <circle cx="700" cy="60" r="150" fill="#F4751F" opacity="0.08"/>
+  <circle cx="80" cy="400" r="120" fill="#F4751F" opacity="0.06"/>
+  <text x="48" y="86" font-family="Arial, Helvetica, sans-serif" font-size="19" letter-spacing="6" fill="#F4751F" font-weight="bold">ACCOUNT STORE ONE</text>
+  <text x="48" y="196" font-family="Arial, Helvetica, sans-serif" font-size="52" fill="#FFFFFF" font-weight="bold">Valorant Radiant-</text>
+  <text x="48" y="258" font-family="Arial, Helvetica, sans-serif" font-size="52" fill="#FFFFFF" font-weight="bold">Ready Account</text>
+  <rect x="48" y="292" width="64" height="5" fill="#F4751F"/>
+  <text x="48" y="338" font-family="Arial, Helvetica, sans-serif" font-size="21" letter-spacing="4" fill="#B9C6E4">GAMING ACCOUNTS</text>
+  <rect x="48" y="368" width="216" height="46" rx="23" fill="#F4751F"/>
+  <text x="156" y="398" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#FFFFFF" font-weight="bold" text-anchor="middle">MANUAL DELIVERY</text>
+  <text x="752" y="404" font-family="Arial, Helvetica, sans-serif" font-size="40" fill="#FFFFFF" font-weight="bold" text-anchor="end" opacity="0.25">AS1</text>
+</svg>

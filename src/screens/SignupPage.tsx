@@ -9,9 +9,12 @@ import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
 import { toast } from "react-hot-toast";
 import { lsGet, lsSet } from "@/src/lib/storage";
+import { BrandWordmark } from "@/src/components/BrandMark";
+import { useStoreBrand } from "@/src/lib/useStoreBrand";
 
 
 export function SignupPage() {
+  const brand = useStoreBrand();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -77,10 +80,14 @@ export function SignupPage() {
         
         <div className="relative z-10">
             <Link href="/" className="flex items-center gap-2 mb-12 group">
-                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Zap className="w-6 h-6 text-primary-400 fill-current" />
-                </div>
-                <span className="text-2xl font-display font-bold text-white tracking-tight">Account<span className="text-primary-400">Store</span></span>
+                {brand.logoUrl ? (
+                    <img src={brand.logoUrl} alt={brand.name} className="w-10 h-10 rounded-xl object-cover border border-white/20 group-hover:scale-110 transition-transform" />
+                ) : (
+                    <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Zap className="w-6 h-6 text-primary-400 fill-current" />
+                    </div>
+                )}
+                <span className="text-2xl font-display font-bold text-white tracking-tight"><BrandWordmark brand={brand} accentClassName="text-primary-400" builtin={<>Account<span className="text-primary-400">Store</span></>} /></span>
             </Link>
 
             <motion.div 
@@ -130,8 +137,12 @@ export function SignupPage() {
         {/* Mobile Header */}
         <div className="md:hidden absolute top-8 left-8">
             <Link href="/" className="flex items-center gap-2">
-                <Zap className="w-6 h-6 text-primary-600 fill-current" />
-                <span className="text-xl font-display font-bold text-slate-900">Account<span className="text-primary-600">Store</span></span>
+                {brand.logoUrl ? (
+                    <img src={brand.logoUrl} alt={brand.name} className="w-8 h-8 rounded-lg object-cover" />
+                ) : (
+                    <Zap className="w-6 h-6 text-primary-600 fill-current" />
+                )}
+                <span className="text-xl font-display font-bold text-slate-900"><BrandWordmark brand={brand} accentClassName="text-primary-600" builtin={<>Account<span className="text-primary-600">Store</span></>} /></span>
             </Link>
         </div>
 

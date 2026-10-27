@@ -12,6 +12,7 @@ import { AdminOverview } from "../components/admin/AdminOverview";
 import { AdminProducts } from "../components/admin/AdminProducts";
 import { AdminOrders } from "../components/admin/AdminOrders";
 import { AdminSettings } from "../components/admin/AdminSettings";
+import { AdminStorefront } from "../components/admin/AdminStorefront";
 import { AdminCustomers } from "../components/admin/AdminCustomers";
 import { AdminMessages } from "../components/admin/AdminMessages";
 import { AdminCategories } from "../components/admin/AdminCategories";
@@ -20,7 +21,6 @@ import { AdminSellerInfo } from "../components/admin/AdminSellerInfo";
 import { AdminFeedback } from "../components/admin/AdminFeedback";
 import { AdminCoupons } from "../components/admin/AdminCoupons";
 
-import { toast } from "react-hot-toast";
 
 export function AdminDashboardPage() {
   const params = useParams();
@@ -56,47 +56,11 @@ export function AdminDashboardPage() {
     checkAuth();
   }, []);
 
-  // Real-time Order Notifications
-  useEffect(() => {
-    if (profile?.role !== "admin" && profile?.role !== "moderator") return;
-
-    const orderSubscription = db.channel('admin-order-notifications')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders' },
-        (payload: any) => {
-          // Play notification sound
-          const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
-          audio.volume = 0.5;
-          audio.play().catch(e => console.log('Audio playback blocked by browser:', e));
-
-          // Show Toast Notification
-          toast.success(
-            <div className="flex flex-col gap-1">
-              <span className="font-black text-slate-900 uppercase tracking-widest text-[11px]">New Order Received!</span>
-              <span className="text-[13px] font-bold text-slate-600">ID: #{payload.new.id.split('-')[0].toUpperCase()}</span>
-              <span className="text-[14px] font-black text-[#E62E04] mt-1">Amount: ${payload.new.total_price || payload.new.total_amount}</span>
-            </div>,
-            { 
-              duration: 8000, 
-              icon: '🚨',
-              style: {
-                border: '1px solid #E62E04',
-                padding: '16px',
-                color: '#0A0F1C',
-                borderRadius: '16px',
-                background: '#fff'
-              }
-            }
-          );
-        }
-      )
-      .subscribe();
-
-    return () => {
-      db.removeChannel(orderSubscription);
-    };
-  }, [profile]);
+  // New-order alerts (sound + toast + bell badge) live in ONE place:
+  // AdminLayout's order watcher. A second subscription used to live here
+  // and played an externally-hosted MP3 (assets.mixkit.co) plus a duplicate
+  // toast on every order — removed in the 2026-10-26 full-QA pass so the
+  // admin gets exactly one alert, from a self-contained WebAudio chime.
 
   if (loading) {
     return (
@@ -155,6 +119,14 @@ export function AdminDashboardPage() {
             to them lands on Seller Information, a real screen. */}
         {(activeTab === "management" || activeTab === "violation" || activeTab === "customizer" || activeTab === "store_customize") && (
           <AdminSellerInfo setActiveTab={setActiveTab} />
+        )}
+        {activeTab === "storefront" && profile?.role === "admin" && <AdminStorefront />}
+        {activeTab === "storefront" && profile?.role !== "admin" && (
+           <div className="flex flex-col items-center justify-center py-32 text-center">
+              <ShieldAlert size={64} className="text-amber-500 mb-4" />
+              <h3 className="text-2xl font-black text-slate-900">Restricted Module</h3>
+              <p className="text-slate-500 mt-2 font-medium">Moderators cannot modify system-wide configurations.</p>
+           </div>
         )}
         {activeTab === "settings" && profile?.role === "admin" && <AdminSettings />}
         {activeTab === "settings" && profile?.role !== "admin" && (

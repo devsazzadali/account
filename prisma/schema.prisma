@@ -426,6 +426,13 @@ model EmailOutbox {
   text      String
   status    String    @default("pending") // pending | sent | failed
   error     String?
+  // Retry bookkeeping (2026-10-27): provider failures retry with
+  // backoff instead of failing terminally on the first error. A row
+  // stays "pending" (attempts incremented, nextAttemptAt set) until
+  // the attempt budget is exhausted, then it is marked "failed" with
+  // the provider error. Purely additive columns.
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime? @map("next_attempt_at")
   createdAt DateTime  @default(now()) @map("created_at")
   sentAt    DateTime? @map("sent_at")
 

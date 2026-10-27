@@ -2,7 +2,7 @@
 // Uses @prisma/adapter-neon over the pooled DATABASE_URL so the same client
 // works on Vercel serverless and in restricted-egress environments.
 // Singleton via globalThis to survive Next.js dev HMR.
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { neonConfig } from "@neondatabase/serverless";
 import ws from "ws";
@@ -33,3 +33,18 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export default prisma;
+
+/**
+ * Interactive transaction with a window sized for the Neon serverless
+ * adapter. Prisma's defaults (maxWait 2s / timeout 5s) are too tight for
+ * multi-write order transactions over a WebSocket pool: under load the
+ * transaction handle expires mid-flight ("Transaction not found …
+ * obtained before disconnecting") and the whole write 500s — observed
+ * in QA rounds 10–11 on the exact-stock order path after passing nine
+ * rounds. Same semantics, wider window.
+ */
+export function withTx<T>(
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  return prisma.$transaction(fn, { maxWait: 10_000, timeout: 20_000 });
+}

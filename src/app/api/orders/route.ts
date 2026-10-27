@@ -9,6 +9,7 @@ import { createOrder, payOrderWithWallet, maybeReleaseEscrow, ServiceError } fro
 import { flushEmailOutbox } from "@/src/lib/mailer";
 import { prisma } from "@/src/lib/db";
 import { serializeRow, serializeRows } from "@/src/lib/serialize";
+import { orderCode } from "@/src/lib/order-ref";
 
 export async function POST(req: Request) {
   const ctx = await getSessionContext(req);
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
     const shaped = serializeRow(withProduct as unknown as Record<string, unknown>);
     const { product, ...rest } = shaped;
     void flushEmailOutbox();
-    return Response.json({ order: { ...rest, products: product } }, { status: 201 });
+    return Response.json({ order: { ...rest, order_number: orderCode(final.id), products: product } }, { status: 201 });
   } catch (err) {
     if (err instanceof ServiceError) return Response.json({ error: err.message }, { status: err.status });
     return Response.json({ error: err instanceof Error ? err.message : "Order failed" }, { status: 500 });
@@ -52,7 +53,8 @@ export async function GET(req: Request) {
       include: { product: true },
     });
     const released = await Promise.all(orders.map((o) => maybeReleaseEscrow(o)));
-    return Response.json({ orders: serializeRows(released as unknown as Record<string, unknown>[]) });
+    const rows = serializeRows(released as unknown as Record<string, unknown>[]).map((r) => ({ ...r, order_number: orderCode(String(r.id)) }));
+    return Response.json({ orders: rows });
   }
   const ctx = await getSessionContext(req);
   if (!ctx) return unauthorized();
@@ -65,7 +67,7 @@ export async function GET(req: Request) {
   const released = await Promise.all(orders.map((o) => maybeReleaseEscrow(o)));
   const shaped = serializeRows(released as unknown as Record<string, unknown>[]).map((r) => {
     const { product, ...rest } = r;
-    return { ...rest, products: product };
+    return { ...rest, order_number: orderCode(String(r.id)), products: product };
   });
   return Response.json({ orders: shaped });
 }
