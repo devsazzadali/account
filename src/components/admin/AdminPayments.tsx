@@ -103,7 +103,7 @@ export function AdminPayments() {
             Buyers who pay manually (bKash/Nagad) submit a Transaction ID here. Verify the money arrived, then approve — delivery and wallet credit happen automatically.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {["pending", "approved", "rejected"].map((s) => (
             <button
               key={s}

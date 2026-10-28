@@ -243,7 +243,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
               />
             </FilterField>
             <div className="col-span-2 flex items-center gap-4">
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <FilterField label="FROM">
                   <input 
                     type="date" 
@@ -254,7 +254,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
                 </FilterField>
               </div>
               <span className="text-sm font-medium text-slate-400 mt-6">to</span>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <FilterField label="TO">
                   <input 
                     type="date" 
@@ -277,7 +277,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
         </div>
 
         {/* Fulfilment sub-filter — wired to the real status column */}
-        <div className="flex items-center gap-3 mt-4 mb-2">
+        <div className="flex items-center gap-3 mt-4 mb-2 flex-wrap">
             {["New Order", "PREPARING", "Delivering"].map((s) => (
               <button
                 key={s}

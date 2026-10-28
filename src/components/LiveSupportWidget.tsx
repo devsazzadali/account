@@ -84,14 +84,14 @@ export function LiveSupportWidget() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-[2000] font-sans">
+    <div className="fixed bottom-24 right-4 sm:right-6 md:bottom-6 z-[2000] font-sans">
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.9, transformOrigin: "bottom right" }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="mb-4 w-[380px] h-[550px] bg-white rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 flex flex-col overflow-hidden"
+            className="mb-4 w-[min(380px,calc(100vw-2rem))] h-[min(550px,calc(100dvh-11rem))] bg-white rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 flex flex-col overflow-hidden"
           >
             {/* Widget Header */}
             <div className="bg-slate-900 px-6 py-8 text-white shrink-0 relative overflow-hidden">

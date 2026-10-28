@@ -475,7 +475,7 @@ export function CheckoutPage() {
                           value={couponInput}
                           onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                           placeholder="Coupon code"
-                          className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold uppercase placeholder:normal-case placeholder:font-medium focus:outline-none focus:border-slate-400"
+                          className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold uppercase placeholder:normal-case placeholder:font-medium focus:outline-none focus:border-slate-400"
                         />
                         <button onClick={applyCoupon} disabled={couponBusy || !couponInput.trim()} className="px-5 py-3 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-40">
                           {couponBusy ? "…" : "Apply"}

@@ -154,7 +154,7 @@ export function ProductDetailsPage({
                 </span>
               </div>
 
-              <div className="absolute bottom-6 left-6 flex items-center gap-3">
+              <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-auto flex flex-wrap items-center gap-2 sm:gap-3">
                  <div className="bg-white/90 backdrop-blur-md border border-slate-200 rounded-2xl px-4 py-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-900 shadow-sm">
                     <Zap size={14} className="text-primary-600 fill-current" />
                     Instant Clearance
@@ -167,13 +167,13 @@ export function ProductDetailsPage({
             </motion.div>
 
             {/* Tabs Section */}
-            <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 min-h-[300px] shadow-sm">
-                <div className="flex gap-8 border-b border-slate-100 mb-8">
+            <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 border border-slate-200 min-h-[300px] shadow-sm">
+                <div className="flex gap-5 sm:gap-8 border-b border-slate-100 mb-8 overflow-x-auto">
                     {["description", "delivery", "warranty"].map((tab) => (
-                        <button 
+                        <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`pb-4 text-xs font-bold uppercase tracking-[0.2em] relative transition-colors ${
+                            className={`pb-4 text-xs font-bold uppercase tracking-[0.2em] relative transition-colors whitespace-nowrap shrink-0 ${
                                 activeTab === tab ? "text-primary-600" : "text-slate-400 hover:text-slate-900"
                             }`}
                         >

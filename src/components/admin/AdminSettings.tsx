@@ -104,8 +104,8 @@ export function AdminSettings() {
   }
 
   return (
-    <div className="flex gap-8 items-start">
-      <div className="w-52 shrink-0 bg-white rounded-3xl border border-slate-100 shadow-sm p-3 space-y-1">
+    <div className="flex flex-col lg:flex-row gap-8 items-start">
+      <div className="w-full lg:w-52 shrink-0 bg-white rounded-3xl border border-slate-100 shadow-sm p-3 space-y-1">
         {TABS.map((tab) => (
           <button
             key={tab}
@@ -122,7 +122,7 @@ export function AdminSettings() {
         ))}
       </div>
 
-      <div className="flex-1 space-y-6">
+      <div className="flex-1 min-w-0 w-full lg:w-auto space-y-6">
         {!settings ? (
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-16 flex items-center justify-center">
             <Loader2 className="animate-spin text-slate-300" size={32} />

@@ -114,7 +114,7 @@ export function Footer({
 
       <button
         onClick={scrollToTop}
-        className="fixed bottom-10 right-10 w-14 h-14 bg-[#0C2254] text-white rounded-2xl shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 z-50 flex items-center justify-center group"
+        className="fixed bottom-[10.5rem] right-4 sm:right-6 md:bottom-10 md:right-10 w-14 h-14 bg-[#0C2254] text-white rounded-2xl shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 z-50 flex items-center justify-center group"
       >
         <ArrowUp className="w-6 h-6 group-hover:-translate-y-1 transition-transform" />
       </button>

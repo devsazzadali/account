@@ -293,7 +293,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                     <p className="text-[14px] text-slate-400 font-medium">Enter product name here</p>
                     
                     <div className="flex flex-wrap items-start gap-4 max-w-4xl relative">
-                        <div className="relative flex-1">
+                        <div className="relative flex-1 min-w-0">
                             <div className="flex border border-slate-300 rounded overflow-hidden focus-within:border-slate-400 transition-colors">
                                 <input 
                                     value={sellingItemQuery}
@@ -305,13 +305,13 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                                     onFocus={() => { if(sellingItemQuery.toLowerCase().includes("facebook")) setShowGamePopover(true) }}
                                     onBlur={() => setTimeout(() => setShowGamePopover(false), 200)}
                                     placeholder="What do you want to sell?" 
-                                    className="flex-1 px-4 py-3 text-[15px] text-slate-900 outline-none"
+                                    className="flex-1 min-w-0 px-4 py-3 text-[15px] text-slate-900 outline-none"
                                 />
                                 <div className="w-px bg-slate-300 my-2" />
                                 <select 
                                     value={sellingCategory}
                                     onChange={(e) => setSellingCategory(e.target.value)}
-                                    className="px-6 py-3 bg-white text-[15px] text-slate-800 outline-none cursor-pointer border-l border-slate-300 min-w-[160px]"
+                                    className="px-6 py-3 bg-white text-[15px] text-slate-800 outline-none cursor-pointer border-l border-slate-300 min-w-[120px] sm:min-w-[160px]"
                                 >
                                     <option>All</option>
                                     {dbCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
@@ -632,7 +632,7 @@ function ProductCard({ product, onEdit, onDelete, selected, onToggleSelect, onSa
                     <button onClick={onEdit} className="bg-white p-2 rounded-lg text-slate-600 hover:text-[#E62E04] shadow-xl border border-slate-100"><Edit size={16} /></button>
                     <button onClick={onDelete} className="bg-white p-2 rounded-lg text-slate-600 hover:text-red-600 shadow-xl border border-slate-100"><Trash2 size={16} /></button>
                 </div>
-                <div className="absolute bottom-3 left-3 flex gap-2">
+                <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
                     <span className="px-3 py-1 bg-white/90 backdrop-blur-md rounded-lg text-[12px] font-black uppercase tracking-widest text-slate-900 border border-white/20">
                         {product.category}
                     </span>

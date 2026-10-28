@@ -135,6 +135,25 @@ function OrderToast({ title, amount, onView, onDismiss }: { title: string; amoun
 export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutProps) {
   const username = lsGet("username") || "Admin";
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Mobile: the sidebar becomes a slide-over drawer below lg. The
+  // desktop collapse behaviour only applies at lg and up — on mobile
+  // the drawer always shows full labels.
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isLg, setIsLg] = useState(() =>
+    typeof window === "undefined" ? true : window.matchMedia("(min-width: 1024px)").matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setIsLg(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  const collapsed = isSidebarCollapsed && isLg;
+  const goToTab = (tab: string) => {
+    setActiveTab(tab);
+    setMobileOpen(false);
+  };
   const [unreadCount, setUnreadCount] = useState(0);
   const [newOrderAlert, setNewOrderAlert] = useState<{ title: string; amount: number; orderId: string } | null>(null);
   const [newOrderBadge, setNewOrderBadge] = useState(0);
@@ -204,28 +223,43 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
   return (
     <div className="min-h-screen bg-[#F6F6F7] text-slate-900 flex font-sans selection:bg-red-100 selection:text-red-900">
       
+      {/* Mobile drawer backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-slate-950/50 z-[550] lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
       {/* ── Sidebar - Seller Center Red Theme ── */}
-      <aside 
-        className={`bg-white border-r border-slate-200 flex flex-col z-[500] relative shrink-0 transition-all duration-300 shadow-xl shadow-slate-200/50 ${isSidebarCollapsed ? 'w-[72px]' : 'w-[260px]'}`}
+      <aside
+        className={`bg-white border-r border-slate-200 flex flex-col z-[600] lg:z-[500] fixed inset-y-0 left-0 lg:static shrink-0 transition-all duration-300 shadow-xl shadow-slate-200/50 w-[260px] ${collapsed ? 'lg:w-[72px]' : 'lg:w-[260px]'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
       >
         {/* Sidebar Header - Premium Seller Center */}
-        <div className={`h-24 flex items-center bg-[#0A0F1C] text-white shrink-0 relative overflow-hidden transition-all duration-300 border-b border-white/5 ${isSidebarCollapsed ? 'px-4 justify-center' : 'px-8'}`}>
+        <div className={`h-24 flex items-center bg-[#0A0F1C] text-white shrink-0 relative overflow-hidden transition-all duration-300 border-b border-white/5 ${collapsed ? 'px-4 justify-center' : 'px-5 lg:px-8'}`}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#E62E04]/10 blur-[40px] -mr-16 -mt-16" />
             <div className="flex items-center gap-4 relative z-10 overflow-hidden">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#E62E04] to-[#c92503] flex items-center justify-center shadow-lg shadow-red-500/20 shrink-0">
                     <Zap size={20} className="text-white fill-white" />
                 </div>
-                {!isSidebarCollapsed && (
+                {!collapsed && (
                     <div className="flex flex-col">
-                        <span className="font-black tracking-[-0.05em] text-xl uppercase italic leading-none text-white whitespace-nowrap">Seller Center</span>
+                        <span className="font-black tracking-[-0.05em] text-[17px] lg:text-xl uppercase italic leading-none text-white whitespace-nowrap">Seller Center</span>
                         <span className="text-[9px] font-black text-[#E62E04] uppercase tracking-[0.3em] mt-1 italic whitespace-nowrap">Operational Hub</span>
                     </div>
                 )}
             </div>
+            <button
+                onClick={() => setMobileOpen(false)}
+                aria-label="Close menu"
+                className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 text-white"
+            >
+                <X size={18} />
+            </button>
         </div>
 
         {/* User Quick Info */}
-        {!isSidebarCollapsed && (
+        {!collapsed && (
             <div className="p-6 border-b border-slate-100 flex items-center gap-4 bg-slate-50/30">
                 <div className="w-12 h-12 rounded-[1.25rem] border-2 border-white shadow-sm overflow-hidden bg-white shrink-0">
                     <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="avatar" />
@@ -247,52 +281,52 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             label="Home" 
             icon={<LayoutDashboard size={20} />} 
             activeTab={activeTab} 
-            setActiveTab={setActiveTab}
-            collapsed={isSidebarCollapsed}
+            setActiveTab={goToTab}
+            collapsed={collapsed}
           />
           <MenuItem 
             id="orders" 
             label="Sold Orders" 
             icon={<ShoppingCart size={20} />} 
             activeTab={activeTab} 
-            setActiveTab={setActiveTab}
-            collapsed={isSidebarCollapsed}
+            setActiveTab={goToTab}
+            collapsed={collapsed}
           />
           <MenuItem
             id="payments"
             label="Payment Verification"
             icon={<DollarSign size={20} />}
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            collapsed={isSidebarCollapsed}
+            setActiveTab={goToTab}
+            collapsed={collapsed}
           />
           <MenuItem
             id="products"
             label="Create New Offers"
             icon={<Plus size={20} />} 
             activeTab={activeTab} 
-            setActiveTab={setActiveTab}
-            collapsed={isSidebarCollapsed}
+            setActiveTab={goToTab}
+            collapsed={collapsed}
           />
           <MenuItem 
             id="active_offers" 
             label="Active Offers" 
             icon={<Package size={20} />} 
             activeTab={activeTab} 
-            setActiveTab={setActiveTab}
-            collapsed={isSidebarCollapsed}
+            setActiveTab={goToTab}
+            collapsed={collapsed}
           />
           
           <div className="pt-6 px-3 pb-2">
-              <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
+              <div className={`h-px bg-slate-100 ${collapsed ? 'hidden' : 'block'}`} />
           </div>
 
           <CollapsibleMenu
             label="Store Management"
             icon={<Settings size={20} />}
-            collapsed={isSidebarCollapsed}
+            collapsed={collapsed}
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
+            setActiveTab={goToTab}
             items={[
                 { id: "categories", label: "Categories" },
                 { id: "seller_info", label: "Seller Information" },
@@ -302,7 +336,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
           />
 
           <div className="pt-6 px-3 pb-2">
-              <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
+              <div className={`h-px bg-slate-100 ${collapsed ? 'hidden' : 'block'}`} />
           </div>
 
           <MenuItem
@@ -310,45 +344,45 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             label="Messages"
             icon={<MessageSquare size={20} />}
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
+            setActiveTab={goToTab}
             badge={unreadCount > 0 ? String(unreadCount) : undefined}
-            collapsed={isSidebarCollapsed}
+            collapsed={collapsed}
           />
           <MenuItem
             id="customers"
             label="Customers"
             icon={<Users size={20} />}
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            collapsed={isSidebarCollapsed}
+            setActiveTab={goToTab}
+            collapsed={collapsed}
           />
           <MenuItem
             id="seller_info"
             label="Seller Information"
             icon={<ShieldCheck size={20} />}
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            collapsed={isSidebarCollapsed}
+            setActiveTab={goToTab}
+            collapsed={collapsed}
           />
           <MenuItem
             id="feedback"
             label="Feedback"
             icon={<Star size={20} />}
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            collapsed={isSidebarCollapsed}
+            setActiveTab={goToTab}
+            collapsed={collapsed}
           />
           <MenuItem
             id="coupons"
             label="Coupons"
             icon={<Tag size={20} />}
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            collapsed={isSidebarCollapsed}
+            setActiveTab={goToTab}
+            collapsed={collapsed}
           />
 
           <div className="pt-4 px-3 pb-2">
-              <div className={`h-px bg-slate-100 ${isSidebarCollapsed ? 'hidden' : 'block'}`} />
+              <div className={`h-px bg-slate-100 ${collapsed ? 'hidden' : 'block'}`} />
           </div>
 
           <a 
@@ -357,23 +391,23 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all group`}
           >
             <div className="shrink-0 group-hover:scale-110 transition-transform"><Store size={20} /></div>
-            {!isSidebarCollapsed && (
+            {!collapsed && (
                 <span className="font-black text-[13px] uppercase tracking-wide whitespace-nowrap">Visit Store</span>
             )}
-            {!isSidebarCollapsed && <ExternalLink size={14} className="ml-auto opacity-40" />}
+            {!collapsed && <ExternalLink size={14} className="ml-auto opacity-40" />}
           </a>
         </nav>
 
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-slate-100 space-y-1 bg-slate-50/30">
-            <button 
+            <button
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition-all group"
+                className="hidden lg:flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition-all group"
             >
                 <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                    {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+                    {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
                 </div>
-                {!isSidebarCollapsed && <span className="text-[12px] font-black uppercase tracking-widest group-hover:text-slate-900 transition-colors">Collapse menu</span>}
+                {!collapsed && <span className="text-[12px] font-black uppercase tracking-widest group-hover:text-slate-900 transition-colors">Collapse menu</span>}
             </button>
             <button 
                 onClick={handleLogout}
@@ -382,42 +416,49 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
                 <div className="w-5 h-5 flex items-center justify-center shrink-0">
                     <LogOut size={18} />
                 </div>
-                {!isSidebarCollapsed && <span className="text-[12px] font-black uppercase tracking-widest">Terminate Session</span>}
+                {!collapsed && <span className="text-[12px] font-black uppercase tracking-widest">Terminate Session</span>}
             </button>
         </div>
       </aside>
 
       {/* ── Main Workspace ── */}
-      <div className="flex-1 flex flex-col relative z-10 overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col relative z-10 overflow-hidden">
         {/* Topbar */}
-        <header className="h-16 bg-white border-b border-slate-200 px-8 flex justify-between items-center shrink-0 shadow-sm z-40">
-          <div className="flex items-center gap-6 flex-1">
-              <div className="relative w-full max-w-xl group">
-                  <input 
-                    type="text" 
-                    placeholder="Scan ledgers by ID, product name, or seller hash..." 
+        <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 flex justify-between items-center shrink-0 shadow-sm z-40">
+          <div className="flex items-center gap-3 sm:gap-6 flex-1 min-w-0">
+              <button
+                  onClick={() => setMobileOpen(true)}
+                  aria-label="Open menu"
+                  className="lg:hidden shrink-0 w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                  <Menu size={20} />
+              </button>
+              <div className="relative w-full max-w-xl min-w-0 group">
+                  <input
+                    type="text"
+                    placeholder="Scan ledgers by ID, product name, or seller hash..."
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-2.5 text-[13px] font-bold text-slate-900 focus:outline-none focus:border-red-300 focus:bg-white focus:ring-4 focus:ring-red-50 transition-all"
                   />
                   <Search className="absolute left-4 top-3 text-slate-400 group-focus-within:text-[#E62E04] transition-colors" size={18} />
-                  <div className="absolute right-3 top-2.5 flex items-center gap-1 opacity-20 group-focus-within:opacity-40 transition-opacity">
+                  <div className="absolute right-3 top-2.5 hidden md:flex items-center gap-1 opacity-20 group-focus-within:opacity-40 transition-opacity">
                       <kbd className="text-[10px] font-sans border border-slate-400 rounded px-1.5 py-0.5">Ctrl</kbd>
                       <kbd className="text-[10px] font-sans border border-slate-400 rounded px-1.5 py-0.5">K</kbd>
                   </div>
               </div>
           </div>
 
-          <div className="flex items-center gap-6 ml-6">
+          <div className="flex items-center gap-3 sm:gap-6 ml-3 sm:ml-6 shrink-0">
               {/* Exit to Site */}
-              <button 
+              <button
                   onClick={() => router.push("/")}
-                  className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-900 tracking-wide mr-2 transition-colors"
+                  className="hidden md:flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-900 tracking-wide mr-2 transition-colors whitespace-nowrap"
               >
                   <ChevronLeft size={16} /> EXIT TO SITE
               </button>
 
               {/* New Order Bell */}
               <button
-                onClick={() => { setActiveTab("orders"); setNewOrderBadge(0); }}
+                onClick={() => { goToTab("orders"); setNewOrderBadge(0); }}
                 className="relative text-slate-500 hover:text-slate-900 transition-colors"
               >
                 <Bell size={20} />
@@ -438,7 +479,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
 
               {/* Messages Icon */}
               <button 
-                onClick={() => setActiveTab("messages")}
+                onClick={() => goToTab("messages")}
                 className="relative text-[#14b8a6] hover:text-teal-600 transition-colors flex items-center justify-center"
               >
                   <MessageSquare size={20} />
@@ -450,7 +491,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
               </button>
 
               {/* User Avatar */}
-              <div className="w-9 h-9 rounded-full border border-slate-200 bg-slate-100 overflow-hidden cursor-pointer hover:ring-2 hover:ring-slate-200 transition-all ml-2" onClick={() => setActiveTab("settings")}>
+              <div className="w-9 h-9 rounded-full border border-slate-200 bg-slate-100 overflow-hidden cursor-pointer hover:ring-2 hover:ring-slate-200 transition-all ml-2" onClick={() => goToTab("settings")}>
                   <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="avatar" className="w-full h-full object-cover" />
               </div>
           </div>
@@ -480,7 +521,7 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             title={newOrderAlert.title}
             amount={newOrderAlert.amount}
             onView={() => {
-              setActiveTab("orders");
+              goToTab("orders");
               setNewOrderBadge(0);
               setNewOrderAlert(null);
             }}
