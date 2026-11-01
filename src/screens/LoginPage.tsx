@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Lock, ArrowRight, Zap, Crown, CheckCircle2, Github, Mail, Globe, Loader2 } from "lucide-react";
+import { User, Lock, ArrowRight, Zap, Crown, CheckCircle2, Github, Mail, Globe, Loader2, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
@@ -120,14 +120,14 @@ export function LoginPage() {
                     Access the World's Most <span className="bg-gradient-to-r from-[#1dbf73] to-emerald-400 bg-clip-text text-transparent">Premium</span> Accounts.
                 </h1>
                 <p className="text-lg text-slate-500 font-medium leading-relaxed mb-10">
-                    Join thousands of elite users who trust AccountStore for their digital asset needs. Secure, instant, and reliable.
+                    Premium accounts and subscriptions from a single verified seller — every order protected by escrow until you confirm delivery.
                 </p>
 
                 <div className="space-y-4">
                     {[
-                        "Instant Delivery on all orders",
-                        "24/7 Premium Support Access",
-                        "Verified & Secure Transactions"
+                        "Automatic delivery when stock is available",
+                        "24/7 support from your dashboard",
+                        "Escrow buyer protection on every order"
                     ].map((text, i) => (
                         <div key={i} className="flex items-center gap-3 text-sm font-bold text-slate-700">
                             <CheckCircle2 className="w-5 h-5 text-[#1dbf73]" />
@@ -139,16 +139,21 @@ export function LoginPage() {
         </div>
 
         <div className="relative z-10">
+            {/* F-28: this card used to show a fabricated customer
+                testimonial. It now states only what the store actually
+                does — real buyer-protection facts, no invented people. */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50">
                 <div className="flex items-center gap-4 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1dbf73] to-emerald-500 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-500/30">JD</div>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1dbf73] to-emerald-500 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-500/30">
+                        <ShieldCheck className="w-5 h-5" />
+                    </div>
                     <div>
-                        <div className="text-sm font-bold text-slate-900">James Dupont</div>
-                        <div className="text-[10px] text-[#1dbf73] uppercase tracking-widest font-black">Elite Member</div>
+                        <div className="text-sm font-bold text-slate-900">Buyer Protection</div>
+                        <div className="text-[10px] text-[#1dbf73] uppercase tracking-widest font-black">On Every Order</div>
                     </div>
                 </div>
-                <p className="text-xs text-slate-600 font-medium italic leading-relaxed">
-                    "The quality of service and account security is unmatched. I've been using AccountStore for 2 years and never had a single issue."
+                <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    Your payment is held in escrow until you confirm delivery. Credentials are delivered into the secure vault on your order page — and if they don't work, you can open a dispute for a replacement or a wallet refund.
                 </p>
             </div>
         </div>

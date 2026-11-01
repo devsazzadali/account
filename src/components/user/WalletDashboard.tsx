@@ -3,16 +3,17 @@
 // AccountStoreOne — wallet dashboard (REAL wallet, completion build).
 // Balance and history come from /api/wallet: the balance is the wallets
 // row, the history is the append-only wallet_transactions ledger. Top-ups
-// use the same manual TrxID verification as order payments: the buyer
-// sends money to the store number, submits the TrxID, and the balance is
-// credited only after an admin approves it in the verification queue.
-// Refunds from orders/disputes also land here as ledger credits.
+// are made BY CARD (R2, owner ruling 2026-11-01 — international store,
+// card + wallet only): the buyer starts a Stripe Checkout session via
+// /api/payments/stripe/topup-session and the balance is credited by the
+// Stripe webhook when the payment confirms. Refunds from orders and
+// disputes also land here as ledger credits.
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Wallet, ArrowDownLeft, ArrowUpRight, Clock,
-  ShoppingBag, RefreshCw, DollarSign, Shield, Loader2, Copy, Check
+  ShoppingBag, RefreshCw, DollarSign, CreditCard, Loader2
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -27,9 +28,7 @@ interface LedgerTx {
 
 interface PendingTopup {
   id: string;
-  method: string;
   amount: number;
-  trx_id: string;
   created_at: string;
 }
 
@@ -47,12 +46,8 @@ export function WalletDashboard() {
   const [loading, setLoading] = useState(true);
 
   const [payConfig, setPayConfig] = useState<any>(null);
-  const [method, setMethod] = useState("bkash");
   const [amount, setAmount] = useState("");
-  const [trxId, setTrxId] = useState("");
-  const [senderNumber, setSenderNumber] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [topupBusy, setTopupBusy] = useState(false);
 
   async function fetchData() {
     setLoading(true);
@@ -64,10 +59,7 @@ export function WalletDashboard() {
       setBalance(Number(w.wallet?.balance ?? w.balance) || 0);
       setLedger(w.transactions || []);
       setPending(w.pending_topups || []);
-      if (cfg) {
-        setPayConfig(cfg);
-        if (!cfg.manual?.bkashNumber && cfg.manual?.nagadNumber) setMethod("nagad");
-      }
+      if (cfg) setPayConfig(cfg);
     } catch {
       toast.error("Could not load wallet");
     } finally {
@@ -77,32 +69,29 @@ export function WalletDashboard() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const manualNumber = method === "bkash" ? payConfig?.manual?.bkashNumber : payConfig?.manual?.nagadNumber;
   const totalIn = ledger.filter((t) => Number(t.amount) > 0).reduce((a, t) => a + Number(t.amount), 0);
   const totalOut = ledger.filter((t) => Number(t.amount) < 0).reduce((a, t) => a + Math.abs(Number(t.amount)), 0);
 
-  async function submitTopup() {
+  // Card top-up: ask the server for a Stripe Checkout session for this
+  // amount, then hand the browser to Stripe. The balance moves only when
+  // Stripe's webhook confirms the payment — never on this click.
+  async function startCardTopup() {
     const amt = Number(amount);
     if (!amt || amt <= 0) { toast.error("Enter an amount"); return; }
-    if (trxId.trim().length < 6) { toast.error("Enter the Transaction ID"); return; }
-    if (senderNumber.trim().length < 6) { toast.error("Enter your sender number"); return; }
-    setSubmitting(true);
+    setTopupBusy(true);
     try {
-      const res = await fetch("/api/wallet", {
+      const res = await fetch("/api/payments/stripe/topup-session", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amt, method, trxId: trxId.trim(), senderNumber: senderNumber.trim() }),
+        body: JSON.stringify({ amount: amt }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Top-up failed");
-      toast.success("Top-up submitted — balance updates after verification");
-      setAmount(""); setTrxId(""); setSenderNumber("");
-      await fetchData();
+      if (!res.ok || !json.url) throw new Error(json.error || "Could not start the card top-up");
+      window.location.href = json.url;
     } catch (err: any) {
       toast.error(err.message);
-    } finally {
-      setSubmitting(false);
+      setTopupBusy(false);
     }
   }
 
@@ -157,42 +146,23 @@ export function WalletDashboard() {
         </div>
       </div>
 
-      {/* Top-up */}
+      {/* Top-up (by card) */}
       <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm space-y-4">
         <div className="flex items-center gap-2">
           <DollarSign size={16} className="text-primary-600" />
-          <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Add Money (Manual Verification)</h3>
+          <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Add Money (Card)</h3>
         </div>
-        {payConfig && !payConfig.manual?.bkashNumber && !payConfig.manual?.nagadNumber ? (
-          <p className="text-sm text-slate-400 font-medium">Top-ups are unavailable right now — the store has not published a payment number. Refunds still credit here automatically.</p>
+        {payConfig && !payConfig.stripe?.enabled ? (
+          <p className="text-sm text-slate-400 font-medium">Card top-ups are not available yet — card payments are being set up for this store. Refunds still credit here automatically.</p>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3">
-              {payConfig?.manual?.bkashNumber && (
-                <button onClick={() => setMethod("bkash")} className={`p-3.5 rounded-2xl border text-xs font-bold uppercase tracking-widest transition-all ${method === "bkash" ? "bg-primary-50 border-primary-300 text-primary-700" : "bg-slate-50 border-slate-200 text-slate-500"}`}>bKash</button>
-              )}
-              {payConfig?.manual?.nagadNumber && (
-                <button onClick={() => setMethod("nagad")} className={`p-3.5 rounded-2xl border text-xs font-bold uppercase tracking-widest transition-all ${method === "nagad" ? "bg-primary-50 border-primary-300 text-primary-700" : "bg-slate-50 border-slate-200 text-slate-500"}`}>Nagad</button>
-              )}
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+              <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" max="1000" step="0.01" placeholder="Amount (USD)" className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 transition-all" />
+              <button disabled={topupBusy} onClick={startCardTopup} className="px-6 py-3.5 bg-[#0C2254] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40 flex items-center justify-center gap-2">
+                {topupBusy ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />} Add Money by Card
+              </button>
             </div>
-            {manualNumber && (
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-xs font-bold text-slate-500">Send money to:</span>
-                <span className="text-base font-black tracking-wider text-[#0C2254] bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">{manualNumber}</span>
-                <button onClick={() => { navigator.clipboard.writeText(manualNumber); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 hover:text-slate-900 transition-all">
-                  {copied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
-                </button>
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" step="0.01" placeholder="Amount (USD)" className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 transition-all" />
-              <input value={trxId} onChange={(e) => setTrxId(e.target.value.toUpperCase())} placeholder="Transaction ID (TrxID)" className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 transition-all" />
-              <input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} placeholder="Your sender number" className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 transition-all" />
-            </div>
-            <button disabled={submitting} onClick={submitTopup} className="w-full py-3.5 bg-[#0C2254] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40 flex items-center justify-center gap-2">
-              {submitting ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} />} Submit Top-up for Verification
-            </button>
-            <p className="text-[10px] text-slate-400 font-medium">Your balance is credited only after the store verifies the Transaction ID — usually within a few hours.</p>
+            <p className="text-[10px] text-slate-400 font-medium">You will be redirected to Stripe's secure checkout to pay by card. Your balance is credited as soon as Stripe confirms the payment.</p>
           </>
         )}
 
@@ -200,7 +170,7 @@ export function WalletDashboard() {
           <div className="space-y-2 pt-2">
             {pending.map((p) => (
               <div key={p.id} className="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3">
-                <span className="text-xs font-bold text-amber-800">${Number(p.amount).toFixed(2)} via {p.method} · TrxID {p.trx_id}</span>
+                <span className="text-xs font-bold text-amber-800">${Number(p.amount).toFixed(2)} top-up request</span>
                 <span className="text-[9px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-1.5"><Clock size={11} /> Awaiting verification</span>
               </div>
             ))}

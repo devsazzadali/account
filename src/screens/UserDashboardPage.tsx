@@ -84,13 +84,9 @@ export function UserDashboardPage() {
     });
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-primary-600" />
-      </div>
-    );
-  }
+  // F-20: no blank-spinner page. The shell (sidebar + navigation)
+  // renders immediately; while the profile/orders load, the profile
+  // card and the main area show skeleton placeholders instead.
 
   // NOTE (completion build): the old email-confirmation lock screen was
   // removed — Neon Auth verification is optional and handled by its own
@@ -111,6 +107,15 @@ export function UserDashboardPage() {
         {/* ── Left Sidebar (As per Screenshot) ── */}
         <aside className="w-full lg:w-[320px] bg-white border-r border-slate-200 p-8 flex flex-col shrink-0">
            {/* User Profile Card */}
+           {loading ? (
+              <div className="flex items-center gap-4 mb-10 p-4 bg-slate-50 rounded-3xl border border-slate-100 animate-pulse" aria-label="Loading profile">
+                 <div className="w-14 h-14 rounded-2xl bg-slate-200 shrink-0" />
+                 <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-4 bg-slate-200 rounded-full w-3/4" />
+                    <div className="h-2.5 bg-slate-200 rounded-full w-1/2" />
+                 </div>
+              </div>
+           ) : (
            <div className="flex items-center gap-4 mb-10 p-4 bg-slate-50 rounded-3xl border border-slate-100">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1dbf73] to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
                  <img src={profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.username}`} className="w-full h-full object-cover rounded-2xl" alt="" />
@@ -123,6 +128,7 @@ export function UserDashboardPage() {
                  </div>
               </div>
            </div>
+           )}
 
            {/* Navigation Nodes */}
            <nav className="flex-1 space-y-2">
@@ -153,6 +159,9 @@ export function UserDashboardPage() {
 
         {/* ── Main Content Area ── */}
         <main className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto max-h-screen custom-scrollbar">
+           {loading ? (
+              <DashboardSkeleton />
+           ) : (
            <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -165,9 +174,10 @@ export function UserDashboardPage() {
                 {activeTab === 'orders' && <OrderManifest orders={orders} />}
                 {activeTab === 'wallet' && <WalletDashboard />}
                 {activeTab === 'messages' && <UserMessages />}
-                {activeTab === 'security' && <UserSettings />}
+                {activeTab === 'security' && <UserSettings onNavigate={selectTab} />}
               </motion.div>
            </AnimatePresence>
+           )}
         </main>
 
       </div>
@@ -197,6 +207,9 @@ function OperationalOverview({ profile, orders, setActiveTab }: any) {
              <button onClick={() => setActiveTab('orders')} className="text-[12px] font-black text-[#1dbf73] uppercase tracking-widest flex items-center gap-2">Full Ledger <ArrowRight size={14} /></button>
           </div>
           <div className="space-y-4">
+             {orders.length === 0 && (
+                <p className="text-sm text-slate-400 font-medium py-2">No transactions yet — your orders will appear here after your first purchase.</p>
+             )}
              {orders.slice(0, 3).map((order) => (
                 <div key={order.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-3xl border border-slate-100">
                    <div className="flex items-center gap-4">
@@ -224,8 +237,25 @@ function OrderManifest({ orders }: any) {
     <div className="space-y-8">
        <header>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Procurement History</h1>
-          <p className="text-slate-500 font-medium">Historical record of all successfully initialized digital assets.</p>
+          <p className="text-slate-500 font-medium">Every order you place appears here — open one for its delivery status, credential vault and dispute options.</p>
        </header>
+
+       {orders.length === 0 && (
+          <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 md:p-14 shadow-sm text-center">
+             <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-5">
+                <Package size={28} className="text-slate-300" />
+             </div>
+             <h3 className="text-xl font-black text-slate-900 mb-2">No orders yet</h3>
+             <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-md mx-auto mb-8">
+                When you buy a product, your order appears here. Open an order to follow its delivery,
+                unlock the credentials in its Credential Vault, confirm receipt, or open a dispute —
+                every payment is held in escrow until delivery is confirmed.
+             </p>
+             <Link href="/" className="inline-flex items-center gap-2 px-8 py-4 bg-[#0C2254] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:opacity-90 transition-all">
+                Browse the Store <ArrowRight size={14} />
+             </Link>
+          </div>
+       )}
 
        <div className="space-y-4">
           {orders.map((order: any) => (
@@ -252,6 +282,42 @@ function OrderManifest({ orders }: any) {
                       <Link href={`/order/${order.id}`} className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-[#1dbf73] transition-all flex items-center gap-2">Access <ArrowRight size={16} /></Link>
                    </div>
                 </div>
+             </div>
+          ))}
+       </div>
+    </div>
+  );
+}
+
+/** F-20: skeleton shown in the main area while profile/orders load —
+ *  the shell and sidebar are already on screen, so the page never
+ *  appears blank with only a spinner. */
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-12 animate-pulse" aria-label="Loading dashboard">
+       <div className="space-y-3">
+          <div className="h-10 bg-slate-200 rounded-2xl w-64" />
+          <div className="h-4 bg-slate-200 rounded-full w-96 max-w-full" />
+       </div>
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[0, 1, 2].map((i) => (
+             <div key={i} className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm space-y-3">
+                <div className="w-10 h-10 bg-slate-200 rounded-xl" />
+                <div className="h-3 bg-slate-200 rounded-full w-24" />
+                <div className="h-8 bg-slate-200 rounded-xl w-16" />
+             </div>
+          ))}
+       </div>
+       <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm space-y-4">
+          <div className="h-5 bg-slate-200 rounded-full w-48" />
+          {[0, 1].map((i) => (
+             <div key={i} className="flex items-center gap-4 p-5 bg-slate-50 rounded-3xl border border-slate-100">
+                <div className="w-12 h-12 rounded-xl bg-slate-200 shrink-0" />
+                <div className="flex-1 space-y-2">
+                   <div className="h-3.5 bg-slate-200 rounded-full w-1/3" />
+                   <div className="h-2.5 bg-slate-200 rounded-full w-1/5" />
+                </div>
+                <div className="h-4 bg-slate-200 rounded-full w-14" />
              </div>
           ))}
        </div>

@@ -28,20 +28,20 @@ export default function TermsPage() {
         {
           heading: "3. Orders and payment",
           body: [
-            "An order is created in an unpaid state. Payment options are: (a) manual bKash/Nagad payment to the store number shown at checkout, completed by submitting the Transaction ID and sender number for our verification; (b) store wallet balance; (c) card via Stripe when enabled. An order is only treated as paid after verification (manual or wallet) or a confirmed card payment — an order with no verified payment is never marked as paid.",
-            "Submitting a Transaction ID that is not yours, is fabricated, or does not match the order total may lead to rejection of the payment and suspension of the account.",
+            "An order is created in an unpaid state. Payment options are: (a) card via Stripe — you pay on Stripe's secure checkout page and the order is treated as paid when Stripe confirms the payment; (b) store wallet balance, which settles instantly. Wallet balances are funded by card top-ups and by refunds. An order with no confirmed payment is never marked as paid.",
+            "Attempting to pay with a payment method that is not yours, or otherwise defrauding the payment process, may lead to cancellation of the order and suspension of the account.",
           ],
         },
         {
           heading: "4. Delivery",
           body: [
-            "Delivery is made into the Credential Vault on your order page. When delivery stock is available, assignment is automatic on payment verification; otherwise delivery is manual within a reasonable time. Delivery is deemed made when the credentials are visible in your vault.",
+            "Delivery is made into the Credential Vault on your order page. When delivery stock is available, assignment is automatic on payment confirmation; otherwise delivery is manual within a reasonable time. Delivery is deemed made when the credentials are visible in your vault.",
           ],
         },
         {
           heading: "5. Escrow",
           body: [
-            "Verified payments are held in escrow until the earliest of: your confirmation of receipt; 48 hours after delivery without a dispute; or a dispute resolution. Escrow is a buyer-protection mechanism, not a bank deposit, and wallet balances are store credit denominated in USD.",
+            "Confirmed payments are held in escrow until the earliest of: your confirmation of receipt; 48 hours after delivery without a dispute; or a dispute resolution. Escrow is a buyer-protection mechanism, not a bank deposit, and wallet balances are store credit denominated in USD.",
           ],
         },
         {

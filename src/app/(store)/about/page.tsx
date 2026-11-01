@@ -27,14 +27,14 @@ export default function AboutPage() {
         {
           heading: "How buying works",
           body: [
-            "You place an order, pay (by bKash or Nagad with manual Transaction-ID verification, from your store wallet, or by card when card payments are enabled), and your payment is held in escrow. As soon as payment is verified, delivery happens automatically from stock when an item is available; otherwise we deliver manually. Your credentials appear in the secure Credential Vault on your order page — never in a random email or chat message.",
+            "You place an order, pay by card through Stripe's secure checkout or from your store wallet (which you can top up by card), and your payment is held in escrow. As soon as payment is confirmed, delivery happens automatically from stock when an item is available; otherwise we deliver manually. Your credentials appear in the secure Credential Vault on your order page — never in a random email or chat message.",
             "You then confirm receipt to release the escrow, or open a dispute if anything is wrong. If we do not hear from you, escrow releases automatically 48 hours after delivery.",
           ],
         },
         {
           heading: "Why buyers trust the process",
           body: [
-            "Payments are never marked as verified before they are actually verified. Refunds go to your store wallet with a full ledger trail you can inspect at any time. Ratings and review counts on this site come from real orders and real reviews — we do not publish invented numbers.",
+            "Payments are never marked as paid before they are actually confirmed. Refunds go to your store wallet with a full ledger trail you can inspect at any time. Ratings and review counts on this site come from real orders and real reviews — we do not publish invented numbers.",
           ],
         },
         {

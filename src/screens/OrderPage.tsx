@@ -6,8 +6,8 @@
 //    "Awaiting Payment" — never "Payment Verified".
 //  - The Credential Vault renders ONLY the real credential_* fields the
 //    server wrote at delivery. There are no placeholder credentials.
-//  - Buyers can pay (manual TrxID / wallet), cancel, confirm receipt and
-//    open a dispute from here; every action is a server-side state
+//  - Buyers can pay (card via Stripe / wallet), cancel, confirm receipt
+//    and open a dispute from here; every action is a server-side state
 //    transition via /api/orders/[id].
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -15,7 +15,7 @@ import { orderCode } from "../lib/order-ref";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  ShieldCheck, Zap, CheckCircle, Clock, Package, Eye, EyeOff,
+  ShieldCheck, CreditCard, CheckCircle, Clock, Package, Eye, EyeOff,
   Copy, Check, AlertTriangle, Lock, ArrowLeft, Loader2, Wallet, XCircle, Star
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -59,7 +59,7 @@ function paymentBadge(order: Order): { label: string; cls: string } {
   if (order.status === "Disputed") return { label: "Under Dispute", cls: "bg-red-50 border-red-200 text-red-600" };
   switch (order.payment_status) {
     case "unpaid": return { label: "Awaiting Payment", cls: "bg-amber-50 border-amber-200 text-amber-600" };
-    case "pending_verification": return { label: "Payment Under Verification", cls: "bg-blue-50 border-blue-200 text-blue-600" };
+    case "pending_verification": return { label: "Payment Being Confirmed", cls: "bg-blue-50 border-blue-200 text-blue-600" };
     case "paid": return { label: order.escrow_state === "completed" ? "Paid — Completed" : "Paid — Held in Escrow", cls: "bg-emerald-50 border-emerald-200 text-emerald-600" };
     case "refunded": return { label: "Refunded to Wallet", cls: "bg-violet-50 border-violet-200 text-violet-600" };
     default: return { label: order.status, cls: "bg-slate-50 border-slate-200 text-slate-500" };
@@ -75,9 +75,6 @@ export function OrderPage() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [payConfig, setPayConfig] = useState<any>(null);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [method, setMethod] = useState("bkash");
-  const [trxId, setTrxId] = useState("");
-  const [senderNumber, setSenderNumber] = useState("");
   const [disputeReason, setDisputeReason] = useState("");
   const [showDispute, setShowDispute] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -122,13 +119,30 @@ export function OrderPage() {
 
   useEffect(() => {
     if (order?.payment_status === "unpaid") {
-      fetch("/api/payments/config").then((r) => r.json()).then((j) => {
-        setPayConfig(j);
-        if (!j?.manual?.bkashNumber && j?.manual?.nagadNumber) setMethod("nagad");
-      }).catch(() => {});
+      fetch("/api/payments/config").then((r) => r.json()).then((j) => setPayConfig(j)).catch(() => {});
       fetch("/api/wallet").then((r) => r.json()).then((j) => setWalletBalance(Number(j.wallet?.balance ?? j.balance) || 0)).catch(() => {});
     }
   }, [order?.payment_status]);
+
+  // Card payment for an unpaid order: create a Stripe Checkout session
+  // for THIS order and hand the browser to Stripe (same rail as checkout).
+  async function payByCard() {
+    setBusy("pay_card");
+    try {
+      const res = await fetch("/api/payments/stripe/session", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.url) throw new Error(json.error || "Could not start card payment");
+      window.location.href = json.url;
+    } catch (err: any) {
+      toast.error(err.message);
+      setBusy(null);
+    }
+  }
 
   async function act(action: string, extra: Record<string, unknown> = {}) {
     setBusy(action);
@@ -164,7 +178,6 @@ export function OrderPage() {
   const stepIndex = STATUS_TIMELINE.indexOf(order.status);
   const hasCredentials = !!order.credential_username;
   const isPaid = order.payment_status === "paid";
-  const manualNumber = method === "bkash" ? payConfig?.manual?.bkashNumber : payConfig?.manual?.nagadNumber;
   const canConfirm = isPaid && order.escrow_state === "in_escrow" && (order.status === "Delivering" || order.status === "Completed");
   const canDispute = isPaid && ["PREPARING", "Delivering", "Completed"].includes(order.status);
   const canCancel = order.payment_status === "unpaid" || order.payment_status === "pending_verification" || (isPaid && order.status === "PREPARING");
@@ -227,33 +240,16 @@ export function OrderPage() {
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
               <Clock size={14} className="text-amber-500" /> Complete your payment
             </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {payConfig?.manual?.bkashNumber && (
-                <button onClick={() => setMethod("bkash")} className={`p-3.5 rounded-2xl border text-xs font-bold uppercase tracking-widest transition-all ${method === "bkash" ? "bg-primary-50 border-primary-300 text-primary-700" : "bg-slate-50 border-slate-200 text-slate-500"}`}>bKash</button>
-              )}
-              {payConfig?.manual?.nagadNumber && (
-                <button onClick={() => setMethod("nagad")} className={`p-3.5 rounded-2xl border text-xs font-bold uppercase tracking-widest transition-all ${method === "nagad" ? "bg-primary-50 border-primary-300 text-primary-700" : "bg-slate-50 border-slate-200 text-slate-500"}`}>Nagad</button>
-              )}
-            </div>
-            {manualNumber ? (
-              <>
-                <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                  Send <span className="font-black text-slate-900">${Number(order.total_price).toFixed(2)}</span> to <span className="font-black text-[#0C2254]">{manualNumber}</span>, then submit your Transaction ID:
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <input value={trxId} onChange={(e) => setTrxId(e.target.value.toUpperCase())} placeholder="Transaction ID (TrxID)" className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 transition-all" />
-                  <input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} placeholder="Your sender number" className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 transition-all" />
-                </div>
-                <button
-                  disabled={busy === "submit_payment" || trxId.trim().length < 6 || senderNumber.trim().length < 6}
-                  onClick={() => act("submit_payment", { method, trxId: trxId.trim(), senderNumber: senderNumber.trim() })}
-                  className="w-full py-3.5 bg-[#0C2254] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
-                >
-                  {busy === "submit_payment" ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />} Submit for Verification
-                </button>
-              </>
+            {payConfig?.stripe?.enabled ? (
+              <button
+                disabled={busy === "pay_card"}
+                onClick={payByCard}
+                className="w-full py-3.5 bg-[#0C2254] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {busy === "pay_card" ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />} Pay ${Number(order.total_price).toFixed(2)} by Card
+              </button>
             ) : (
-              <p className="text-xs text-slate-400 font-medium">Manual payment numbers are not published right now — contact support via the chat widget.</p>
+              <p className="text-xs text-slate-400 font-medium">Card payments are being activated for this store — you can pay from your wallet balance below, or contact support via the chat widget for help.</p>
             )}
             {walletBalance !== null && walletBalance >= Number(order.total_price) && (
               <button
@@ -271,8 +267,8 @@ export function OrderPage() {
           <div className="bg-blue-50 border border-blue-200 rounded-[2rem] p-6 flex gap-4">
             <Loader2 size={22} className="text-blue-600 shrink-0 mt-0.5 animate-spin" />
             <div>
-              <h4 className="text-xs font-black text-blue-900 mb-1">Payment under verification</h4>
-              <p className="text-[11px] text-blue-700 leading-relaxed">The store is checking your Transaction ID. Delivery follows automatically once it is approved — this page updates on its own.</p>
+              <h4 className="text-xs font-black text-blue-900 mb-1">Payment being confirmed</h4>
+              <p className="text-[11px] text-blue-700 leading-relaxed">Your payment is being confirmed. Delivery follows automatically once it is confirmed — this page updates on its own.</p>
             </div>
           </div>
         )}
@@ -552,7 +548,7 @@ export function OrderPage() {
             <h4 className="text-xs font-black text-blue-900 mb-1">Escrow Protection</h4>
             <p className="text-[11px] text-blue-700 leading-relaxed">
               {order.payment_status === "unpaid" && "Once you pay, your money is held in escrow — it is only released after delivery and your confirmation (or 48 hours after delivery)."}
-              {order.payment_status === "pending_verification" && "Your payment is being verified. Escrow starts the moment it is approved."}
+              {order.payment_status === "pending_verification" && "Your payment is being confirmed. Escrow starts the moment it is confirmed."}
               {isPaid && order.escrow_state === "in_escrow" && `Your payment is held in escrow${order.escrow_hold_until ? ` until ${new Date(order.escrow_hold_until).toLocaleString()}` : ""}. Confirm receipt to release it early, or open a dispute if something is wrong.`}
               {isPaid && order.escrow_state === "completed" && "This order's escrow has completed — payment released to the store."}
               {order.payment_status === "refunded" && "This order was refunded to your store wallet. Check your dashboard for the credit."}
@@ -571,7 +567,7 @@ export function OrderPage() {
 const ORDER_EVENT_LABELS: Record<string, string> = {
   created: "Order placed",
   payment_submitted: "Payment submitted",
-  payment_verified: "Payment verified — escrow started",
+  payment_verified: "Payment confirmed — escrow started",
   payment_rejected: "Payment rejected",
   delivered: "Delivered",
   completed: "Completed — escrow released",

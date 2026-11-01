@@ -3,7 +3,7 @@
 // and settles orders on checkout.session.completed. Inert without env keys.
 
 import crypto from "node:crypto";
-import { markStripePaid } from "@/src/lib/order-service";
+import { markStripePaid, creditStripeTopup } from "@/src/lib/order-service";
 import { prisma } from "@/src/lib/db";
 
 function verifySignature(payload: string, header: string, secret: string): boolean {
@@ -40,12 +40,20 @@ export async function POST(req: Request) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     if (session.payment_status === "paid") {
-      await markStripePaid(session.id);
-      if (session.payment_intent) {
-        await prisma.order.update({
-          where: { stripeSessionId: session.id },
-          data: { paymentIntentId: String(session.payment_intent) },
-        }).catch(() => undefined);
+      if (session.metadata?.purpose === "topup") {
+        // Wallet top-up by card — credit the wallet (idempotent on the
+        // session id inside creditStripeTopup).
+        const userId = String(session.metadata.user_id || "");
+        const amountUsd = Number(session.amount_total || 0) / 100;
+        if (userId && amountUsd > 0) await creditStripeTopup(userId, amountUsd, session.id);
+      } else {
+        await markStripePaid(session.id);
+        if (session.payment_intent) {
+          await prisma.order.update({
+            where: { stripeSessionId: session.id },
+            data: { paymentIntentId: String(session.payment_intent) },
+          }).catch(() => undefined);
+        }
       }
     }
   }

@@ -576,52 +576,13 @@ export async function payOrderWithWallet(orderId: string, userId: string) {
   });
 }
 
-export async function submitManualPayment(input: {
-  orderId?: string;
-  userId: string;
-  method: string;
-  trxId: string;
-  senderNumber?: string;
-  amount?: number; // top-ups only
-}) {
-  const method = input.method === "nagad" ? "nagad" : "bkash";
-  const trxId = (input.trxId || "").trim();
-  if (trxId.length < 6) throw new ServiceError("Please enter a valid Transaction ID", 422);
-  return withTx(async (tx) => {
-    if (input.orderId) {
-      const order = await tx.order.findUnique({ where: { id: input.orderId } });
-      if (!order) throw new ServiceError("Order not found", 404);
-      if (order.userId !== input.userId) throw new ServiceError("Not your order", 403);
-      if (order.paymentStatus === "paid") throw new ServiceError("Order is already paid", 409);
-      if (order.status === "Canceled" || order.status === "Refunded") throw new ServiceError("Order is closed", 409);
-      const existing = await tx.paymentRequest.findFirst({ where: { orderId: order.id, status: "pending" } });
-      if (existing) throw new ServiceError("A payment for this order is already awaiting verification", 409);
-      const pr = await tx.paymentRequest.create({
-        data: {
-          userId: input.userId,
-          orderId: order.id,
-          purpose: "order",
-          method,
-          amount: order.totalPrice,
-          trxId,
-          senderNumber: input.senderNumber || null,
-        },
-      });
-      await tx.order.update({ where: { id: order.id }, data: { paymentStatus: "pending_verification", paymentMethod: method } });
-      await logOrderEvent(tx, order.id, "buyer", "payment_submitted", `${method} TrxID ${trxId}`);
-      await notifyAdmins(tx, "Payment awaiting verification", `${order.username || "A buyer"} submitted a ${method} payment (TrxID ${trxId}) for order ${orderCode(order.id)}.`, "payment");
-      return pr;
-    }
-    // Wallet top-up
-    const amount = dec(input.amount || 0);
-    if (amount.lte(0)) throw new ServiceError("Enter a top-up amount greater than zero", 422);
-    const pr = await tx.paymentRequest.create({
-      data: { userId: input.userId, purpose: "topup", method, amount, trxId, senderNumber: input.senderNumber || null },
-    });
-    await notifyAdmins(tx, "Wallet top-up awaiting verification", `A ${method} top-up of $${amount.toFixed(2)} (TrxID ${trxId}) was submitted.`, "payment");
-    return pr;
-  });
-}
+// NOTE (R2, owner ruling 2026-11-01): this is an INTERNATIONAL store —
+// card (Stripe) + store wallet only. The old manual mobile-money
+// submission path (submitManualPayment: buyers sending money to a store
+// number and submitting a transaction ID for order payments and wallet
+// top-ups) was removed entirely; the API entry points now refuse it.
+// reviewPaymentRequest below remains ONLY so an admin can still resolve
+// a historical pending request if one exists.
 
 export async function reviewPaymentRequest(prId: string, approve: boolean, adminNote?: string) {
   return withTx(async (tx) => {
@@ -643,15 +604,15 @@ export async function reviewPaymentRequest(prId: string, approve: boolean, admin
           await tx.order.update({ where: { id: order.id }, data: { paymentStatus: "unpaid" } });
           await logOrderEvent(tx, order.id, "admin", "payment_rejected", adminNote || "Payment could not be verified");
           await syncDerivedStock(tx, order.productId);
-          if (order.userId) await notify(tx, order.userId, "Payment not verified", "We could not verify your payment. Please check the Transaction ID and submit again, or contact support.", "payment");
+          if (order.userId) await notify(tx, order.userId, "Payment not verified", "We could not verify your payment. Please contact support for help completing your order.", "payment");
         }
       }
     } else if (pr.purpose === "topup" && pr.userId) {
       if (approve) {
-        await creditWallet(tx, pr.userId, dec(pr.amount), "topup", { method: pr.method, trxId: pr.trxId, note: `Top-up via ${pr.method} (TrxID ${pr.trxId})` });
+        await creditWallet(tx, pr.userId, dec(pr.amount), "topup", { method: pr.method, trxId: pr.trxId, note: "Top-up — verified by the store" });
         await notify(tx, pr.userId, "Wallet topped up", `$${dec(pr.amount).toFixed(2)} was added to your wallet.`, "payment");
       } else {
-        await notify(tx, pr.userId, "Top-up not verified", "We could not verify your top-up payment. Please check the Transaction ID and try again.", "payment");
+        await notify(tx, pr.userId, "Top-up not verified", "We could not verify your top-up payment. Please contact support.", "payment");
       }
     }
     return updated;
@@ -1135,4 +1096,26 @@ export async function markStripePaid(sessionId: string) {
   const order = await prisma.order.findUnique({ where: { stripeSessionId: sessionId } });
   if (!order) throw new ServiceError("No order for this Stripe session", 404);
   return withTx((tx) => markPaidAndDeliver(tx, order.id, "stripe"));
+}
+
+/** Credit a wallet top-up paid by card (Stripe webhook, purpose=topup).
+ *  Idempotent on the Stripe session id: Stripe may deliver the same
+ *  event more than once, and the ledger row keyed by referenceId =
+ *  session id is the guard — a repeat delivery credits nothing. */
+export async function creditStripeTopup(userId: string, amountUsd: number, sessionId: string) {
+  const amount = dec(amountUsd);
+  if (amount.lte(0)) throw new ServiceError("Invalid top-up amount", 422);
+  return withTx(async (tx) => {
+    const existing = await tx.walletTransaction.findFirst({
+      where: { referenceId: sessionId, type: "topup" },
+    });
+    if (existing) return existing;
+    await creditWallet(tx, userId, amount, "topup", {
+      method: "card",
+      note: "Wallet top-up by card",
+      referenceId: sessionId,
+    });
+    await notify(tx, userId, "Wallet topped up", `$${amount.toFixed(2)} was added to your wallet.`, "payment");
+    return tx.walletTransaction.findFirst({ where: { referenceId: sessionId, type: "topup" } });
+  });
 }

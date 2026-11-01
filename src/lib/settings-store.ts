@@ -66,7 +66,7 @@ const DEFAULTS: Record<string, string> = {
   payment_number_bkash: "",
   payment_number_nagad: "",
   payment_instructions:
-    "Send the exact order total to the number shown, then submit your Transaction ID and the number you sent from. An admin verifies every payment by hand before delivery.",
+    "Pay by card on Stripe's secure checkout page, or from your store wallet balance. Card payments are confirmed automatically by Stripe; wallet payments settle instantly.",
   notify_new_order: "true",
   // Storefront CMS — toggles + section order have explicit defaults so the
   // admin UI renders them; CMS *text* keys stay unset by default ("" = the

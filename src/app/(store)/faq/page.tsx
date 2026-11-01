@@ -3,7 +3,7 @@ import { ContentPage } from "@/src/components/ContentPage";
 
 export const metadata: Metadata = {
   title: "Frequently Asked Questions",
-  description: "How buying, payment verification, escrow, delivery, wallet top-ups and disputes work at Account Store One.",
+  description: "How buying, payments, escrow, delivery, wallet top-ups and disputes work at Account Store One.",
 };
 
 export default function FaqPage() {
@@ -21,21 +21,21 @@ export default function FaqPage() {
         {
           heading: "Which payment methods can I use?",
           body: [
-            "bKash and Nagad: send the total to the store number shown at checkout, then submit the Transaction ID and the number you sent from. Our team verifies the Transaction ID manually — your order shows Payment Under Verification until it is approved.",
-            "Store wallet: if your wallet balance covers the total, you can pay instantly from the wallet at checkout or from the order page.",
-            "Card (Stripe): offered at checkout only when card payments are enabled for the store; you will be redirected to Stripe's secure checkout.",
+            "Card: pay by debit or credit card at checkout — you will be redirected to Stripe's secure checkout page, and your order is marked paid as soon as Stripe confirms the payment. We never see or store your card details.",
+            "Store wallet: if your wallet balance covers the total, you can pay instantly from the wallet at checkout or from the order page. Wallet balances come from card top-ups and from refunds.",
+            "This is an international store: all prices and payments are in USD, and we do not accept local mobile-money or bank-transfer payments.",
           ],
         },
         {
-          heading: "How long does verification take?",
+          heading: "How long does payment confirmation take?",
           body: [
-            "Manual Transaction-ID verification is done by a human and is usually completed within a few hours. Wallet payments settle instantly. Your order page updates automatically as soon as the state changes — you do not need to refresh or chase us.",
+            "Card payments are confirmed automatically by Stripe, usually within moments of checkout. Wallet payments settle instantly. Your order page updates automatically as soon as the state changes — you do not need to refresh or chase us.",
           ],
         },
         {
           heading: "When do I get my credentials?",
           body: [
-            "The moment your payment is verified. If the product has delivery stock, the assignment is automatic and the credentials appear in the Credential Vault on your order page. If stock runs out, we deliver manually and the vault fills in the same way. We never send credentials to a different email or over social media.",
+            "The moment your payment is confirmed. If the product has delivery stock, the assignment is automatic and the credentials appear in the Credential Vault on your order page. If stock runs out, we deliver manually and the vault fills in the same way. We never send credentials to a different email or over social media.",
           ],
         },
         {
@@ -53,7 +53,7 @@ export default function FaqPage() {
         {
           heading: "How do wallet top-ups work?",
           body: [
-            "From your dashboard's Wallet tab: choose bKash or Nagad, send the amount to the store number, and submit the Transaction ID. The balance is credited after the same manual verification used for orders. Pending top-ups are listed in the wallet until they are approved or rejected.",
+            "From your dashboard's Wallet tab: enter an amount and pay by card on Stripe's secure checkout page. Your balance is credited as soon as Stripe confirms the payment. Refunds from orders and disputes are also credited to your wallet automatically, and every movement is listed in your wallet ledger.",
           ],
         },
         {

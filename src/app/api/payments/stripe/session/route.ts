@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) {
     return Response.json(
-      { error: "Card payments are not configured on this store yet. Please use bKash/Nagad or your wallet balance." },
+      { error: "Card payments are not configured on this store yet. Please pay from your wallet balance, or contact support." },
       { status: 501 },
     );
   }

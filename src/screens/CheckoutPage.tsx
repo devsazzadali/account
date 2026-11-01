@@ -10,19 +10,16 @@
 //       keys the option is shown as unavailable, never faked.
 //   2b. Wallet rail: balance is debited in the same transaction; the
 //       order is paid immediately and auto-delivery runs.
-//   2c. Manual rail (bKash/Nagad — regional fallback): only listed when
-//       a number is configured. The buyer sends money to the store
-//       number shown here, then submits TrxID + sender number. The order
-//       becomes "pending_verification" until an admin approves it in the
-//       Payment Verification queue — only then is it paid and delivered.
+// This is an international store (owner ruling 2026-11-01): card +
+// wallet ONLY — there is no manual/mobile-money rail.
 // An unpaid order NEVER displays as paid anywhere in the app.
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ShieldCheck, CreditCard, Lock, CheckCircle, Wallet,
-  ArrowLeft, Zap, Shield, AlertCircle, ChevronRight, Loader2,
-  Package, Mail, CheckCheck, Smartphone, Copy, Check
+  ArrowLeft, Shield, AlertCircle, ChevronRight, Loader2,
+  Package, Mail, CheckCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { auth } from "../lib/auth-client";
@@ -43,12 +40,6 @@ interface IntakeField {
 }
 
 interface PaymentConfig {
-  manual: {
-    enabled: boolean;
-    bkashNumber: string | null;
-    nagadNumber: string | null;
-    instructions: string;
-  };
   stripe: { enabled: boolean };
   store_open?: boolean;
 }
@@ -75,11 +66,8 @@ export function CheckoutPage() {
   const [email, setEmail] = useState("");
   const [payConfig, setPayConfig] = useState<PaymentConfig | null>(null);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [trxId, setTrxId] = useState("");
-  const [senderNumber, setSenderNumber] = useState("");
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [paidViaWallet, setPaidViaWallet] = useState(false);
-  const [copied, setCopied] = useState(false);
   // Coupon (P5): applied only after server-side validation.
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
@@ -111,12 +99,9 @@ export function CheckoutPage() {
       if (cfgRes) {
         setPayConfig(cfgRes);
         // Default selection: Stripe (card) first whenever it is enabled;
-        // otherwise the first manual rail that is actually configured;
         // otherwise the store wallet. The selection must always be a
         // method that exists in the rendered list.
         if (cfgRes.stripe?.enabled) setPaymentMethod("stripe");
-        else if (cfgRes.manual?.bkashNumber) setPaymentMethod("bkash");
-        else if (cfgRes.manual?.nagadNumber) setPaymentMethod("nagad");
         else setPaymentMethod("wallet");
       }
       const session = (meRes as any)?.data?.session;
@@ -141,7 +126,6 @@ export function CheckoutPage() {
   const total = Math.max(0, subtotal - discount) + serviceFee;
   const storeClosed = payConfig?.store_open === false;
   const outOfStock = !product || stockCap <= 0 || qty > stockCap || storeClosed;
-  const manualNumber = paymentMethod === "bkash" ? payConfig?.manual.bkashNumber : paymentMethod === "nagad" ? payConfig?.manual.nagadNumber : null;
   const walletSufficient = walletBalance !== null && walletBalance >= total;
   const isService = product?.fulfilment_type === "service";
   const missingIntake = isService
@@ -191,12 +175,7 @@ export function CheckoutPage() {
     if (!email.trim()) { toast.error("Please enter your delivery email"); return; }
     if (storeClosed) { toast.error("The store is temporarily closed and not accepting new orders"); return; }
     if (outOfStock) { toast.error("This product is out of stock"); return; }
-    if ((paymentMethod === "bkash" || paymentMethod === "nagad")) {
-      if (!manualNumber) { toast.error("This payment method is not available right now"); return; }
-      if (trxId.trim().length < 6) { toast.error("Enter the Transaction ID from your payment"); return; }
-      if (senderNumber.trim().length < 6) { toast.error("Enter the number you sent the money from"); return; }
-    }
-    if (paymentMethod === "wallet" && !walletSufficient) { toast.error("Insufficient wallet balance — top up from your dashboard first"); return; }
+    if (paymentMethod === "wallet" && !walletSufficient) { toast.error("Insufficient wallet balance — top up by card from your dashboard first"); return; }
     if (paymentMethod === "stripe" && !payConfig?.stripe.enabled) { toast.error("Card payments are not configured for this store yet"); return; }
 
     setProcessing(true);
@@ -224,9 +203,6 @@ export function CheckoutPage() {
         if (paymentMethod === "wallet") setPaidViaWallet(true);
       }
 
-      if (paymentMethod === "bkash" || paymentMethod === "nagad") {
-        await api(`/api/orders/${orderId}`, { action: "submit_payment", method: paymentMethod, trxId: trxId.trim(), senderNumber: senderNumber.trim() });
-      }
       if (paymentMethod === "stripe") {
         const s = await api("/api/payments/stripe/session", { orderId });
         if (s.url) { window.location.href = s.url; return; }
@@ -242,13 +218,10 @@ export function CheckoutPage() {
   if (loading) return <PageLoader label="Initializing Secure Checkout..." />;
   if (!product) return <div className="p-8 text-center">Product not found.</div>;
 
-  // Stripe-first: card, then wallet, then the manual rails (regional
-  // fallback, listed only when a payment number is configured).
+  // Stripe-first: card, then wallet. International store — no other rails.
   const methods: { id: string; label: string; icon: React.ReactNode; disabled?: boolean; note?: string }[] = [
     { id: "stripe", label: "Card (Stripe)", icon: <CreditCard size={18} />, disabled: !payConfig?.stripe.enabled, note: payConfig?.stripe.enabled ? undefined : "Not configured yet" },
     { id: "wallet", label: "Store Wallet", icon: <Wallet size={18} />, note: walletBalance === null ? "Sign in to use" : `Balance $${walletBalance.toFixed(2)}` },
-    ...(payConfig?.manual.bkashNumber ? [{ id: "bkash", label: "bKash", icon: <Smartphone size={18} /> }] : []),
-    ...(payConfig?.manual.nagadNumber ? [{ id: "nagad", label: "Nagad", icon: <Smartphone size={18} /> }] : []),
   ];
 
   return (
@@ -531,7 +504,7 @@ export function CheckoutPage() {
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all"
                   />
                   <p className="text-[9px] text-slate-400 font-bold mt-3 uppercase tracking-widest flex items-center gap-2">
-                    <AlertCircle size={11} className="text-primary-600" /> Your credentials appear in the secure vault on your order page after payment verification.
+                    <AlertCircle size={11} className="text-primary-600" /> Your credentials appear in the secure vault on your order page after your payment is confirmed.
                   </p>
                 </div>
 
@@ -552,44 +525,6 @@ export function CheckoutPage() {
                       </button>
                     ))}
                   </div>
-
-                  {(paymentMethod === "bkash" || paymentMethod === "nagad") && manualNumber && (
-                    <div className="mt-6 bg-slate-50 border border-slate-200 rounded-3xl p-6 space-y-4">
-                      <p className="text-xs font-bold text-slate-700 leading-relaxed">
-                        1. Send <span className="text-slate-900 font-black">${total.toFixed(2)}</span> via {paymentMethod === "bkash" ? "bKash" : "Nagad"} (Send Money) to:
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl font-black tracking-wider text-[#0C2254] bg-white border border-slate-200 rounded-2xl px-5 py-3">{manualNumber}</span>
-                        <button
-                          onClick={() => { navigator.clipboard.writeText(manualNumber); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-                          className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-500 hover:text-slate-900 transition-all"
-                        >
-                          {copied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                        </button>
-                      </div>
-                      {payConfig?.manual.instructions && (
-                        <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{payConfig.manual.instructions}</p>
-                      )}
-                      <p className="text-xs font-bold text-slate-700">2. Then enter your payment details:</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <input
-                          value={trxId}
-                          onChange={(e) => setTrxId(e.target.value.toUpperCase())}
-                          placeholder="Transaction ID (TrxID)"
-                          className="bg-white border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold tracking-wide focus:outline-none focus:border-primary-500 transition-all"
-                        />
-                        <input
-                          value={senderNumber}
-                          onChange={(e) => setSenderNumber(e.target.value)}
-                          placeholder="Your sender number"
-                          className="bg-white border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold tracking-wide focus:outline-none focus:border-primary-500 transition-all"
-                        />
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
-                        The store verifies every Transaction ID manually. Your order shows "Awaiting Verification" until it is approved — delivery follows automatically.
-                      </p>
-                    </div>
-                  )}
 
                   {paymentMethod === "wallet" && (
                     <div className="mt-6 bg-slate-50 border border-slate-200 rounded-3xl p-6">
@@ -631,7 +566,7 @@ export function CheckoutPage() {
                     onClick={handlePlaceOrder}
                     className="w-full py-5 bg-[#0C2254] text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {processing ? <><Loader2 size={18} className="animate-spin" /> Processing...</> : paymentMethod === "wallet" ? <><Wallet size={18} /> Pay from Wallet</> : paymentMethod === "stripe" ? <><CreditCard size={18} /> Continue to Stripe</> : <><Zap size={18} fill="currentColor" /> Place Order & Submit Payment</>}
+                    {processing ? <><Loader2 size={18} className="animate-spin" /> Processing...</> : paymentMethod === "wallet" ? <><Wallet size={18} /> Pay from Wallet</> : <><CreditCard size={18} /> Continue to Stripe</>}
                   </button>
                   <button onClick={() => setStep(1)} className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-colors">
                     ← Back to Review
@@ -660,7 +595,7 @@ export function CheckoutPage() {
               <p className="text-slate-500 text-sm mb-4 max-w-md">
                 {paidViaWallet
                   ? "Paid from your wallet. Redirecting to your order — your credentials are in the vault."
-                  : "Your payment details were submitted for verification. Once the store confirms your payment, delivery happens automatically. Redirecting to your order…"}
+                  : "Redirecting to your order — you can complete payment there."}
               </p>
               <div className="flex items-center gap-2 text-[10px] font-black text-primary-600 uppercase tracking-widest">
                 <Loader2 size={14} className="animate-spin" /> Redirecting...

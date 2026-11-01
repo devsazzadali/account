@@ -1,8 +1,9 @@
 // AccountStoreOne — single order read + action endpoint.
 // GET  /api/orders/:id → order (owner or admin only), escrow lazily released.
 // POST /api/orders/:id { action, ... } — the ONLY way order state changes:
-//   buyer:  submit_payment | pay_wallet | cancel | confirm_receipt | dispute
+//   buyer:  pay_wallet | cancel | confirm_receipt | dispute
 //           confirm_partial | cancel_remainder
+//           (submit_payment is refused — see the case below)
 //   admin:  verify_payment (via /api/admin/payments) | deliver | complete |
 //           cancel | refund | resolve_dispute | progress | add_proof |
 //           deliver_service | deliver_units | cancel_remainder
@@ -15,7 +16,6 @@ import { orderCode } from "@/src/lib/order-ref";
 import {
   ServiceError,
   maybeReleaseEscrow,
-  submitManualPayment,
   payOrderWithWallet,
   cancelOrder,
   confirmReceipt,
@@ -78,14 +78,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     let result: unknown;
     switch (action) {
       case "submit_payment":
-        result = await submitManualPayment({
-          orderId: id,
-          userId: uid,
-          method: String(body.method || "bkash"),
-          trxId: String(body.trx_id || body.trxId || ""),
-          senderNumber: body.sender_number || body.senderNumber,
-        });
-        break;
+        // R2 (owner ruling 2026-11-01): international store — card +
+        // wallet only. The old manual payment submission (send money to
+        // a store number, submit a transaction ID) is closed; refuse it
+        // explicitly instead of pretending to accept it.
+        throw new ServiceError("Manual payments are not accepted — please pay by card or from your wallet balance.", 410);
       case "pay_wallet":
         result = await payOrderWithWallet(id, uid);
         break;

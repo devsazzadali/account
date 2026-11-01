@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
 import { lsGet, lsSet } from "@/src/lib/storage";
+import { parseMessageBody, isImageAttachment } from "../lib/message-format";
 
 export function LiveSupportWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -135,19 +136,32 @@ export function LiveSupportWidget() {
 
                {messages.map((msg) => {
                  const isAdmin = msg.message === '[ADMIN_INITIATED]';
+                 const parsed = parseMessageBody(isAdmin ? msg.reply : msg.message);
                  return (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, x: isAdmin ? -10 : 10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        key={msg.id} 
+                        key={msg.id}
                         className={`flex ${isAdmin ? 'justify-start' : 'justify-end'}`}
                     >
                        <div className={`max-w-[85%] p-5 rounded-[1.8rem] text-[14px] shadow-sm ${
-                         isAdmin 
-                         ? 'bg-white border border-slate-100 text-slate-700 rounded-tl-sm' 
+                         isAdmin
+                         ? 'bg-white border border-slate-100 text-slate-700 rounded-tl-sm'
                          : 'bg-[#1dbf73] text-white shadow-lg shadow-emerald-500/10 rounded-tr-sm'
                        }`}>
-                          <p className="leading-relaxed font-bold tracking-tight">{isAdmin ? msg.reply : msg.message}</p>
+                          {parsed.text && <p className="leading-relaxed font-bold tracking-tight whitespace-pre-wrap">{parsed.text}</p>}
+                          {parsed.attachment && (
+                            isImageAttachment(parsed.attachment) ? (
+                              <a href={parsed.attachment.url} target="_blank" rel="noreferrer" className="block mt-1">
+                                <img src={parsed.attachment.url} alt={parsed.attachment.name} className="max-w-[200px] max-h-[200px] rounded-xl object-cover border border-black/10" />
+                                <span className="block mt-1.5 text-[11px] font-bold opacity-70 truncate">{parsed.attachment.name}</span>
+                              </a>
+                            ) : (
+                              <a href={parsed.attachment.url} target="_blank" rel="noreferrer" className={`flex items-center gap-2 mt-1 px-3 py-2 rounded-xl text-[12px] font-bold ${isAdmin ? 'bg-slate-50 border border-slate-100 text-slate-700' : 'bg-white/15 text-white'}`}>
+                                <Paperclip size={13} className="shrink-0" /> <span className="truncate">{parsed.attachment.name}</span>
+                              </a>
+                            )
+                          )}
                           <div className={`mt-3 text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${isAdmin ? 'text-slate-300' : 'text-white/40'}`}>
                              {new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                              <div className={`w-1 h-1 rounded-full ${isAdmin ? 'bg-slate-200' : 'bg-white/20'}`} />

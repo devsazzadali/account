@@ -8,7 +8,7 @@ import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
 import { lsGet, lsSet } from "@/src/lib/storage";
 
-export function UserSettings() {
+export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => void } = {}) {
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -23,6 +23,39 @@ export function UserSettings() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  // F-16: the identity badge must tell the truth about verification —
+  // this mirrors the header pill's resend (same auth call, same states).
+  const [verifyState, setVerifyState] = useState<"idle" | "sending" | "sent">("idle");
+
+  const emailVerified = !!user?.email_confirmed_at;
+
+  async function handleResendVerification() {
+    if (!user?.email || verifyState === "sending") return;
+    setVerifyState("sending");
+    const { error } = await auth.sendVerificationEmail(user.email);
+    if (error) {
+      setVerifyState("idle");
+      toast.error(`Verification email could not be sent: ${error.message}`);
+    } else {
+      setVerifyState("sent");
+      toast.success(`Verification email sent to ${user.email} — check your inbox.`);
+    }
+  }
+
+  // F-19: MANAGE CORE goes to the real security controls on this page —
+  // the Rotate Security Keys (password) form above it.
+  function handleManageCore() {
+    const el = document.getElementById("security-keys-form");
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const input = document.getElementById("current-password-input") as HTMLInputElement | null;
+    if (input) setTimeout(() => input.focus({ preventScroll: true }), 350);
+  }
+
+  // F-19: INITIALIZE SECURE WALLET goes to the real Wallet panel.
+  function handleOpenWallet() {
+    if (onNavigate) onNavigate("wallet");
+    else window.location.assign("/dashboard?tab=wallet");
+  }
 
   useEffect(() => {
     fetchUserData();
@@ -223,9 +256,25 @@ export function UserSettings() {
                                     </div>
                                     <div className="text-center md:text-left">
                                         <h3 className="text-3xl font-black text-slate-900 tracking-tight italic mb-1">{fullName || username}</h3>
-                                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.3em] flex items-center justify-center md:justify-start gap-3">
-                                           <ShieldCheck size={14} className="text-[#1dbf73]" /> Verified Identity Node • {user.email}
-                                        </p>
+                                        {emailVerified ? (
+                                          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.3em] flex items-center justify-center md:justify-start gap-3">
+                                             <ShieldCheck size={14} className="text-[#1dbf73]" /> Verified Identity Node • {user.email}
+                                          </p>
+                                        ) : (
+                                          <div className="flex flex-col items-center md:items-start gap-2.5">
+                                            <p className="text-[11px] text-amber-600 font-bold uppercase tracking-[0.3em] flex items-center justify-center md:justify-start gap-3">
+                                               <AlertCircle size={14} className="text-amber-500" /> Email Not Verified • {user.email}
+                                            </p>
+                                            <button
+                                              onClick={handleResendVerification}
+                                              disabled={verifyState === "sending"}
+                                              className="px-4 py-2 bg-amber-50 border border-amber-200 rounded-full text-[10px] font-black text-amber-700 uppercase tracking-widest hover:bg-amber-100 transition-colors disabled:opacity-60 flex items-center gap-2"
+                                            >
+                                              {verifyState === "sending" ? <Loader2 size={12} className="animate-spin" /> : verifyState === "sent" ? <CheckCircle size={12} /> : <Mail size={12} />}
+                                              {verifyState === "sending" ? "Sending…" : verifyState === "sent" ? "Email Sent" : "Resend Verification Email"}
+                                            </button>
+                                          </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -282,14 +331,14 @@ export function UserSettings() {
                             <div className="bg-white border border-slate-200 rounded-[3rem] p-10 md:p-16 shadow-xl space-y-12 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-80 h-80 bg-red-50 rounded-full blur-3xl -mr-40 -mt-40 opacity-30" />
                                 
-                                <div className="space-y-8 relative z-10">
+                                <div className="space-y-8 relative z-10" id="security-keys-form">
                                     <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3">
                                         <Lock size={18} className="text-[#1dbf73]" /> Rotate Security Keys
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Password</label>
-                                            <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-sm focus:border-[#1dbf73] transition-all shadow-inner" placeholder="••••••••" />
+                                            <input id="current-password-input" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-sm focus:border-[#1dbf73] transition-all shadow-inner" placeholder="••••••••" />
                                         </div>
                                         <div>
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">New Access Password</label>
@@ -315,7 +364,7 @@ export function UserSettings() {
                                             <p className="text-[11px] text-white/50 font-bold uppercase tracking-widest mt-1">Multi-Factor Encryption Active</p>
                                         </div>
                                     </div>
-                                    <button className="px-8 py-4 bg-white text-slate-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-emerald-50 transition-all shadow-lg">Manage Core</button>
+                                    <button onClick={handleManageCore} className="px-8 py-4 bg-white text-slate-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-emerald-50 transition-all shadow-lg">Manage Core</button>
                                 </div>
                             </div>
                         </motion.div>
@@ -327,8 +376,8 @@ export function UserSettings() {
                                 <Wallet size={40} className="text-slate-300" />
                             </div>
                             <h3 className="text-2xl font-black text-slate-900 mb-3 italic">Financial Nodes</h3>
-                            <p className="text-slate-500 max-w-sm mx-auto mb-10 font-medium leading-relaxed">Payment encryption is managed via Stripe Secure Node. Your credit data is never cached on local servers.</p>
-                            <button className="px-10 py-5 bg-slate-900 text-white rounded-[2rem] font-black text-[13px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-2xl">Initialize Secure Wallet</button>
+                            <p className="text-slate-500 max-w-sm mx-auto mb-10 font-medium leading-relaxed">Card payments are processed by Stripe — your card data never touches our servers. Your store wallet balance, top-ups and ledger live in the Wallet panel.</p>
+                            <button onClick={handleOpenWallet} className="px-10 py-5 bg-slate-900 text-white rounded-[2rem] font-black text-[13px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-2xl">Open My Wallet</button>
                         </motion.div>
                     )}
 

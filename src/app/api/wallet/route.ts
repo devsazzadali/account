@@ -1,13 +1,15 @@
 // AccountStoreOne — wallet read + top-up submission.
 // GET  /api/wallet → { wallet: { balance }, transactions: [...] } for the user.
-// POST /api/wallet { method, trx_id, sender_number, amount } → creates a
-// pending top-up PaymentRequest; the balance moves only when an admin
-// verifies it (see /api/admin/payments).
+// POST /api/wallet → CLOSED (R2, owner ruling 2026-11-01): this store is
+// international — wallet top-ups are made BY CARD through
+// /api/payments/stripe/topup-session. The old manual top-up submission
+// (send money to a store number, submit a transaction ID, wait for an
+// admin to verify) is refused here with a 410 so no client can still
+// create one.
 
 import { getSessionContext, unauthorized } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 import { serializeRow, serializeRows } from "@/src/lib/serialize";
-import { submitManualPayment, ServiceError } from "@/src/lib/order-service";
 
 export async function GET(req: Request) {
   const ctx = await getSessionContext(req);
@@ -33,21 +35,9 @@ export async function GET(req: Request) {
   });
 }
 
-export async function POST(req: Request) {
-  const ctx = await getSessionContext(req);
-  if (!ctx) return unauthorized();
-  const body = await req.json().catch(() => ({}));
-  try {
-    const pr = await submitManualPayment({
-      userId: ctx.user.id,
-      method: String(body.method || "bkash"),
-      trxId: String(body.trx_id || body.trxId || ""),
-      senderNumber: body.sender_number || body.senderNumber,
-      amount: Number(body.amount || 0),
-    });
-    return Response.json({ ok: true, payment_request: serializeRow(pr as unknown as Record<string, unknown>) }, { status: 201 });
-  } catch (err) {
-    if (err instanceof ServiceError) return Response.json({ error: err.message }, { status: err.status });
-    return Response.json({ error: err instanceof Error ? err.message : "Top-up failed" }, { status: 500 });
-  }
+export async function POST() {
+  return Response.json(
+    { error: "Manual top-ups are closed. Add money to your wallet by card — use the Add Money option on your wallet page." },
+    { status: 410 },
+  );
 }
