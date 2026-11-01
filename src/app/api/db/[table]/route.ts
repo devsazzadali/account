@@ -286,6 +286,29 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
         for (const uname of usernames) {
           await prisma.message.updateMany({ where: { username: uname }, data: { ticketStatus: next } });
         }
+        // Real notifications (R3): a store reply must actually reach the
+        // customer — create a `notifications` row for the thread owner.
+        // Best-effort: a notification failure never fails the reply.
+        if (ctx.isAdmin) {
+          for (const it of items) {
+            const replyText = typeof it.reply === "string" ? it.reply.trim() : "";
+            const uname = it.username as string | undefined;
+            if (!replyText || !uname) continue;
+            try {
+              const owner = await prisma.profile.findUnique({ where: { username: uname }, select: { id: true } });
+              if (owner) {
+                await prisma.notification.create({
+                  data: {
+                    userId: owner.id,
+                    title: "Support replied to you",
+                    message: replyText.length > 140 ? `${replyText.slice(0, 140)}…` : replyText,
+                    type: "support",
+                  },
+                });
+              }
+            } catch { /* notification is best-effort */ }
+          }
+        }
       }
       // Derived stock (P2): new inventory changes the sellable count.
       if (table === "inventory") {

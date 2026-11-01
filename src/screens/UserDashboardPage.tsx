@@ -2,11 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { orderCode } from "../lib/order-ref";
-import { 
-  Package, Clock, CheckCircle2, ChevronRight, MessageSquare, 
-  Settings, ShoppingBag, Loader2, AlertCircle, ShieldAlert,
-  Mail, ExternalLink, ArrowRight, ShieldCheck, Crown,
-  LayoutDashboard, History, MessageCircle, Shield, LogOut, Wallet
+import {
+  Package, ChevronRight, ArrowRight, ShieldCheck,
+  LayoutDashboard, ShoppingBag, MessageCircle, Shield, LogOut, Wallet,
+  Plus, LifeBuoy
 } from "lucide-react";
 import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
@@ -25,6 +24,8 @@ export function UserDashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [ticketState, setTicketState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<DashboardTab>("dashboard"); // dashboard, orders, wallet, messages, security
   const router = useRouter();
@@ -61,10 +62,12 @@ export function UserDashboardPage() {
       return;
     }
     setUser(session.user);
-    
-    const [profileRes, ordersRes] = await Promise.all([
+
+    const [profileRes, ordersRes, walletRes, msgRes] = await Promise.all([
       db.from('profiles').select('*').eq('id', session.user.id).single(),
-      db.from('orders').select('*, products(*)').eq('user_id', session.user.id).order('created_at', { ascending: false })
+      db.from('orders').select('*, products(*)').eq('user_id', session.user.id).order('created_at', { ascending: false }),
+      fetch("/api/wallet", { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      db.from('messages').select('ticket_status').order('created_at', { ascending: false }),
     ]);
 
     if (profileRes.data?.role === 'admin' || profileRes.data?.role === 'moderator') {
@@ -74,6 +77,11 @@ export function UserDashboardPage() {
 
     setProfile(profileRes.data);
     setOrders(ordersRes.data || []);
+    if (walletRes) setWalletBalance(Number(walletRes.wallet?.balance ?? walletRes.balance) || 0);
+    // The thread's ticket state is kept in sync on every row of the
+    // thread, so any row reports the one real state.
+    const rows = (msgRes.data || []) as { ticket_status?: string }[];
+    setTicketState(rows.length > 0 ? (rows[0].ticket_status || "open") : "none");
     setLoading(false);
   }
 
@@ -92,23 +100,25 @@ export function UserDashboardPage() {
   // removed — Neon Auth verification is optional and handled by its own
   // flow; locking every new customer out of the dashboard was a dead end.
 
+  // R3: plain customer language (Z2U/G2G buyer-panel pattern) — the tab
+  // ids are unchanged so every ?tab= deep link keeps working.
   const menuItems = [
-    { id: "dashboard", label: "Operational Hub",      icon: LayoutDashboard },
-    { id: "orders",    label: "Procurement History",  icon: History },
-    { id: "wallet",    label: "Wallet & Spending",    icon: Wallet },
-    { id: "messages",  label: "Communication Desk",  icon: MessageCircle },
-    { id: "security",  label: "Security Node",        icon: Shield },
+    { id: "dashboard", label: "Dashboard",          icon: LayoutDashboard },
+    { id: "orders",    label: "My Orders",          icon: ShoppingBag },
+    { id: "wallet",    label: "Wallet",             icon: Wallet },
+    { id: "messages",  label: "Messages",           icon: MessageCircle },
+    { id: "security",  label: "Account & Security", icon: Shield },
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] font-sans pb-20 md:pb-0">
+    <div className="min-h-screen bg-[#F8F9FB] font-sans pb-20 md:pb-0">
       <div className="max-w-[1440px] mx-auto flex flex-col lg:flex-row min-h-screen">
-        
-        {/* ── Left Sidebar (As per Screenshot) ── */}
-        <aside className="w-full lg:w-[320px] bg-white border-r border-slate-200 p-8 flex flex-col shrink-0">
+
+        {/* ── Left Sidebar ── */}
+        <aside className="w-full lg:w-[300px] bg-white border-b lg:border-b-0 lg:border-r border-slate-200 p-6 lg:p-8 flex flex-col shrink-0">
            {/* User Profile Card */}
            {loading ? (
-              <div className="flex items-center gap-4 mb-10 p-4 bg-slate-50 rounded-3xl border border-slate-100 animate-pulse" aria-label="Loading profile">
+              <div className="flex items-center gap-4 mb-8 p-4 bg-slate-50 rounded-3xl border border-slate-100 animate-pulse" aria-label="Loading profile">
                  <div className="w-14 h-14 rounded-2xl bg-slate-200 shrink-0" />
                  <div className="min-w-0 flex-1 space-y-2">
                     <div className="h-4 bg-slate-200 rounded-full w-3/4" />
@@ -116,49 +126,49 @@ export function UserDashboardPage() {
                  </div>
               </div>
            ) : (
-           <div className="flex items-center gap-4 mb-10 p-4 bg-slate-50 rounded-3xl border border-slate-100">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1dbf73] to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
+           <div className="flex items-center gap-4 mb-8 p-4 bg-slate-50 rounded-3xl border border-slate-100">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0C2254] to-[#1d3f7d] flex items-center justify-center text-white shadow-lg shadow-[#0C2254]/20 shrink-0 overflow-hidden">
                  <img src={profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.username}`} className="w-full h-full object-cover rounded-2xl" alt="" />
               </div>
               <div className="min-w-0">
                  <h4 className="text-[16px] font-black text-slate-900 truncate">{profile?.full_name || profile?.username}</h4>
                  <div className="flex items-center gap-1.5 mt-0.5">
                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Session Active</span>
+                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Signed in</span>
                  </div>
               </div>
            </div>
            )}
 
-           {/* Navigation Nodes */}
-           <nav className="flex-1 space-y-2">
+           {/* Navigation */}
+           <nav className="flex-1 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 -mx-1 px-1">
               {menuItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => selectTab(item.id)}
-                  className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-[14px] font-black uppercase tracking-widest transition-all group ${
-                    activeTab === item.id 
-                    ? "bg-slate-900 text-white shadow-xl shadow-slate-900/20" 
-                    : "text-slate-400 hover:bg-slate-50 hover:text-slate-900"
+                  className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl text-[14px] font-bold transition-all group whitespace-nowrap ${
+                    activeTab === item.id
+                    ? "bg-[#0C2254] text-white shadow-xl shadow-[#0C2254]/20"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                   }`}
                 >
-                   <item.icon size={20} className={activeTab === item.id ? "text-[#1dbf73]" : "group-hover:text-slate-900"} />
+                   <item.icon size={20} className={activeTab === item.id ? "text-[#F4751F]" : "group-hover:text-slate-900"} />
                    {item.label}
-                   {activeTab === item.id && <ChevronRight size={16} className="ml-auto text-white/50" />}
+                   {activeTab === item.id && <ChevronRight size={16} className="ml-auto text-white/50 hidden lg:block" />}
                 </button>
               ))}
            </nav>
 
            {/* Footer Actions */}
-           <div className="mt-auto pt-8 border-t border-slate-100">
-              <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-[14px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 transition-all">
+           <div className="mt-4 lg:mt-auto pt-6 border-t border-slate-100">
+              <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl text-[14px] font-bold text-red-500 hover:bg-red-50 transition-all">
                  <LogOut size={20} /> Sign Out
               </button>
            </div>
         </aside>
 
         {/* ── Main Content Area ── */}
-        <main className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto max-h-screen custom-scrollbar">
+        <main className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto lg:max-h-screen custom-scrollbar min-w-0">
            {loading ? (
               <DashboardSkeleton />
            ) : (
@@ -170,7 +180,16 @@ export function UserDashboardPage() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.2 }}
               >
-                {activeTab === 'dashboard' && <OperationalOverview profile={profile} orders={orders} setActiveTab={selectTab} />}
+                {activeTab === 'dashboard' && (
+                  <DashboardHome
+                    profile={profile}
+                    user={user}
+                    orders={orders}
+                    walletBalance={walletBalance}
+                    ticketState={ticketState}
+                    setActiveTab={selectTab}
+                  />
+                )}
                 {activeTab === 'orders' && <OrderManifest orders={orders} />}
                 {activeTab === 'wallet' && <WalletDashboard />}
                 {activeTab === 'messages' && <UserMessages />}
@@ -185,49 +204,156 @@ export function UserDashboardPage() {
   );
 }
 
-function OperationalOverview({ profile, orders, setActiveTab }: any) {
+function paymentLabel(p?: string) {
+  return p === 'paid' ? 'Paid' : p === 'pending_verification' ? 'Verifying payment' : p === 'refunded' ? 'Refunded' : 'Awaiting payment';
+}
+
+function statusChipClass(status?: string) {
+  switch (status) {
+    case 'Completed': return 'bg-emerald-50 text-emerald-600';
+    case 'Delivering': return 'bg-blue-50 text-blue-600';
+    case 'Disputed': return 'bg-red-50 text-red-600';
+    case 'Canceled': case 'Refunded': return 'bg-slate-100 text-slate-500';
+    default: return 'bg-amber-50 text-amber-600';
+  }
+}
+
+function DashboardHome({ profile, user, orders, walletBalance, ticketState, setActiveTab }: any) {
+  const displayName = profile?.full_name || profile?.username || "there";
+  const inProgress = orders.filter((o: any) => !['Completed', 'Canceled', 'Refunded'].includes(o.status)).length;
+  const emailVerified = !!user?.email_confirmed_at;
+
+  const ticket = ticketState === "awaiting_reply"
+    ? { value: "Support replied", sub: "Waiting for your reply" }
+    : ticketState === "open"
+      ? { value: "Ticket open", sub: "Support will reply soon" }
+      : ticketState === "closed"
+        ? { value: "Closed", sub: "Your last ticket is resolved" }
+        : { value: "No tickets", sub: "Start a conversation any time" };
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
        <header>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Operational Overview</h1>
-          <p className="text-slate-500 font-medium italic">{`Welcome back, Agent `}<span className="text-[#1dbf73]">{profile?.full_name || profile?.username}</span>{`. Neural link stable.`}</p>
+          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">{`Welcome back, ${displayName}`}</h1>
+          <p className="text-slate-500 font-medium">Here&rsquo;s what&rsquo;s happening with your orders, wallet and messages.</p>
        </header>
 
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatNode label="Total Procurements" value={orders.length} icon={<Package size={24} />} color="text-slate-900" />
-          <StatNode label="Active Sessions" value={orders.filter((o:any) => o.status !== 'Completed').length} icon={<Clock size={24} />} color="text-[#1dbf73]" />
-          <StatNode label="Security Tier" value={profile?.is_premium ? "ELITE" : "BASIC"} icon={<Crown size={24} />} color="text-amber-500" />
+       {/* Summary cards */}
+       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+          <SummaryCard
+            icon={<Wallet size={22} />}
+            label="Wallet Balance"
+            value={walletBalance === null ? "—" : `$${walletBalance.toFixed(2)}`}
+            sub="Available to spend on any order"
+            actionLabel="Add Money"
+            actionIcon={<Plus size={14} />}
+            onAction={() => setActiveTab('wallet')}
+          />
+          <SummaryCard
+            icon={<ShoppingBag size={22} />}
+            label="My Orders"
+            value={String(orders.length)}
+            sub={orders.length === 0 ? "No orders yet" : inProgress > 0 ? `${inProgress} in progress` : "All settled"}
+            actionLabel="View Orders"
+            onAction={() => setActiveTab('orders')}
+          />
+          <SummaryCard
+            icon={<MessageCircle size={22} />}
+            label="Messages"
+            value={ticket.value}
+            valueSmall
+            sub={ticket.sub}
+            actionLabel="Open Messages"
+            onAction={() => setActiveTab('messages')}
+          />
+          <SummaryCard
+            icon={<ShieldCheck size={22} />}
+            label="Account"
+            value={profile?.is_premium ? "Premium" : "Standard"}
+            valueSmall
+            sub={emailVerified ? "Email verified" : "Email not verified"}
+            actionLabel="Account Settings"
+            onAction={() => setActiveTab('security')}
+          />
        </div>
 
        <AnnouncementsCard />
 
-       <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-             <h3 className="text-xl font-black text-slate-900">Recent Transactions</h3>
-             <button onClick={() => setActiveTab('orders')} className="text-[12px] font-black text-[#1dbf73] uppercase tracking-widest flex items-center gap-2">Full Ledger <ArrowRight size={14} /></button>
+       {/* Recent orders */}
+       <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 md:p-8 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+             <h3 className="text-xl font-black text-slate-900">Recent Orders</h3>
+             <button onClick={() => setActiveTab('orders')} className="text-[12px] font-black text-[#F4751F] uppercase tracking-widest flex items-center gap-2 hover:underline">View All <ArrowRight size={14} /></button>
           </div>
-          <div className="space-y-4">
-             {orders.length === 0 && (
-                <p className="text-sm text-slate-400 font-medium py-2">No transactions yet — your orders will appear here after your first purchase.</p>
-             )}
-             {orders.slice(0, 3).map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-3xl border border-slate-100">
-                   <div className="flex items-center gap-4">
+          {orders.length === 0 ? (
+             <div className="text-center py-6">
+                <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-4">
+                   <Package size={24} className="text-slate-300" />
+                </div>
+                <h4 className="text-[16px] font-black text-slate-900 mb-1.5">No orders yet</h4>
+                <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-md mx-auto mb-6">
+                   When you buy a product, your order appears here. Open an order to follow its delivery,
+                   unlock the credentials in its Credential Vault, confirm receipt, or open a dispute —
+                   every payment is held in escrow until delivery is confirmed.
+                </p>
+                <Link href="/" className="inline-flex items-center gap-2 px-7 py-3.5 bg-[#0C2254] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:opacity-90 transition-all">
+                   Browse the Store <ArrowRight size={14} />
+                </Link>
+             </div>
+          ) : (
+          <div className="space-y-3">
+             {orders.slice(0, 4).map((order: any) => (
+                <Link key={order.id} href={`/order/${order.id}`} className="flex items-center justify-between gap-4 p-4 sm:p-5 bg-slate-50 rounded-3xl border border-slate-100 hover:border-[#0C2254]/30 transition-all">
+                   <div className="flex items-center gap-4 min-w-0">
                       <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 overflow-hidden shrink-0"><img src={order.products?.image} className="w-full h-full object-cover" alt="" /></div>
-                      <div>
-                         <div className="text-[14px] font-black text-slate-900">{order.products?.title}</div>
-                         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">#{orderCode(order.id)}</div>
+                      <div className="min-w-0">
+                         <div className="text-[14px] font-black text-slate-900 truncate">{order.products?.title}</div>
+                         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">#{orderCode(order.id)} · {new Date(order.created_at).toLocaleDateString()}</div>
                       </div>
                    </div>
-                   <div className="text-right">
+                   <div className="text-right shrink-0">
                       <div className="text-[14px] font-black text-slate-900">${Number(order.total_price).toFixed(2)}</div>
-                      <div className={`text-[9px] font-black uppercase tracking-widest ${order.status === 'Completed' ? 'text-emerald-500' : 'text-amber-500'}`}>{order.status}</div>
-                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">{order.payment_status === 'paid' ? 'Paid' : order.payment_status === 'pending_verification' ? 'Verifying' : order.payment_status === 'refunded' ? 'Refunded' : 'Unpaid'}</div>
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest mt-1 ${statusChipClass(order.status)}`}>{order.status}</span>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{paymentLabel(order.payment_status)}</div>
                    </div>
-                </div>
+                </Link>
              ))}
           </div>
+          )}
        </div>
+
+       {/* Support card */}
+       <div className="bg-[#0C2254] rounded-[2.5rem] p-6 md:p-8 shadow-sm text-white flex flex-col md:flex-row md:items-center gap-6">
+          <div className="flex items-start gap-4 flex-1">
+             <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
+                <LifeBuoy size={24} className="text-[#F4751F]" />
+             </div>
+             <div>
+                <h3 className="text-xl font-black mb-1">Need help?</h3>
+                <p className="text-sm text-white/70 font-medium leading-relaxed">
+                   Our support team is available 24/7 and usually replies within about an hour.
+                   Send us a message and we&rsquo;ll take care of it — your conversation lives in Messages.
+                </p>
+             </div>
+          </div>
+          <button onClick={() => setActiveTab('messages')} className="px-7 py-3.5 bg-[#F4751F] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:opacity-90 transition-all shrink-0">
+             Message Support
+          </button>
+       </div>
+    </div>
+  );
+}
+
+function SummaryCard({ icon, label, value, sub, actionLabel, actionIcon, onAction, valueSmall }: any) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm flex flex-col">
+       <div className="w-11 h-11 rounded-xl bg-[#0C2254]/5 text-[#0C2254] flex items-center justify-center mb-4">{icon}</div>
+       <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</div>
+       <div className={`${valueSmall ? "text-[22px]" : "text-3xl"} font-black text-slate-900 leading-tight`}>{value}</div>
+       <div className="text-[12px] text-slate-400 font-medium mt-1 flex-1">{sub}</div>
+       <button onClick={onAction} className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-black text-[#F4751F] uppercase tracking-widest hover:underline self-start">
+          {actionIcon}{actionLabel}<ArrowRight size={13} />
+       </button>
     </div>
   );
 }
@@ -236,7 +362,7 @@ function OrderManifest({ orders }: any) {
   return (
     <div className="space-y-8">
        <header>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Procurement History</h1>
+          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">My Orders</h1>
           <p className="text-slate-500 font-medium">Every order you place appears here — open one for its delivery status, credential vault and dispute options.</p>
        </header>
 
@@ -259,7 +385,7 @@ function OrderManifest({ orders }: any) {
 
        <div className="space-y-4">
           {orders.map((order: any) => (
-             <div key={order.id} className="bg-white border border-slate-200 rounded-[2.5rem] p-6 shadow-sm hover:border-[#1dbf73]/50 transition-all group">
+             <div key={order.id} className="bg-white border border-slate-200 rounded-[2.5rem] p-6 shadow-sm hover:border-[#0C2254]/30 transition-all group">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                    <div className="flex items-center gap-6">
                       <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
@@ -269,7 +395,7 @@ function OrderManifest({ orders }: any) {
                          <h4 className="text-lg font-black text-slate-900">{order.products?.title}</h4>
                          <div className="flex items-center gap-3 mt-1">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: #{orderCode(order.id)}</span>
-                            <span className={`px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${order.status === 'Completed' ? 'bg-emerald-50 text-emerald-500' : 'bg-amber-50 text-amber-500'}`}>{order.status}</span>
+                            <span className={`px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${statusChipClass(order.status)}`}>{order.status}</span>
                          </div>
                       </div>
                    </div>
@@ -277,9 +403,9 @@ function OrderManifest({ orders }: any) {
                       <div className="text-right">
                          <div className="text-[18px] font-black text-slate-900">${Number(order.total_price).toFixed(2)}</div>
                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date(order.created_at).toLocaleDateString()}</div>
-                         <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">{order.payment_status === 'paid' ? 'Paid' : order.payment_status === 'pending_verification' ? 'Verifying payment' : order.payment_status === 'refunded' ? 'Refunded' : 'Awaiting payment'}</div>
+                         <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">{paymentLabel(order.payment_status)}</div>
                       </div>
-                      <Link href={`/order/${order.id}`} className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-[#1dbf73] transition-all flex items-center gap-2">Access <ArrowRight size={16} /></Link>
+                      <Link href={`/order/${order.id}`} className="px-6 py-3 bg-[#0C2254] text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-[#F4751F] transition-all flex items-center gap-2">View Order <ArrowRight size={16} /></Link>
                    </div>
                 </div>
              </div>
@@ -294,21 +420,21 @@ function OrderManifest({ orders }: any) {
  *  appears blank with only a spinner. */
 function DashboardSkeleton() {
   return (
-    <div className="space-y-12 animate-pulse" aria-label="Loading dashboard">
+    <div className="space-y-8 animate-pulse" aria-label="Loading dashboard">
        <div className="space-y-3">
           <div className="h-10 bg-slate-200 rounded-2xl w-64" />
           <div className="h-4 bg-slate-200 rounded-full w-96 max-w-full" />
        </div>
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[0, 1, 2].map((i) => (
-             <div key={i} className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm space-y-3">
-                <div className="w-10 h-10 bg-slate-200 rounded-xl" />
+       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+          {[0, 1, 2, 3].map((i) => (
+             <div key={i} className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm space-y-3">
+                <div className="w-11 h-11 bg-slate-200 rounded-xl" />
                 <div className="h-3 bg-slate-200 rounded-full w-24" />
                 <div className="h-8 bg-slate-200 rounded-xl w-16" />
              </div>
           ))}
        </div>
-       <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm space-y-4">
+       <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm space-y-4">
           <div className="h-5 bg-slate-200 rounded-full w-48" />
           {[0, 1].map((i) => (
              <div key={i} className="flex items-center gap-4 p-5 bg-slate-50 rounded-3xl border border-slate-100">
@@ -325,16 +451,6 @@ function DashboardSkeleton() {
   );
 }
 
-function StatNode({ label, value, icon, color }: any) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
-       <div className={`${color} mb-4`}>{icon}</div>
-       <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</div>
-       <div className={`text-3xl font-black ${color}`}>{value}</div>
-    </div>
-  );
-}
-
 
 /** Store announcements (P4 broadcast) — renders nothing when empty. */
 function AnnouncementsCard() {
@@ -347,7 +463,7 @@ function AnnouncementsCard() {
   }, []);
   if (items.length === 0) return null;
   return (
-    <div className="bg-[#0C2254] rounded-[3rem] p-10 shadow-sm text-white">
+    <div className="bg-[#0C2254] rounded-[2.5rem] p-8 shadow-sm text-white">
       <h3 className="text-xl font-black mb-6">Store Announcements</h3>
       <div className="space-y-5">
         {items.map((a) => (

@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
 import { SellerTrustCard, StockIntelligence, DeliveryTimeline, TrustBadges } from "../components/ProductTrustSystem";
+import { deliveryInfo } from "../lib/fulfilment";
 import { StoreClosedBanner } from "../components/StoreClosedBanner";
 import { PageLoader } from "../components/SkeletonUI";
 
@@ -118,6 +119,8 @@ export function ProductDetailsPage({
   const unitPrice = (product?.price || 0) + (activeVariant ? Number(activeVariant.priceDelta) || 0 : 0);
   const minQty = Math.max(1, product?.minQuantity || 1);
   const fulfilment = product?.fulfilmentType || product?.fulfilment_type || "manual";
+  // F-27: every delivery claim on this page derives from this one value.
+  const dInfo = deliveryInfo(fulfilment);
   const warrantyDays = product?.warrantyDays ?? product?.warranty_days ?? null;
   const stockCap = activeVariant && activeVariant.stock != null ? Number(activeVariant.stock) : (product?.stock || 0);
   const qty = Math.min(Math.max(quantity, minQty), Math.max(stockCap, minQty));
@@ -171,12 +174,12 @@ export function ProductDetailsPage({
 
               <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-auto flex flex-wrap items-center gap-2 sm:gap-3">
                  <div className="bg-white/90 backdrop-blur-md border border-slate-200 rounded-2xl px-4 py-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-900 shadow-sm">
-                    <Zap size={14} className="text-primary-600 fill-current" />
-                    Instant Clearance
+                    {dInfo.type === "instant" ? <Zap size={14} className="text-primary-600 fill-current" /> : <Clock size={14} className="text-amber-600" />}
+                    {dInfo.label}
                  </div>
                  <div className="bg-white/90 backdrop-blur-md border border-slate-200 rounded-2xl px-4 py-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-900 shadow-sm">
                     <ShieldCheck size={14} className="text-blue-600" />
-                    TitanGuard Secured
+                    Escrow Protected
                  </div>
               </div>
             </motion.div>
@@ -243,10 +246,10 @@ export function ProductDetailsPage({
                         {activeTab === "delivery" && (
                             <div className="p-8 bg-primary-50 rounded-3xl border border-primary-100">
                                 <h4 className="text-slate-900 font-bold mb-4 flex items-center gap-2">
-                                    <Zap size={18} className="text-primary-600" />
-                                    Automated Transmission
+                                    {dInfo.type === "instant" ? <Zap size={18} className="text-primary-600" /> : <Clock size={18} className="text-amber-600" />}
+                                    {dInfo.tabTitle}
                                 </h4>
-                                <p className="text-slate-600">As soon as your payment is verified, the credentials appear in the Credential Vault on your order page. When the item is in stock delivery is automatic; otherwise the store delivers manually. Your payment stays held in escrow until you confirm receipt — open a dispute from the order page if anything is wrong.</p>
+                                <p className="text-slate-600">{dInfo.tabCopy}</p>
                             </div>
                         )}
                         {activeTab === "warranty" && (
@@ -336,11 +339,11 @@ export function ProductDetailsPage({
                     {/* Fulfilment type + warranty (fulfilment types build) */}
                     <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-slate-500">
                         {fulfilment === "instant" ? (
-                            <><Zap size={13} className="text-primary-600" /> Instant delivery — credentials arrive automatically right after payment is verified</>
+                            <><Zap size={13} className="text-primary-600" /> {dInfo.line}</>
                         ) : fulfilment === "service" ? (
-                            <><MessageSquare size={13} className="text-primary-600" /> Service — details required at checkout; the store performs the work and posts progress + proof on your order</>
+                            <><MessageSquare size={13} className="text-primary-600" /> {dInfo.line}</>
                         ) : (
-                            <><Clock size={13} className="text-primary-600" /> Manual delivery — the store sends your credentials after payment is verified</>
+                            <><Clock size={13} className="text-primary-600" /> {dInfo.line}</>
                         )}
                     </p>
                     {warrantyDays ? (
@@ -422,12 +425,12 @@ export function ProductDetailsPage({
                 </div>
 
                 {/* Trust Badges */}
-                <TrustBadges />
+                <TrustBadges fulfilmentType={fulfilment} />
               </div>
             </div>
 
             {/* Delivery Timeline */}
-            <DeliveryTimeline />
+            <DeliveryTimeline fulfilmentType={fulfilment} />
 
             {/* Seller Trust Card */}
             <SellerTrustCard />

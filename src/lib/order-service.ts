@@ -552,6 +552,7 @@ export async function createOrder(input: {
     await logOrderEvent(tx, order.id, "buyer", "created", `Order placed × ${qty}${variant ? ` · ${variant.label}` : ""}${couponCode ? ` · coupon ${couponCode}` : ""}${isService ? " · service intake received" : ""}`);
     await queueOrderReceived(tx, order);
     await queueAdminNewOrder(tx, order);
+    await notify(tx, input.userId, "Order placed", `Your order ${orderCode(order.id)} for ${product.title} × ${qty} was placed — complete payment to start delivery.`, "order");
     await notifyAdmins(tx, "New order", `${input.username} ordered ${product.title} × ${qty} ($${total.toFixed(2)}) — awaiting payment.`, "order");
     return order;
   });
@@ -686,6 +687,9 @@ export async function cancelOrder(orderId: string, actor: { userId: string; isAd
     await syncDerivedStock(tx, order.productId);
     await logOrderEvent(tx, order.id, actor.isAdmin ? "admin" : "buyer", "canceled", "Unpaid order canceled; reserved stock restored");
     await queueOrderCancelled(tx, updated);
+    if (order.userId) {
+      await notify(tx, order.userId, "Order cancelled", `Your order ${orderCode(order.id)} was cancelled before payment. No charge was made.`, "order");
+    }
     return updated;
   });
 }
@@ -1087,6 +1091,20 @@ export async function maybeReleaseEscrow<T extends { id: string; status: string;
       .create({ data: { orderId: order.id, actor: "system", event: "completed", detail: "Escrow hold lapsed after delivery — auto-completed" } })
       .catch(() => {});
     await queueCompletedOnRead(updated);
+    // The lazy release completes the order on a read — the buyer still
+    // gets the same "Order completed" notification as a manual confirm.
+    if (updated.userId) {
+      await prisma.notification
+        .create({
+          data: {
+            userId: updated.userId,
+            title: "Order completed",
+            message: "Your order is complete. Escrow funds have been released.",
+            type: "order",
+          },
+        })
+        .catch(() => {});
+    }
     return updated as unknown as T;
   }
   return order;

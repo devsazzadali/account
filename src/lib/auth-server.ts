@@ -71,6 +71,20 @@ export async function ensureProfile(user: AuthUser) {
     update: {},
     create: { userId: user.id, balance: 0 },
   });
+  // One-time welcome notification (R3) — this create branch runs exactly
+  // once per account, so the welcome can never repeat. Best-effort: it
+  // must never break sign-in.
+  await prisma.notification
+    .create({
+      data: {
+        userId: user.id,
+        title: "Welcome to Account Store One",
+        message:
+          "Your account is ready. Pay by card or from your wallet, track every order from your dashboard, and message support any time — every payment is held in escrow until you confirm delivery.",
+        type: "support",
+      },
+    })
+    .catch(() => {});
   return profile;
 }
 

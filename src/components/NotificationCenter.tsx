@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, X, ShoppingBag, CreditCard, AlertTriangle, Package, CheckCircle } from "lucide-react";
+import { Bell, X, ShoppingBag, CreditCard, AlertTriangle, Package, CheckCircle, MessageSquare } from "lucide-react";
 import type { AppNotification } from "../lib/useRealtimeNotifications";
 import Link from "next/link";
 
@@ -11,6 +11,7 @@ const iconMap = {
   payment:  { icon: CreditCard,    color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
   alert:    { icon: AlertTriangle, color: "text-amber-600",   bg: "bg-amber-50",   border: "border-amber-100" },
   delivery: { icon: Package,       color: "text-primary-600", bg: "bg-primary-50", border: "border-primary-100" },
+  support:  { icon: MessageSquare, color: "text-blue-600",    bg: "bg-blue-50",    border: "border-blue-100" },
 };
 
 interface Props {

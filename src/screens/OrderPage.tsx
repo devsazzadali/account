@@ -268,7 +268,13 @@ export function OrderPage() {
             <Loader2 size={22} className="text-blue-600 shrink-0 mt-0.5 animate-spin" />
             <div>
               <h4 className="text-xs font-black text-blue-900 mb-1">Payment being confirmed</h4>
-              <p className="text-[11px] text-blue-700 leading-relaxed">Your payment is being confirmed. Delivery follows automatically once it is confirmed — this page updates on its own.</p>
+              <p className="text-[11px] text-blue-700 leading-relaxed">
+                {order.products?.fulfilment_type === "instant"
+                  ? "Your payment is being confirmed. Delivery follows automatically once it is confirmed — this page updates on its own."
+                  : order.products?.fulfilment_type === "service"
+                    ? "Your payment is being confirmed. Once it is confirmed, the store starts the work and posts progress on this page."
+                    : "Your payment is being confirmed. Once it is confirmed, the store prepares and delivers your credentials — this page updates on its own."}
+              </p>
             </div>
           </div>
         )}

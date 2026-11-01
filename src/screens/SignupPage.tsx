@@ -113,8 +113,8 @@ export function SignupPage() {
                 <div className="space-y-6">
                     {[
                         { title: "Global Marketplace", desc: "Access accounts from sellers worldwide." },
-                        { title: "Titan™ Protection", desc: "Your transactions are shielded by our elite security." },
-                        { title: "Instant Access", desc: "Get your digital assets delivered in seconds." }
+                        { title: "Buyer Protection", desc: "Every payment is held in escrow until you confirm delivery." },
+                        { title: "Delivered to Your Vault", desc: "Your credentials appear on your order page as soon as delivery is ready." }
                     ].map((item, i) => (
                         <div key={i} className="flex items-start gap-4">
                             <div className="mt-1 p-1 bg-primary-500/20 rounded-full border border-primary-500/30">

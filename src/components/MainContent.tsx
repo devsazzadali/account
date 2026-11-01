@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award, Plus, Minus, AlertCircle, ShieldCheck, Check } from "lucide-react";
+import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award, Plus, Minus, AlertCircle, ShieldCheck, Check, Briefcase } from "lucide-react";
+import { deliveryInfo } from "../lib/fulfilment";
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -54,13 +55,37 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
             <h3 className="text-sm font-display font-semibold text-slate-900 line-clamp-2 mb-3 group-hover:text-primary-600 transition-colors leading-relaxed" title={item.title}>
               {item.title}
             </h3>
+            {/* F-27: delivery badges derive from the product's REAL
+                fulfilmentType — a manual/service product is never
+                labelled "Instant"/"Auto" (and vice versa). */}
             <div className="flex flex-wrap items-center gap-2 mb-3">
-               <span className="flex items-center gap-1 text-[10px] text-primary-700 bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100">
-                 <Zap className="w-3 h-3 text-primary-500 fill-current" /> Instant
-               </span>
-               <span className="flex items-center gap-1 text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                 <Clock className="w-3 h-3 text-blue-500" /> Auto
-               </span>
+              {(() => {
+                const d = deliveryInfo(item.fulfilmentType);
+                if (d.type === "instant") {
+                  return (
+                    <>
+                      <span className="flex items-center gap-1 text-[10px] text-primary-700 bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100">
+                        <Zap className="w-3 h-3 text-primary-500 fill-current" /> Instant
+                      </span>
+                      <span className="flex items-center gap-1 text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                        <Clock className="w-3 h-3 text-blue-500" /> Auto
+                      </span>
+                    </>
+                  );
+                }
+                if (d.type === "service") {
+                  return (
+                    <span className="flex items-center gap-1 text-[10px] text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-100">
+                      <Briefcase className="w-3 h-3 text-violet-500" /> Service
+                    </span>
+                  );
+                }
+                return (
+                  <span className="flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
+                    <Clock className="w-3 h-3 text-amber-500" /> Manual
+                  </span>
+                );
+              })()}
             </div>
           </div>
           

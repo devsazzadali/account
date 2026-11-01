@@ -8,7 +8,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { db } from "./dbclient";
 
-export type NotificationType = "order" | "payment" | "alert" | "delivery";
+export type NotificationType = "order" | "payment" | "alert" | "delivery" | "support";
 
 export interface AppNotification {
   id: string;
@@ -23,7 +23,7 @@ export interface AppNotification {
 function mapRow(r: any): AppNotification {
   return {
     id: r.id,
-    type: (["order", "payment", "alert", "delivery"].includes(r.type) ? r.type : "order") as NotificationType,
+    type: (["order", "payment", "alert", "delivery", "support"].includes(r.type) ? r.type : "order") as NotificationType,
     title: r.title,
     message: r.message,
     read: !!r.is_read,

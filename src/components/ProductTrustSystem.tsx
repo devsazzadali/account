@@ -3,6 +3,7 @@
 import React from "react";
 import { ShieldCheck, Star, Zap, TrendingUp, Award, BadgeCheck, AlertTriangle, Clock } from "lucide-react";
 import { motion } from "framer-motion";
+import { deliveryInfo } from "../lib/fulfilment";
 
 // ── Store Trust Card ───────────────────────────────────────────
 // Real aggregates from /api/store/stats only. (The previous version
@@ -140,11 +141,15 @@ export function StockIntelligence({ stock, totalCapacity = 100 }: StockProps) {
 }
 
 // ── Delivery Timeline ──────────────────────────────────────────
-export function DeliveryTimeline() {
+// F-27: the steps derive from the product's real fulfilmentType —
+// a manual product's timeline never promises auto assignment.
+export function DeliveryTimeline({ fulfilmentType }: { fulfilmentType?: string | null } = {}) {
+  const info = deliveryInfo(fulfilmentType);
+  const midIcon = info.type === "instant" ? <Zap size={16} /> : <Clock size={16} />;
   const steps = [
-    { icon: <ShieldCheck size={16} />, label: "Payment Verified",  sub: "Manual check" },
-    { icon: <Zap size={16} />,         label: "Auto Assignment",   sub: "When in stock" },
-    { icon: <BadgeCheck size={16} />,  label: "Credentials Ready", sub: "In your vault" },
+    { icon: <ShieldCheck size={16} />, label: info.steps[0].label, sub: info.steps[0].sub },
+    { icon: midIcon,                   label: info.steps[1].label, sub: info.steps[1].sub },
+    { icon: <BadgeCheck size={16} />,  label: info.steps[2].label, sub: info.steps[2].sub },
   ];
 
   return (
@@ -178,10 +183,11 @@ export function DeliveryTimeline() {
 }
 
 // ── Trust Badges Row ───────────────────────────────────────────
-export function TrustBadges() {
+export function TrustBadges({ fulfilmentType }: { fulfilmentType?: string | null } = {}) {
+  const info = deliveryInfo(fulfilmentType);
   const badges = [
     { icon: <ShieldCheck size={16} />, label: "Escrow Protected" },
-    { icon: <Zap size={16} />,         label: "Instant Delivery" },
+    { icon: info.type === "instant" ? <Zap size={16} /> : <Clock size={16} />, label: info.label },
     { icon: <Award size={16} />,       label: "Verified Stock" },
     { icon: <Star size={16} />,        label: "Rated by Buyers" },
   ];

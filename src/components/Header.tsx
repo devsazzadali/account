@@ -67,6 +67,29 @@ export function Header({
   };
   const { notifications, unreadCount, markAllRead, markRead } = useRealtimeNotifications(user?.id);
 
+  // F-25 (R3): a real wallet-balance chip for signed-in customers —
+  // live balance from /api/wallet, refreshed periodically, linking to
+  // the Wallet panel. (No cart: the store is single-item BUY NOW.)
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const isCustomer = !!profile && profile.role !== "admin" && profile.role !== "moderator";
+  useEffect(() => {
+    if (!user?.id || !isCustomer) return;
+    let cancelled = false;
+    const load = () =>
+      fetch("/api/wallet", { credentials: "same-origin" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (!cancelled && j) setWalletBalance(Number(j.wallet?.balance ?? j.balance) || 0);
+        })
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [user?.id, isCustomer]);
+
   // Ctrl+K shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -228,9 +251,20 @@ export function Header({
           {!loading && user ? (
             <>
                 <div className="hidden md:flex items-center gap-4 text-slate-500">
+                    {isCustomer && walletBalance !== null && (
+                      <Link
+                        href="/dashboard?tab=wallet"
+                        title="Your wallet balance — open Wallet"
+                        aria-label="Open wallet"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0C2254]/5 border border-[#0C2254]/10 text-[#0C2254] hover:bg-[#0C2254]/10 transition-colors"
+                      >
+                        <Wallet size={14} className="text-[#F4751F]" />
+                        <span className="text-[12px] font-black">${walletBalance.toFixed(2)}</span>
+                      </Link>
+                    )}
                     <Link
                         href="/dashboard?tab=messages"
-                        title="Messages — Communication Desk"
+                        title="Messages"
                         aria-label="Open messages"
                         className="hover:text-primary-600 transition-colors hover:animate-float"
                     >
@@ -285,7 +319,7 @@ export function Header({
                                     </div>
                                     <div className="text-[10px] text-primary-600 font-bold uppercase tracking-widest flex items-center gap-1.5">
                                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                                        Session Active
+                                        Signed In
                                     </div>
                                 </div>
                             </div>
@@ -300,11 +334,11 @@ export function Header({
                                 </>
                             ) : (
                                 <>
-                                    <DropdownItem href="/dashboard?tab=dashboard" onNavigate={() => setMenuOpen(false)} icon={<LayoutDashboard size={18} />} label="Operational Hub" />
-                                    <DropdownItem href="/dashboard?tab=orders" onNavigate={() => setMenuOpen(false)} icon={<ShoppingBag size={18} className="text-primary-600" />} label="Procurement History" />
-                                    <DropdownItem href="/dashboard?tab=wallet" onNavigate={() => setMenuOpen(false)} icon={<Wallet size={18} className="text-emerald-500" />} label="Wallet & Spending" />
-                                    <DropdownItem href="/dashboard?tab=messages" onNavigate={() => setMenuOpen(false)} icon={<MessageSquare size={18} className="text-blue-500" />} label="Communication Desk" />
-                                    <DropdownItem href="/dashboard?tab=security" onNavigate={() => setMenuOpen(false)} icon={<ShieldCheck size={18} className="text-slate-500" />} label="Security Node" />
+                                    <DropdownItem href="/dashboard?tab=dashboard" onNavigate={() => setMenuOpen(false)} icon={<LayoutDashboard size={18} />} label="Dashboard" />
+                                    <DropdownItem href="/dashboard?tab=orders" onNavigate={() => setMenuOpen(false)} icon={<ShoppingBag size={18} className="text-primary-600" />} label="My Orders" />
+                                    <DropdownItem href="/dashboard?tab=wallet" onNavigate={() => setMenuOpen(false)} icon={<Wallet size={18} className="text-emerald-500" />} label="Wallet" />
+                                    <DropdownItem href="/dashboard?tab=messages" onNavigate={() => setMenuOpen(false)} icon={<MessageSquare size={18} className="text-blue-500" />} label="Messages" />
+                                    <DropdownItem href="/dashboard?tab=security" onNavigate={() => setMenuOpen(false)} icon={<ShieldCheck size={18} className="text-slate-500" />} label="Account & Security" />
                                 </>
                             )}
                         </div>
@@ -315,7 +349,7 @@ export function Header({
                                 className="w-full bg-slate-900 hover:bg-red-600 text-white text-[11px] font-black uppercase tracking-widest py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-lg shadow-slate-900/20"
                             >
                                 <LogOut size={14} />
-                                Terminate Session
+                                Sign Out
                             </button>
                         </div>
                     </div>
