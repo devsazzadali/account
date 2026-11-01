@@ -8,6 +8,8 @@
 
 import { MessageCircle, ThumbsUp, Crown, ShieldCheck, Star } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { auth } from "../lib/auth-client";
 
 interface StoreStats {
   store_name: string;
@@ -28,6 +30,17 @@ export function Sidebar({
   aboutTitle?: string;
 } = {}) {
   const [stats, setStats] = useState<StoreStats | null>(null);
+  const router = useRouter();
+
+  // F-13: "Contact Store" opens the Communication Desk. Signed-in users
+  // go straight to their support thread; signed-out visitors go to login
+  // with a next= that returns them to the desk afterwards.
+  const handleContactStore = async () => {
+    const desk = "/dashboard?tab=messages";
+    const { data: { session } } = await auth.getSession();
+    if (session?.user) router.push(desk);
+    else router.push(`/login?next=${encodeURIComponent(desk)}`);
+  };
 
   useEffect(() => {
     fetch("/api/store/stats")
@@ -70,7 +83,11 @@ export function Sidebar({
           </div>
         </div>
 
-        <button className="w-full bg-primary-600 hover:bg-primary-500 text-white font-medium py-2.5 rounded-xl flex items-center justify-center gap-2 mb-6 transition-all duration-300 shadow-lg shadow-primary-500/20 hover:shadow-primary-500/40 transform hover:-translate-y-0.5">
+        <button
+          type="button"
+          onClick={handleContactStore}
+          className="w-full bg-primary-600 hover:bg-primary-500 text-white font-medium py-2.5 rounded-xl flex items-center justify-center gap-2 mb-6 transition-all duration-300 shadow-lg shadow-primary-500/20 hover:shadow-primary-500/40 transform hover:-translate-y-0.5"
+        >
           <MessageCircle className="w-4 h-4" />
           Contact Store
         </button>

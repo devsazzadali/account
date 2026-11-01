@@ -20,7 +20,8 @@ type ProductRow = Awaited<ReturnType<typeof prisma.product.findFirst>>;
 
 function toStoreProduct(
   row: NonNullable<ProductRow>,
-  schema: { key: string; label: string }[] = []
+  schema: { key: string; label: string }[] = [],
+  acquisitions = 0
 ): StoreProduct {
   const rawSpecs =
     row.specs && typeof row.specs === "object" && !Array.isArray(row.specs)
@@ -38,6 +39,7 @@ function toStoreProduct(
     category: row.category,
     badge: row.badge,
     sold: row.sold,
+    acquisitions,
     description: row.description,
     createdAt: row.createdAt.toISOString(),
     deliveryEtaHours: row.deliveryEtaHours,
@@ -112,7 +114,25 @@ export const getProductById = cache(async function getProductById(
   try {
     const row = await prisma.product.findUnique({ where: { id } });
     if (!row || !row.isActive) return null;
-    return toStoreProduct(row, await schemaForCategory(row.category));
+    // Real acquisitions: orders for this product that actually reached
+    // the buyer (escrow delivered/completed). The `sold` column is a
+    // seeded counter that does not correspond to orders — never show it
+    // as social proof.
+    let acquisitions = 0;
+    try {
+      acquisitions = await prisma.order.count({
+        where: {
+          productId: id,
+          OR: [
+            { escrowState: { in: ["delivered", "completed"] } },
+            { status: "Completed" },
+          ],
+        },
+      });
+    } catch {
+      acquisitions = 0;
+    }
+    return toStoreProduct(row, await schemaForCategory(row.category), acquisitions);
   } catch (err) {
     // e.g. a malformed (non-uuid) id makes Postgres reject the query —
     // treat any failure as "not found" for rendering purposes.

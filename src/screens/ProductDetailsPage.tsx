@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
   ShoppingCart, Zap, Clock, ThumbsUp, Star, Copy, Check, Crown,
@@ -18,6 +18,10 @@ interface Product {
   id: string;
   title: string;
   sold: number;
+  /** Real delivered/completed order count (server-computed from the
+   *  orders table). The acquisitions stat renders only when this is a
+   *  known number > 0 — never from the seeded `sold` column. */
+  acquisitions?: number;
   price: number;
   image: string;
   badge: string;
@@ -46,7 +50,18 @@ export function ProductDetailsPage({
   initialProduct?: Product | null;
 } = {}) {
   const params = useParams();
+  const router = useRouter();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
+
+  // F-13: "Contact Seller" opens the Communication Desk — signed-in
+  // users go straight to their support thread; signed-out visitors go
+  // to login with a next= that returns them to the desk afterwards.
+  const handleContactSeller = async () => {
+    const desk = "/dashboard?tab=messages";
+    const { data: { session } } = await auth.getSession();
+    if (session?.user) router.push(desk);
+    else router.push(`/login?next=${encodeURIComponent(desk)}`);
+  };
   const [product, setProduct] = useState<Product | null>(
     initialProduct ?? null,
   );
@@ -283,7 +298,7 @@ export function ProductDetailsPage({
                     <p className="text-sm text-slate-500 font-medium leading-relaxed">
                         Reviews are tied to real purchases: once your order is completed, you can rate it — including delivery speed and service — right from the order page.
                     </p>
-                    <Link href="/dashboard" className="inline-block mt-3 px-6 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all">
+                    <Link href="/dashboard?tab=orders" className="inline-block mt-3 px-6 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all">
                         Go to My Orders
                     </Link>
                 </div>
@@ -298,12 +313,14 @@ export function ProductDetailsPage({
               <div className="relative z-10">
                 <h1 className="text-3xl font-display font-bold text-slate-900 mb-4 leading-tight">{product.title}</h1>
                 
+                {(product.acquisitions ?? 0) > 0 && (
                 <div className="flex items-center gap-6 mb-10 pb-8 border-b border-slate-100">
                     <div className="flex items-center gap-2">
                         <ShoppingCart size={14} className="text-primary-600" />
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{product.sold || 0}+ Acquisitions</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{product.acquisitions}+ Acquisitions</span>
                     </div>
                 </div>
+                )}
 
                 <div className="mb-6">
                     <div className="text-[10px] text-primary-600 font-bold uppercase tracking-[0.3em] mb-2">Market Settlement</div>
@@ -387,7 +404,11 @@ export function ProductDetailsPage({
                         </Link>
                     )}
                     <div className="grid grid-cols-2 gap-4">
-                         <button className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-50 border border-slate-200 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-white hover:text-slate-900 transition-all shadow-sm">
+                         <button
+                            type="button"
+                            onClick={handleContactSeller}
+                            className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-50 border border-slate-200 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-white hover:text-slate-900 transition-all shadow-sm"
+                         >
                             <MessageSquare size={16} /> Contact Seller
                          </button>
                          <button 

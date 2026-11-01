@@ -20,12 +20,22 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // F-14: honour the ?next= target the visitor was sent here with
+  // (e.g. /login?next=%2Fdashboard%3Ftab%3Dmessages from Contact Seller).
+  // Only same-site absolute paths are accepted — never an external URL,
+  // and never back to /login itself.
+  const nextPath = () => {
+    const n = new URLSearchParams(window.location.search).get("next");
+    if (n && n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/login")) return n;
+    return null;
+  };
+
   const handleSocialLogin = async (provider: 'google' | 'github') => {
     try {
       const { error } = await auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: window.location.origin + '/dashboard'
+          redirectTo: window.location.origin + (nextPath() || '/dashboard')
         }
       });
       if (error) throw error;
@@ -54,19 +64,23 @@ export function LoginPage() {
                 .eq('id', authData.user.id)
                 .single();
 
+            // F-14: the audit found a soft router.push after login could
+            // leave the user sitting on the login form even though the
+            // session was created. A hard navigation cannot stall that
+            // way — the session cookie is already set at this point.
             if (profile) {
                 lsSet("userRole", profile.role);
                 lsSet("username", profile.username || "User");
-                
+
                 if (profile.role === 'admin') {
-                    router.push("/admin");
+                    window.location.assign("/admin");
                 } else {
-                    router.push("/dashboard");
+                    window.location.assign(nextPath() || "/dashboard");
                 }
             } else {
                 // Fallback if profile trigger hasn't finished
                 lsSet("userRole", "user");
-                router.push("/dashboard");
+                window.location.assign(nextPath() || "/dashboard");
             }
         }
     } catch (err: any) {

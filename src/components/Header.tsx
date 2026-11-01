@@ -1,7 +1,8 @@
 "use client";
 
-import { Search, User, ShoppingCart, Menu, LayoutDashboard, ShoppingBag, Store, Gavel, Ticket, Megaphone, FileText, Tag, Share2, Settings, LogOut, ChevronDown, Bell, MessageSquare, Crown, ShieldCheck, MailWarning, X } from "lucide-react";
-import React, { useEffect, useState, useCallback } from "react";
+import { Search, User, ShoppingCart, Menu, LayoutDashboard, ShoppingBag, Store, Gavel, Ticket, Megaphone, FileText, Tag, Share2, Settings, LogOut, ChevronDown, Bell, MessageSquare, Crown, ShieldCheck, MailWarning, X, Wallet, Loader2, CheckCircle2 } from "lucide-react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { db } from "../lib/dbclient";
@@ -27,7 +28,43 @@ export function Header({
   const [revenue, setRevenue] = useState(0);
   const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [verifyState, setVerifyState] = useState<"idle" | "sending" | "sent">("idle");
   const router = useRouter();
+
+  // Profile dropdown: close on outside click / Escape (F-08 — the menu
+  // used to be hover-only and could not be closed by clicking).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  // F-03: the VERIFY EMAIL pill now actually re-sends the verification
+  // email through Neon Auth and reports the server's real answer.
+  const handleResendVerification = async () => {
+    if (!user?.email || verifyState === "sending") return;
+    setVerifyState("sending");
+    const { error } = await auth.sendVerificationEmail(user.email);
+    if (error) {
+      setVerifyState("idle");
+      toast.error(`Verification email could not be sent: ${error.message}`);
+    } else {
+      setVerifyState("sent");
+      toast.success(`Verification email sent to ${user.email} — check your inbox.`);
+    }
+  };
   const { notifications, unreadCount, markAllRead, markRead } = useRealtimeNotifications(user?.id);
 
   // Ctrl+K shortcut
@@ -172,26 +209,33 @@ export function Header({
         {/* Right Actions */}
         <div className="flex items-center gap-4 shrink-0">
           {user && !isEmailConfirmed && (
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-[10px] font-black text-amber-700 animate-pulse uppercase tracking-widest">
-               <MailWarning size={14} /> Verify Email
-            </div>
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={verifyState === "sending"}
+              title={verifyState === "sent" ? `Verification email sent to ${user.email}` : `Resend the verification email to ${user.email}`}
+              className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-[10px] font-black text-amber-700 uppercase tracking-widest hover:bg-amber-100 transition-colors disabled:opacity-60"
+            >
+               {verifyState === "sending" ? <Loader2 size={14} className="animate-spin" /> : verifyState === "sent" ? <CheckCircle2 size={14} /> : <MailWarning size={14} />}
+               {verifyState === "sending" ? "Sending…" : verifyState === "sent" ? "Email Sent" : "Verify Email"}
+            </button>
           )}
 
-          <div className="hidden md:flex items-center gap-2 text-sm text-slate-600 cursor-pointer hover:text-slate-900 border border-slate-200 rounded-full px-3 py-1.5 bg-slate-100/50 transition-colors">
-            <div className="w-4 h-4 rounded-full bg-primary-600 border border-white/20 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1/2 bg-blue-500"></div>
-            </div>
-            <span className="font-medium text-xs">EN</span>
-            <span className="text-slate-300">|</span>
-            <span className="font-medium text-xs">USD</span>
-          </div>
+          {/* F-24: the static "EN | USD" block was removed — the store has
+              no language/currency switching system, and a fake control is
+              worse than none. */}
 
           {!loading && user ? (
             <>
                 <div className="hidden md:flex items-center gap-4 text-slate-500">
-                    <button className="hover:text-primary-600 transition-colors hover:animate-float">
+                    <Link
+                        href="/dashboard?tab=messages"
+                        title="Messages — Communication Desk"
+                        aria-label="Open messages"
+                        className="hover:text-primary-600 transition-colors hover:animate-float"
+                    >
                         <MessageSquare className="w-5 h-5" />
-                    </button>
+                    </Link>
                     <div className="relative">
                         <NotificationCenter
                           notifications={notifications}
@@ -202,9 +246,17 @@ export function Header({
                     </div>
                 </div>
 
-                {/* User Profile Dropdown */}
-                <div className="relative group">
-                    <button className="flex items-center gap-3 focus:outline-none py-2 px-1">
+                {/* User Profile Dropdown — click-controlled (F-08): the
+                    toggle opens AND closes it, choosing an item closes it,
+                    and every item deep-links to its dashboard panel. */}
+                <div className="relative group" ref={menuRef}>
+                    <button
+                        type="button"
+                        onClick={() => setMenuOpen((v) => !v)}
+                        aria-expanded={menuOpen}
+                        aria-haspopup="menu"
+                        className="flex items-center gap-3 focus:outline-none py-2 px-1"
+                    >
                         <div className="hidden md:block text-right">
                             <div className="text-sm font-black text-slate-900 flex items-center justify-end gap-2">
                                 {profile?.username || user.email.split('@')[0]}
@@ -220,7 +272,7 @@ export function Header({
                     </button>
 
                     {/* Dropdown Menu */}
-                    <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 transform origin-top-right translate-y-2 group-hover:translate-y-0 overflow-hidden shadow-2xl">
+                    <div className={`absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-slate-200 transition-all duration-300 z-50 transform origin-top-right overflow-hidden shadow-2xl ${menuOpen ? "opacity-100 visible translate-y-0" : "opacity-0 invisible translate-y-2 pointer-events-none"}`}>
                         <div className={`p-5 border-b border-slate-100 ${profile?.is_premium ? 'bg-amber-50/50' : 'bg-slate-50/50'}`}>
                             <div className="flex items-center gap-4">
                                 <div className={`w-12 h-12 rounded-2xl ${profile?.is_premium ? 'bg-gradient-to-br from-amber-400 to-orange-600 shadow-amber-500/20' : 'bg-gradient-to-br from-primary-500 to-blue-600 shadow-primary-500/20'} flex items-center justify-center text-white font-black text-xl shadow-lg border-2 border-white`}>
@@ -242,15 +294,17 @@ export function Header({
                         <div className="p-2 space-y-1 bg-white">
                             {profile?.role === "admin" || profile?.role === "moderator" ? (
                                 <>
-                                    <DropdownItem href="/admin" icon={<Store size={18} className="text-primary-600" />} label="Store Console" />
-                                    <DropdownItem href="/admin/orders" icon={<ShoppingBag size={18} className="text-amber-500" />} label="Order Registry" />
-                                    <DropdownItem href="/admin/settings" icon={<Settings size={18} className="text-slate-500" />} label="System Config" />
+                                    <DropdownItem href="/admin" onNavigate={() => setMenuOpen(false)} icon={<Store size={18} className="text-primary-600" />} label="Store Console" />
+                                    <DropdownItem href="/admin/orders" onNavigate={() => setMenuOpen(false)} icon={<ShoppingBag size={18} className="text-amber-500" />} label="Order Registry" />
+                                    <DropdownItem href="/admin/settings" onNavigate={() => setMenuOpen(false)} icon={<Settings size={18} className="text-slate-500" />} label="System Config" />
                                 </>
                             ) : (
                                 <>
-                                    <DropdownItem href="/dashboard" icon={<LayoutDashboard size={18} />} label="Operational Hub" />
-                                    <DropdownItem href="/dashboard" icon={<ShoppingBag size={18} className="text-primary-600" />} label="Procurement History" />
-                                    <DropdownItem href="/dashboard" icon={<MessageSquare size={18} className="text-blue-500" />} label="Communication Desk" />
+                                    <DropdownItem href="/dashboard?tab=dashboard" onNavigate={() => setMenuOpen(false)} icon={<LayoutDashboard size={18} />} label="Operational Hub" />
+                                    <DropdownItem href="/dashboard?tab=orders" onNavigate={() => setMenuOpen(false)} icon={<ShoppingBag size={18} className="text-primary-600" />} label="Procurement History" />
+                                    <DropdownItem href="/dashboard?tab=wallet" onNavigate={() => setMenuOpen(false)} icon={<Wallet size={18} className="text-emerald-500" />} label="Wallet & Spending" />
+                                    <DropdownItem href="/dashboard?tab=messages" onNavigate={() => setMenuOpen(false)} icon={<MessageSquare size={18} className="text-blue-500" />} label="Communication Desk" />
+                                    <DropdownItem href="/dashboard?tab=security" onNavigate={() => setMenuOpen(false)} icon={<ShieldCheck size={18} className="text-slate-500" />} label="Security Node" />
                                 </>
                             )}
                         </div>
@@ -320,9 +374,9 @@ export function Header({
   );
 }
 
-function DropdownItem({ href, icon, label }: { href: string, icon: React.ReactNode, label: string }) {
+function DropdownItem({ href, icon, label, onNavigate }: { href: string, icon: React.ReactNode, label: string, onNavigate?: () => void }) {
     return (
-        <Link href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all group">
+        <Link href={href} onClick={onNavigate} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all group">
             <span className="w-6 flex justify-center text-slate-400 group-hover:text-primary-600 transition-colors">
                 {icon}
             </span>

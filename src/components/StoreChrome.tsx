@@ -52,7 +52,7 @@ function MobileTabBar() {
     <div className="md:hidden fixed bottom-4 left-4 right-4 ios-glass border border-white/20 ios-rounded px-8 py-3 flex justify-between items-center z-[100] pb-safe-area shadow-[0_8px_32px_rgba(0,0,0,0.1)]">
         <TabItem href="/" icon={<Home size={22} />} label="Store" />
         <TabItem href="/" icon={<Search size={22} />} label="Explore" />
-        <TabItem href="/dashboard" icon={<ShoppingBag size={22} />} label="Orders" />
+        <TabItem href="/dashboard?tab=orders" icon={<ShoppingBag size={22} />} label="Orders" />
         <TabItem href="/dashboard" icon={<UserIcon size={22} />} label="Account" />
     </div>
   );

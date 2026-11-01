@@ -15,6 +15,7 @@ import { useStoreBrand } from "@/src/lib/useStoreBrand";
 
 export function SignupPage() {
   const brand = useStoreBrand();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -44,13 +45,19 @@ export function SignupPage() {
 
     setLoading(true);
     try {
+        // F-15: the name typed here becomes the account's real display /
+        // legal identity name (auth user name → profile full_name). The
+        // username keeps its email-derived value — other systems key off
+        // it — but nothing user-facing should present the email local
+        // part as the person's name anymore.
+        const displayName = name.trim();
         const { data, error } = await auth.signUp({
             email,
             password,
             options: {
                 data: {
                     user_name: email.split('@')[0],
-                    full_name: email.split('@')[0],
+                    full_name: displayName || email.split('@')[0],
                 }
             }
         });
@@ -160,6 +167,23 @@ export function SignupPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Full Name</label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <User className="h-5 w-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
+                                </div>
+                                <input
+                                    type="text"
+                                    required
+                                    autoComplete="name"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all shadow-sm"
+                                    placeholder="Your full name"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                />
+                            </div>
+                        </div>
                         <div>
                             <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Email Address</label>
                             <div className="relative group">

@@ -120,7 +120,7 @@ export function StockIntelligence({ stock, totalCapacity = 100 }: StockProps) {
             {isCritical ? "Almost Sold Out!" : isLow ? "Low Stock Warning" : "In Stock"}
           </span>
         </div>
-        <span className={`text-sm font-black ${color.text}`}>{stock} left</span>
+        <span className={`text-sm font-black ${color.text}`}>{`${stock} left`}</span>
       </div>
       <div className="h-2 bg-white/60 rounded-full overflow-hidden">
         <motion.div

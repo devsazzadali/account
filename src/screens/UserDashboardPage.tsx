@@ -18,13 +18,37 @@ import { UserSettings } from "../components/user/UserSettings";
 import { WalletDashboard } from "../components/user/WalletDashboard";
 import { lsClear } from "@/src/lib/storage";
 
+const DASHBOARD_TABS = ["dashboard", "orders", "wallet", "messages", "security"] as const;
+type DashboardTab = (typeof DASHBOARD_TABS)[number];
+
 export function UserDashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("dashboard"); // dashboard, orders, messages, security
+  const [activeTab, setActiveTab] = useState<DashboardTab>("dashboard"); // dashboard, orders, wallet, messages, security
   const router = useRouter();
+
+  // Deep-linking (F-07/F-08/F-18): header links, the profile dropdown and
+  // product-page buttons land here with ?tab=<panel>; read it on load so
+  // the requested panel — not always the overview — is what opens.
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab && (DASHBOARD_TABS as readonly string[]).includes(tab)) {
+      setActiveTab(tab as DashboardTab);
+    }
+  }, []);
+
+  // Switching panels keeps the URL in sync (shareable / reloadable)
+  // without a navigation or refetch.
+  function selectTab(tab: string) {
+    const next = (DASHBOARD_TABS as readonly string[]).includes(tab)
+      ? (tab as DashboardTab)
+      : "dashboard";
+    setActiveTab(next);
+    const url = next === "dashboard" ? "/dashboard" : `/dashboard?tab=${next}`;
+    window.history.replaceState(null, "", url);
+  }
 
   useEffect(() => {
     checkUser();
@@ -105,7 +129,7 @@ export function UserDashboardPage() {
               {menuItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => selectTab(item.id)}
                   className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-[14px] font-black uppercase tracking-widest transition-all group ${
                     activeTab === item.id 
                     ? "bg-slate-900 text-white shadow-xl shadow-slate-900/20" 
@@ -137,7 +161,7 @@ export function UserDashboardPage() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.2 }}
               >
-                {activeTab === 'dashboard' && <OperationalOverview profile={profile} orders={orders} setActiveTab={setActiveTab} />}
+                {activeTab === 'dashboard' && <OperationalOverview profile={profile} orders={orders} setActiveTab={selectTab} />}
                 {activeTab === 'orders' && <OrderManifest orders={orders} />}
                 {activeTab === 'wallet' && <WalletDashboard />}
                 {activeTab === 'messages' && <UserMessages />}
@@ -156,7 +180,7 @@ function OperationalOverview({ profile, orders, setActiveTab }: any) {
     <div className="space-y-12">
        <header>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Operational Overview</h1>
-          <p className="text-slate-500 font-medium italic">Welcome back, Agent <span className="text-[#1dbf73]">{profile?.username}</span>. Neural link stable.</p>
+          <p className="text-slate-500 font-medium italic">{`Welcome back, Agent `}<span className="text-[#1dbf73]">{profile?.full_name || profile?.username}</span>{`. Neural link stable.`}</p>
        </header>
 
        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

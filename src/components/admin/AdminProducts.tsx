@@ -40,7 +40,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
     price: "",
     image: "",
     stock: "10",
-    category: "Accounts",
+    category: "",
     game_type: "All",
     description: "",
     min_quantity: "1",
@@ -116,7 +116,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
 
   // UI State for the new design
   const [sellingItemQuery, setSellingItemQuery] = useState("");
-  const [sellingCategory, setSellingCategory] = useState("Accounts");
+  const [sellingCategory, setSellingCategory] = useState("All");
   const [dbCategories, setDbCategories] = useState<any[]>([]);
   const [showGamePopover, setShowGamePopover] = useState(false);
   // Listings hub (P2): stock-health tabs, search, bulk selection, CSV.
@@ -198,6 +198,22 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
     fetchProducts();
   }, []);
 
+  // Keep the create form's category in sync with the REAL categories.
+  // The form state used to default to a hard-coded category name that
+  // exists in no DB category: on first open the <select> displayed the
+  // first real category (browser behaviour for an unmatched value) while
+  // the state — and the spec-schema lookup below — kept the phantom
+  // name, so the Specifications section never rendered and a listing
+  // could be committed under a nonexistent category.
+  useEffect(() => {
+    if (dbCategories.length === 0) return;
+    setNewProduct((prev) =>
+      dbCategories.some((c) => c.name === prev.category)
+        ? prev
+        : { ...prev, category: dbCategories[0].name, specs: {} }
+    );
+  }, [dbCategories]);
+
   async function fetchProducts() {
     setLoading(true);
     try {
@@ -238,7 +254,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
       }]);
       if (error) throw error;
       setNewProduct({
-        title: "", price: "", image: "", stock: "10", category: "Accounts", game_type: "All",
+        title: "", price: "", image: "", stock: "10", category: dbCategories[0]?.name || "", game_type: "All",
         description: "", min_quantity: "1", delivery_eta_hours: "", fulfilment_type: "manual", warranty_days: "", use_inventory_stock: false,
         specs: {}, variants: [],
       });
@@ -536,7 +552,14 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormItem label="Title"><input value={editing.title || ""} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
-                        <FormItem label="Category"><input value={editing.category || ""} onChange={(e) => setEditing({ ...editing, category: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                        <FormItem label="Category">
+                            <select value={editing.category || ""} onChange={(e) => setEditing({ ...editing, category: e.target.value, specs: {} })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400">
+                                {editing.category && !dbCategories.some((c) => c.name === editing.category) && (
+                                    <option value={editing.category}>{editing.category} (legacy)</option>
+                                )}
+                                {dbCategories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                            </select>
+                        </FormItem>
                         <FormItem label="Price (USD)"><input type="number" step="0.01" value={editing.price ?? ""} onChange={(e) => setEditing({ ...editing, price: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
                         <FormItem label={editing.use_inventory_stock ? "Stock (derived from inventory)" : "Stock (manual count)"}>
                             <input type="number" value={editing.stock ?? 0} disabled={!!editing.use_inventory_stock} onChange={(e) => setEditing({ ...editing, stock: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400 disabled:bg-slate-50 disabled:text-slate-400" />

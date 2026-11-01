@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award, Plus, Minus, AlertCircle, ShieldCheck } from "lucide-react";
+import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award, Plus, Minus, AlertCircle, ShieldCheck, Check } from "lucide-react";
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,6 +17,9 @@ interface FeaturedItem {
   badge: string;
   category?: string;
   stock?: number;
+  /** Real delivery mode from the products table ("instant" | "manual" |
+   *  "service") — drives the category view's Delivery Type filter. */
+  fulfilmentType?: string;
 }
 
 const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
@@ -159,9 +162,18 @@ import type {
 
 /** Section heading with the design's two-tone treatment: all words but
  *  the last in ink, the last word accented. With the design's default
- *  titles this reproduces the original headings exactly. */
+ *  titles this reproduces the original headings exactly. A spaceless
+ *  single-token title ("FeaturedList") is camel-split first, so it can
+ *  never render glued (F-21). */
 function SplitTitle({ title, accentClassName }: { title: string; accentClassName: string }) {
-  const parts = title.trim().split(/\s+/).filter(Boolean);
+  let parts = title.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) {
+    parts = title
+      .trim()
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .split(/\s+/)
+      .filter(Boolean);
+  }
   if (parts.length <= 1) return <>{title}</>;
   return (
     <>
@@ -181,8 +193,18 @@ function toFeaturedItem(p: StoreProduct): FeaturedItem {
     badge: p.badge ?? "",
     category: p.category ?? undefined,
     stock: p.stock,
+    fulfilmentType: p.fulfilmentType,
   };
 }
+
+/** The real delivery modes a product can have (products.fulfilment_type).
+ *  The category filter offers these — with live counts — instead of the
+ *  old decorative "Account Type" list, which mapped to no data at all. */
+const DELIVERY_TYPES = [
+  { id: "instant", label: "Instant Delivery" },
+  { id: "manual", label: "Manual Delivery" },
+  { id: "service", label: "Service" },
+] as const;
 
 /** Map a Prisma-shaped review onto the shape this component renders. */
 function toUiReview(r: StoreReview) {
@@ -204,7 +226,7 @@ export function MainContent({
   sectionOrder,
 }: MainContentProps) {
   const orderOf = (id: HomeSectionId) => sectionOrder.indexOf(id) + 1;
-  const { searchQuery } = useSearch();
+  const { searchQuery, setSearchQuery } = useSearch();
   // Server data only short-circuits the legacy client fetch when it
   // actually contains products; while the Neon products table is still
   // empty (pre data-migration) the component keeps its previous behaviour.
@@ -219,6 +241,18 @@ export function MainContent({
   const [dbReviews, setDbReviews] = useState<any[]>(() =>
     (initialReviews ?? []).map(toUiReview),
   );
+
+  // Category-view filters (F-05) — all applied client-side over the
+  // products already loaded for the view: name substring, price bounds,
+  // delivery-type checkboxes, and the Accounts / Subscriptions tabs.
+  const [nameFilter, setNameFilter] = useState("");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [deliverySel, setDeliverySel] = useState<string[]>([]);
+  const [kindTab, setKindTab] = useState<"accounts" | "subscriptions">("accounts");
+  // Reviews paging (F-23): reveal loaded reviews in steps; the button
+  // disappears once everything loaded is on screen.
+  const [reviewsShown, setReviewsShown] = useState(4);
 
   useEffect(() => {
     // Server-rendered data was passed in — nothing to fetch client-side.
@@ -236,7 +270,10 @@ export function MainContent({
             ]);
 
             if (prodRes.error) throw prodRes.error;
-            setAllProducts(prodRes.data || []);
+            setAllProducts((prodRes.data || []).map((r: any) => ({
+                ...r,
+                fulfilmentType: r.fulfilment_type ?? r.fulfilmentType ?? undefined,
+            })));
             setDbCategories(catRes.data || []);
             setDbReviews((revRes.data || []).map((r: any) => ({
                 buyer: r.username || "Anonymous",
@@ -283,6 +320,66 @@ export function MainContent({
     return allProducts.filter(p => p.category === selectedCategory || selectedCategory === 'Accounts');
   }, [selectedCategory, allProducts, searchQuery]);
 
+  // Live counts for the Delivery Type filter — computed from the
+  // products in the current category view, so they always reflect real
+  // stock (the old panel hard-coded 0 next to invented types).
+  const deliveryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of products) {
+      const t = p.fulfilmentType ?? "manual";
+      counts[t] = (counts[t] ?? 0) + 1;
+    }
+    return counts;
+  }, [products]);
+
+  // The category grid after every filter is applied (F-05). Products
+  // without delivery metadata count as "manual" (the schema default).
+  // "Subscriptions" means the Streaming category — the store's only
+  // subscription offers; "Available Accounts" is everything else.
+  const visibleProducts = useMemo(() => {
+    let list = products.filter((p) =>
+      kindTab === "subscriptions" ? p.category === "Streaming" : p.category !== "Streaming",
+    );
+    if (nameFilter.trim()) {
+      const q = nameFilter.trim().toLowerCase();
+      list = list.filter((p) => p.title.toLowerCase().includes(q));
+    }
+    const min = parseFloat(priceMin);
+    if (!Number.isNaN(min)) list = list.filter((p) => p.price >= min);
+    const max = parseFloat(priceMax);
+    if (!Number.isNaN(max)) list = list.filter((p) => p.price <= max);
+    if (deliverySel.length > 0) {
+      list = list.filter((p) => deliverySel.includes(p.fulfilmentType ?? "manual"));
+    }
+    return list;
+  }, [products, kindTab, nameFilter, priceMin, priceMax, deliverySel]);
+
+  const filtersActive =
+    nameFilter.trim() !== "" || priceMin !== "" || priceMax !== "" || deliverySel.length > 0;
+
+  const clearFilters = () => {
+    setNameFilter("");
+    setPriceMin("");
+    setPriceMax("");
+    setDeliverySel([]);
+  };
+
+  const toggleDelivery = (id: string) =>
+    setDeliverySel((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
+
+  // Empty-state copy (F-26) — distinguishes an empty category from
+  // filters that excluded everything.
+  const emptyMessage =
+    products.length === 0
+      ? `No offers are listed under ${selectedCategory} yet. Try another category from the storefront.`
+      : filtersActive
+        ? "No offers match the current filters. Clear them to see everything in this category."
+        : kindTab === "subscriptions"
+          ? "No subscription offers in this view — subscriptions are the Streaming category. Switch to Available Accounts, or open the Streaming category."
+          : kindTab === "accounts" && products.every((p) => p.category === "Streaming")
+            ? "Every offer in this category is a subscription — switch to the Subscriptions tab to see them."
+            : "Nothing to show in this view right now.";
+
   const handleCategoryClick = (categoryName: string) => {
     setSelectedCategory(categoryName);
   };
@@ -298,6 +395,20 @@ export function MainContent({
             exit={{ opacity: 0, y: -20 }}
             className="mb-12"
           >
+             {/* The query stays editable here (F-06): typing in the hero
+                 box switches to this view, so the search box must live
+                 here too — clearing it returns to the storefront. */}
+             <div className="relative mb-8 group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
+                <input
+                    type="text"
+                    autoFocus
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search premium accounts, categories..."
+                    className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-6 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all duration-300 shadow-sm"
+                />
+             </div>
              <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">
@@ -306,7 +417,7 @@ export function MainContent({
                     <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">Search <span className="text-primary-600">Results</span></h2>
                 </div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    Found <span className="text-primary-600">{products.length}</span> Matching Offers
+                    Found{" "}<span className="text-primary-600">{products.length}</span>{" "}Matching Offers
                 </div>
              </div>
              
@@ -396,9 +507,9 @@ export function MainContent({
 
                 <div className="flex gap-6 overflow-x-auto pb-4 mb-8 border-b border-slate-100 scrollbar-hide">
                     {['Accounts', 'Items', 'Money', 'Boosting', 'Video Games', 'Top Up'].map((tab) => (
-                        <button 
+                        <button
                             key={tab}
-                            onClick={() => handleCategoryClick(tab === 'Accounts' ? 'All' : tab)}
+                            onClick={() => handleCategoryClick(tab === 'Accounts' ? 'All' : tab === 'Top Up' ? 'Game Top Up' : tab)}
                             className={`${tab === 'Accounts' ? 'text-primary-600 border-b-2 border-primary-600' : 'text-slate-400 hover:text-slate-900'} pb-3 px-2 text-sm font-semibold whitespace-nowrap transition-all duration-300`}
                         >
                             {tab} {tab === 'Accounts' && <span className="ml-1 opacity-50">({allProducts.length})</span>}
@@ -406,11 +517,17 @@ export function MainContent({
                     ))}
                 </div>
 
+                {/* F-06: bound to the same SearchContext the header
+                    modal drives, so this box and the modal behave
+                    identically. Typing switches to the Search Results
+                    view, where the query stays editable. */}
                 <div className="relative mb-10 group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
-                    <input 
-                        type="text" 
-                        placeholder="Search across all premium accounts..." 
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search across all premium accounts..."
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-6 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 focus:bg-white transition-all duration-300 shadow-sm"
                     />
                 </div>
@@ -457,12 +574,18 @@ export function MainContent({
             </>
         ) : (
             <div className="flex flex-col md:flex-row gap-8">
-                {/* Left Sidebar Filters */}
+                {/* Left Sidebar Filters — every control is live (F-05) */}
                 <div className="w-full md:w-72 shrink-0 space-y-8">
                     <div>
                         <h3 className="text-sm font-bold text-slate-900 mb-4 uppercase tracking-widest text-primary-600">Search Offers</h3>
                         <div className="relative">
-                            <input type="text" placeholder="Filter by name..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-primary-500/50 transition-all shadow-sm" />
+                            <input
+                                type="text"
+                                value={nameFilter}
+                                onChange={(e) => setNameFilter(e.target.value)}
+                                placeholder="Filter by name..."
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-primary-500/50 transition-all shadow-sm"
+                            />
                             <Search className="absolute right-4 top-3.5 w-4 h-4 text-slate-300" />
                         </div>
                     </div>
@@ -470,31 +593,57 @@ export function MainContent({
                     <div>
                         <h3 className="text-sm font-bold text-slate-900 mb-4 uppercase tracking-widest text-primary-600">Price Range</h3>
                         <div className="flex gap-3 items-center">
-                            <input type="text" placeholder="Min" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-primary-500/50 transition-all shadow-sm" />
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                value={priceMin}
+                                onChange={(e) => setPriceMin(e.target.value)}
+                                placeholder="Min"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-primary-500/50 transition-all shadow-sm"
+                            />
                             <span className="text-slate-300">—</span>
-                            <input type="text" placeholder="Max" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-primary-500/50 transition-all shadow-sm" />
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                value={priceMax}
+                                onChange={(e) => setPriceMax(e.target.value)}
+                                placeholder="Max"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-primary-500/50 transition-all shadow-sm"
+                            />
                         </div>
                     </div>
 
                     <div className="space-y-6">
                         <div className="pt-4 border-t border-slate-100">
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Account Type</h3>
+                                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Delivery Type</h3>
                                 <MinusCircle className="w-4 h-4 text-slate-300" />
                             </div>
                             <div className="space-y-3">
-                                {['Premium Account', 'Fresh Instance', 'Verified Only', 'Special Edition'].map((type, i) => (
-                                    <label key={i} className="flex items-center justify-between group cursor-pointer">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-5 h-5 rounded border border-slate-200 bg-slate-50 flex items-center justify-center group-hover:border-primary-500 transition-colors shadow-inner">
-                                                <div className="w-2.5 h-2.5 bg-primary-500 rounded-sm opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                                {DELIVERY_TYPES.map((t) => {
+                                    const checked = deliverySel.includes(t.id);
+                                    return (
+                                        <label key={t.id} className="flex items-center justify-between group cursor-pointer">
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    className="hidden"
+                                                    checked={checked}
+                                                    onChange={() => toggleDelivery(t.id)}
+                                                />
+                                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors shadow-inner ${checked ? "border-primary-500 bg-primary-500" : "border-slate-200 bg-slate-50 group-hover:border-primary-500"}`}>
+                                                    {checked && <Check className="w-3.5 h-3.5 text-white" />}
+                                                </div>
+                                                <span className={`text-sm transition-colors ${checked ? "text-slate-900 font-medium" : "text-slate-500 group-hover:text-slate-900"}`}>{t.label}</span>
                                             </div>
-                                            <span className="text-sm text-slate-500 group-hover:text-slate-900 transition-colors">{type}</span>
-                                        </div>
-                                        <span className="text-[10px] font-bold text-slate-300">0</span>
-                                    </label>
-                                ))}
+                                            <span className="text-[10px] font-bold text-slate-300">{deliveryCounts[t.id] ?? 0}</span>
+                                        </label>
+                                    );
+                                })}
                             </div>
+                            <p className="text-[11px] text-slate-400 leading-relaxed mt-4">
+                                Filter by how an offer is delivered. Counts reflect the offers in this category.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -502,34 +651,65 @@ export function MainContent({
                 {/* Right Product Grid */}
                 <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-100">
-                        <button 
+                        <button
                             onClick={() => handleCategoryClick('All')}
                             className="text-xs font-bold text-slate-400 hover:text-primary-600 flex items-center gap-2 uppercase tracking-widest transition-colors group"
                         >
                             <div className="p-1.5 bg-slate-100 rounded-lg group-hover:bg-primary-50 transition-colors">
                                 <TrendingUp className="w-3.5 h-3.5 rotate-[-90deg]" />
                             </div>
-                            Back to Dashboard
+                            Back to Store
                         </button>
                         <div className="text-xs font-bold text-slate-300 uppercase tracking-widest">
-                            Showing <span className="text-slate-900">{products.length}</span> Results
+                            Showing{" "}<span className="text-slate-900">{visibleProducts.length}</span>{" "}Results
                         </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-6 mb-8 overflow-x-auto scrollbar-hide border-b border-slate-100">
-                         <div className="border-b-2 border-primary-600 px-6 py-3 text-sm font-bold text-primary-600 uppercase tracking-widest whitespace-nowrap">
+                         <button
+                            type="button"
+                            onClick={() => setKindTab("accounts")}
+                            className={kindTab === "accounts"
+                                ? "border-b-2 border-primary-600 px-6 py-3 text-sm font-bold text-primary-600 uppercase tracking-widest whitespace-nowrap"
+                                : "border-b-2 border-transparent px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest cursor-pointer transition-colors whitespace-nowrap"}
+                         >
                             Available Accounts
-                         </div>
-                         <div className="text-sm font-bold text-slate-400 hover:text-slate-900 px-6 py-3 uppercase tracking-widest cursor-pointer transition-colors whitespace-nowrap">
+                         </button>
+                         <button
+                            type="button"
+                            onClick={() => setKindTab("subscriptions")}
+                            className={kindTab === "subscriptions"
+                                ? "border-b-2 border-primary-600 px-6 py-3 text-sm font-bold text-primary-600 uppercase tracking-widest whitespace-nowrap"
+                                : "border-b-2 border-transparent px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest cursor-pointer transition-colors whitespace-nowrap"}
+                         >
                             Subscriptions
-                         </div>
+                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {products.map((item) => (
-                            <ProductCard key={item.id} item={item} />
-                        ))}
-                    </div>
+                    {visibleProducts.length === 0 ? (
+                        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-16 text-center flex flex-col items-center">
+                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-slate-300 mb-4 border border-slate-100">
+                                <AlertCircle size={32} />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900 mb-2">No offers found</h3>
+                            <p className="text-slate-500 text-sm max-w-sm mx-auto">{emptyMessage}</p>
+                            {filtersActive && (
+                                <button
+                                    type="button"
+                                    onClick={clearFilters}
+                                    className="mt-6 px-6 py-3 rounded-xl bg-primary-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-primary-500 transition-colors"
+                                >
+                                    Clear Filters
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {visibleProducts.map((item) => (
+                                <ProductCard key={item.id} item={item} />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         )}
@@ -547,12 +727,12 @@ export function MainContent({
                 <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight"><SplitTitle title={sections.reviews.title} accentClassName="text-primary-600" /></h2>
             </div>
             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                <span className="text-primary-600">{reviews.length}</span> Total Reviews
+                <span className="text-primary-600">{reviews.length}</span>{" "}Total Reviews
             </div>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-slate-100 rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
-            {reviews.map((review, idx) => (
+            {reviews.slice(0, reviewsShown).map((review, idx) => (
                 <div key={idx} className="bg-white p-6 hover:bg-slate-50 transition-all duration-300 flex flex-col justify-between group">
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-2">
@@ -595,11 +775,24 @@ export function MainContent({
             ))}
         </div>
 
-        <div className="mt-10 flex justify-center">
-            <button className="px-10 py-4 rounded-xl border border-primary-200 text-primary-600 text-xs font-bold uppercase tracking-widest hover:bg-primary-50 hover:border-primary-500 transition-all duration-300 shadow-sm">
-                Load More Testimonials
-            </button>
-        </div>
+        {/* F-23: the button pages in more of the loaded reviews and is
+            hidden once everything is shown; with no reviews at all, an
+            honest empty state replaces it. */}
+        {reviews.length === 0 ? (
+            <p className="mt-10 text-center text-sm text-slate-400 font-medium">
+                No reviews yet — reviews appear here once buyers rate completed orders.
+            </p>
+        ) : reviewsShown < reviews.length ? (
+            <div className="mt-10 flex justify-center">
+                <button
+                    type="button"
+                    onClick={() => setReviewsShown((s) => s + 4)}
+                    className="px-10 py-4 rounded-xl border border-primary-200 text-primary-600 text-xs font-bold uppercase tracking-widest hover:bg-primary-50 hover:border-primary-500 transition-all duration-300 shadow-sm"
+                >
+                    Load More Testimonials
+                </button>
+            </div>
+        ) : null}
       </div>
       )}
     </div>

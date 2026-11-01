@@ -155,6 +155,17 @@ export const auth = {
     return { data: { user: null }, error: null };
   },
 
+  /** Ask Neon Auth (Better Auth) to re-send the verification email for
+   *  this address. The endpoint only mails accounts that exist and are
+   *  still unverified; the caller surfaces the server's real answer —
+   *  success must never be faked when delivery is not configured. */
+  async sendVerificationEmail(email: string): Promise<{ error: { message: string } | null }> {
+    const callbackURL = `${window.location.origin}/dashboard`;
+    const { json, res } = await post("send-verification-email", { email, callbackURL });
+    if (!res.ok) return { error: { message: errMessage(json, "Could not send the verification email") } };
+    return { error: null };
+  },
+
   async resetPasswordForEmail(email: string, opts?: { redirectTo?: string }): Promise<{ error: { message: string } | null }> {
     const redirectTo = opts?.redirectTo || `${window.location.origin}/reset-password`;
     const { json, res } = await post("forget-password", { email, redirectTo });

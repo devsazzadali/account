@@ -13,6 +13,11 @@ export interface StoreProduct {
   category: string | null;
   badge: string | null;
   sold: number;
+  /** REAL delivered/completed order count for this product, counted from
+   *  the orders table server-side (NOT the seeded `sold` column). The
+   *  product page renders it as the acquisitions stat and hides the stat
+   *  entirely when it is 0. Only populated by getProductById. */
+  acquisitions: number;
   description: string | null;
   createdAt: string; // ISO string
   // Z2U alignment P1/P2: delivery promise, min quantity, spec values

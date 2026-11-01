@@ -102,12 +102,14 @@ export function Footer({
         <div className="pt-10 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex gap-8 flex-wrap justify-center text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
             <Link href="/buyer-protection" className="hover:text-primary-600 transition-colors">Buyer Protection</Link>
-            <Link href="/faq" className="hover:text-primary-600 transition-colors">How It Works</Link>
+            {/* F-22: this link goes to the FAQ page — label it honestly
+                (no standalone How It Works page exists). */}
+            <Link href="/faq" className="hover:text-primary-600 transition-colors">FAQ</Link>
             <Link href="/terms" className="hover:text-primary-600 transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-primary-600 transition-colors">Privacy</Link>
           </div>
           <div className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-            © 2026 {brand?.name ?? DEFAULT_STORE_NAME}. All rights reserved.
+            {`© 2026 ${brand?.name ?? DEFAULT_STORE_NAME}. All rights reserved.`}
           </div>
         </div>
       </div>
