@@ -25,6 +25,7 @@ import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
 import { motion } from "framer-motion";
 import { lsGet, lsSet } from "@/src/lib/storage";
+import { SalesByDayChart, type SalesDay } from "./SalesByDayChart";
 
 interface AdminOverviewProps {
   setActiveTab: (tab: string) => void;
@@ -46,6 +47,9 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
     reviewCount: 0
   });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  // Fix Round 6 (video-gap #8): real daily sales series from the stats
+  // endpoint (paid orders by day, last 14 days).
+  const [salesByDay, setSalesByDay] = useState<SalesDay[]>([]);
   const [productTitles, setProductTitles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const username = lsGet("username") || "ACCCOUNTSTOREONE";
@@ -53,8 +57,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
-      const [ordersRes, productsRes, recentRes, disputesRes, inventoryRes, storeStats] = await Promise.all([
-        db.from("orders").select("total_price, status, payment_status"),
+      const [productsRes, recentRes, disputesRes, inventoryRes, storeStats] = await Promise.all([
         db.from("products").select("id, title, stock, is_active"),
         db.from("orders")
           .select("*")
@@ -65,23 +68,21 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
         fetch("/api/store/stats").then((r) => r.json()).catch(() => null)
       ]);
 
-      const orders = ordersRes.data || [];
-      // Money truth: revenue counts PAID orders only — an unpaid order is
-      // not revenue. total_price is the one canonical amount field.
-      const paidOrders = orders.filter(o => o.payment_status === 'paid');
-      const totalRevenue = paidOrders.reduce((acc, curr) => acc + (Number(curr.total_price) || 0), 0);
-      const totalOrders = orders.length;
-      const completedOrders = orders.filter(o => o.status?.toLowerCase() === 'completed').length;
-      const canceledOrders = orders.filter(o => o.status === 'Canceled').length;
-      const awaitingAction = orders.filter(o =>
-        o.payment_status === 'pending_verification' ||
-        o.status === 'Disputed' ||
-        (o.payment_status === 'paid' && o.status === 'PREPARING')
-      ).length;
-      // Completion = completed ÷ non-canceled — the same definition the
-      // Seller Information scoreboard uses. No orders → no rate (shown 0%).
-      const denom = totalOrders - canceledOrders;
-      const successRate = denom > 0 ? Math.round((completedOrders / denom) * 100) : 0;
+      // Fix Round 5 (item 3): every order number on this page comes
+      // from the ONE canonical server-side summary
+      // (/api/store/stats → orders_summary, src/lib/order-summary.ts) —
+      // the same numbers Seller Information and Sold Orders show. This
+      // page used to re-derive them in the browser from a full-table
+      // fetch with its own status predicates (case-insensitive
+      // 'completed' but exact-case 'Canceled'), which is how Home,
+      // Sold Orders and Customers could disagree about the same store.
+      // Money truth is unchanged: revenue counts PAID orders only.
+      const summary = storeStats?.orders_summary || null;
+      const totalRevenue = summary?.paidRevenue ?? 0;
+      const totalOrders = summary?.total ?? 0;
+      const successRate = summary?.successRate ?? 0;
+      const awaitingAction = summary?.awaitingAction ?? 0;
+      const paidCount = summary?.paidCount ?? 0;
       const products = productsRes.data || [];
 
       setStats({
@@ -90,7 +91,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
         successRate: successRate,
         awaitingAction: awaitingAction,
         registryDensity: products.filter((p: any) => p.is_active !== false).length,
-        paidCount: paidOrders.length,
+        paidCount: paidCount,
         openDisputes: (disputesRes.data || []).length,
         lowStock: products.filter((p: any) => p.is_active !== false && (p.stock || 0) <= 3).length,
         inventoryAvailable: (inventoryRes.data || []).length,
@@ -99,6 +100,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
         reviewCount: storeStats?.total_reviews ?? 0
       });
 
+      setSalesByDay(Array.isArray(storeStats?.sales_by_day) ? storeStats.sales_by_day : []);
       setRecentOrders(recentRes.data || []);
       // Orders carry product_id only — resolve display titles from the
       // products fetch so the activity ledger shows real product names
@@ -235,6 +237,11 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
             badgeColor="bg-purple-50 text-purple-600"
             subText="Active offers"
           />
+        </div>
+
+        {/* Sales by day (Fix Round 6, video-gap #8) */}
+        <div className="mb-10">
+          <SalesByDayChart days={salesByDay} />
         </div>
 
         {/* Lower Grid */}

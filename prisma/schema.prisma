@@ -114,6 +114,14 @@ model Product {
   // warrantyDays renders as an "X-day warranty" badge on the product page.
   fulfilmentType   FulfilmentType @default(manual) @map("fulfilment_type")
   warrantyDays     Int?           @map("warranty_days")
+  // Listing lifecycle (Fix Round 6, video-gap #3/#9): an optional
+  // listing duration in days; listingExpiresAt is the server-computed
+  // moment the listing stops selling (set at create / renew / extend).
+  // NULL duration = the listing never expires. sortOrder is the manual
+  // storefront display order (ascending; createdAt breaks ties).
+  listingDurationDays Int?      @map("listing_duration_days")
+  listingExpiresAt    DateTime? @map("listing_expires_at")
+  sortOrder           Int       @default(0) @map("sort_order")
   createdAt   DateTime @default(now()) @map("created_at")
 
   orders    Order[]

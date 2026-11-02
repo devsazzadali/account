@@ -5,14 +5,14 @@
 //      Approval is transactional: order → paid + auto-delivery attempted;
 //      top-up → wallet credited with a ledger row.
 
-import { requireAdmin, isResponse } from "@/src/lib/auth-server";
+import { requireAdminStrict, isResponse } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 import { serializeRows, serializeRow } from "@/src/lib/serialize";
 import { reviewPaymentRequest, ServiceError } from "@/src/lib/order-service";
 import { flushEmailOutbox } from "@/src/lib/mailer";
 
 export async function GET(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req); // Fix Round 7: settings/payment config are full-admin only (no moderator access)
   if (isResponse(gate)) return gate;
   const status = new URL(req.url).searchParams.get("status") || "pending";
   const rows = await prisma.paymentRequest.findMany({
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req); // Fix Round 7: settings/payment config are full-admin only (no moderator access)
   if (isResponse(gate)) return gate;
   const body = await req.json().catch(() => ({}));
   try {

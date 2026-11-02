@@ -27,6 +27,10 @@ export function UserDashboardPage() {
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [ticketState, setTicketState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Fix Round 7 (customer suspend): /api/me reports the flag; a
+  // suspended buyer sees a notice instead of the dashboard. Server
+  // enforcement (orders/writes) applies regardless of this screen.
+  const [suspended, setSuspended] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>("dashboard"); // dashboard, orders, wallet, messages, security
   const router = useRouter();
 
@@ -71,12 +75,19 @@ export function UserDashboardPage() {
     }
     setUser(session.user);
 
-    const [profileRes, ordersRes, walletRes, msgRes] = await Promise.all([
+    const [profileRes, ordersRes, walletRes, msgRes, meRes] = await Promise.all([
       db.from('profiles').select('*').eq('id', session.user.id).single(),
       db.from('orders').select('*, products(*)').eq('user_id', session.user.id).order('created_at', { ascending: false }),
       fetch("/api/wallet", { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
       db.from('messages').select('ticket_status').order('created_at', { ascending: false }),
+      fetch("/api/me", { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
+
+    if (meRes?.profile?.suspended) {
+      setSuspended(true);
+      setLoading(false);
+      return;
+    }
 
     if (profileRes.data?.role === 'admin' || profileRes.data?.role === 'moderator') {
       router.push('/admin');
@@ -117,6 +128,28 @@ export function UserDashboardPage() {
     { id: "messages",  label: "Messages",           icon: MessageCircle },
     { id: "security",  label: "Account & Security", icon: Shield },
   ];
+
+  // Fix Round 7: suspension notice replaces the whole dashboard.
+  if (suspended) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FB] font-sans flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white border border-red-100 rounded-[2rem] shadow-xl p-10 text-center">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Shield size={30} className="text-red-500" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 mb-3">Account Suspended</h1>
+          <p className="text-[14px] text-slate-500 font-medium leading-relaxed mb-8">
+            Your account has been suspended by the store team, so ordering and account
+            changes are paused. Your order history is unchanged. If you believe this is
+            a mistake, please contact the store through the contact page.
+          </p>
+          <button onClick={handleLogout} className="px-8 py-4 bg-slate-900 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all inline-flex items-center gap-2">
+            <LogOut size={16} /> Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F9FB] font-sans pb-20 md:pb-0">

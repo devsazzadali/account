@@ -122,6 +122,39 @@ export async function requireAdmin(req: Request): Promise<SessionContext | Respo
   return ctx;
 }
 
+/**
+ * Fix Round 7 (roles matrix): full admins ONLY. Moderators are staff
+ * with a deliberately smaller surface — store settings, payment
+ * configuration, coupon deletion and user role changes sit behind
+ * this gate, never behind requireAdmin.
+ */
+export async function requireAdminStrict(req: Request): Promise<SessionContext | Response> {
+  const ctx = await getSessionContext(req);
+  if (!ctx) return unauthorized();
+  if (ctx.profile.role !== "admin") return forbidden("Admin access required");
+  return ctx;
+}
+
+/**
+ * Fix Round 7 (customer suspend): the suspension flag is
+ * user_risk_profiles.is_blocked — the schema's existing block
+ * mechanism, previously written by nothing. Enforcement points:
+ * order creation, generic-API writes, /api/me (dashboard notice).
+ * A lookup failure must never lock anyone out, so errors read as
+ * "not blocked".
+ */
+export async function isUserBlocked(userId: string): Promise<boolean> {
+  try {
+    const rp = await prisma.userRiskProfile.findUnique({
+      where: { userId },
+      select: { isBlocked: true },
+    });
+    return !!rp?.isBlocked;
+  } catch {
+    return false;
+  }
+}
+
 export function isResponse(v: SessionContext | Response): v is Response {
   return v instanceof Response;
 }

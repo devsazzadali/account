@@ -23,11 +23,16 @@ import {
   XCircle,
   FileText,
   SearchCode,
-  HelpCircle
+  HelpCircle,
+  ChevronUp,
+  ChevronDown,
+  Clock,
+  CalendarPlus
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
+import { roundMoney, moneyInputValue } from "../../lib/utils";
 import { toast } from "react-hot-toast";
 
 
@@ -47,6 +52,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
     delivery_eta_hours: "",
     fulfilment_type: "manual",
     warranty_days: "",
+    listing_duration_days: "",
     use_inventory_stock: false,
     specs: {} as Record<string, string>,
     variants: [] as { label: string; priceDelta: string; stock: string }[]
@@ -59,7 +65,9 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
       .filter((v) => v.label.trim())
       .map((v) => ({
         label: v.label.trim(),
-        priceDelta: Number(v.priceDelta) || 0,
+        // Fix Round 5 (item 1): money is 2-decimal — never persist a
+        // binary-float artifact as a price delta.
+        priceDelta: roundMoney(Number(v.priceDelta) || 0),
         stock: v.stock === "" ? null : Math.max(0, parseInt(v.stock) || 0),
       }));
   }
@@ -70,7 +78,8 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
     try {
       const { error } = await db.from("products").update({
         title: editing.title,
-        price: parseFloat(editing.price),
+        // Fix Round 5 (item 1): round on write — exactly 2 decimals.
+        price: roundMoney(parseFloat(editing.price)),
         // Derived-stock products ignore the manual number (the server
         // recomputes it from inventory) — send it only for manual ones.
         ...(editing.use_inventory_stock ? {} : { stock: parseInt(editing.stock) || 0 }),
@@ -82,6 +91,9 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
         delivery_eta_hours: editing.delivery_eta_hours === "" || editing.delivery_eta_hours == null ? null : parseInt(editing.delivery_eta_hours) || null,
         fulfilment_type: ["instant", "manual", "service"].includes(editing.fulfilment_type) ? editing.fulfilment_type : "manual",
         warranty_days: editing.warranty_days === "" || editing.warranty_days == null ? null : Math.max(0, parseInt(editing.warranty_days) || 0) || null,
+        // Fix Round 6 (video-gap #3): saving a duration re-derives the
+        // expiry server-side (renew from now); blank clears it.
+        listing_duration_days: editing.listing_duration_days === "" || editing.listing_duration_days == null ? null : Math.max(0, parseInt(editing.listing_duration_days) || 0) || null,
         use_inventory_stock: !!editing.use_inventory_stock,
         is_active: editing.is_active !== false,
         specs: editing.specs && Object.keys(editing.specs).length ? editing.specs : null,
@@ -120,18 +132,68 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
   const [dbCategories, setDbCategories] = useState<any[]>([]);
   const [showGamePopover, setShowGamePopover] = useState(false);
   // Listings hub (P2): stock-health tabs, search, bulk selection, CSV.
-  const [hubTab, setHubTab] = useState<"all" | "low" | "inactive">("all");
+  // Fix Round 6 (video-gap #3): + the "Expire soon" lifecycle tab —
+  // active listings whose expiry is in the past or within 7 days.
+  const [hubTab, setHubTab] = useState<"all" | "low" | "inactive" | "expiring">("all");
   const [hubQuery, setHubQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [csvBusy, setCsvBusy] = useState(false);
 
+  const SEVEN_DAYS = 7 * 86_400_000;
+  const isExpiringSoon = (p: any) =>
+    p.is_active !== false && !!p.listing_expires_at &&
+    new Date(p.listing_expires_at).getTime() <= Date.now() + SEVEN_DAYS;
+
   const hubProducts = products.filter((p) => {
     if (hubTab === "low" && !(p.is_active !== false && (p.stock || 0) <= 3)) return false;
     if (hubTab === "inactive" && p.is_active !== false) return false;
+    if (hubTab === "expiring" && !isExpiringSoon(p)) return false;
     if (hubTab === "all" && p.is_active === false) return false;
     if (hubQuery && !String(p.title || "").toLowerCase().includes(hubQuery.toLowerCase())) return false;
     return true;
   });
+
+  // Fix Round 6 (video-gap #3): bulk Extend — renew each selected
+  // listing's duration from today (server recomputes the expiry from
+  // the PATCHed duration; listings without a duration get 30 days).
+  async function bulkExtend() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Extend ${selectedIds.size} selected listing(s)? Each renews from today by its own duration (30 days when none is set).`)) return;
+    let failed = 0;
+    for (const id of selectedIds) {
+      const p = products.find((x: any) => x.id === id);
+      const days = p?.listing_duration_days && p.listing_duration_days > 0 ? p.listing_duration_days : 30;
+      const { error } = await db.from("products").update({ listing_duration_days: days }).eq("id", id);
+      if (error) failed++;
+    }
+    if (failed > 0) toast.error(`${failed} listing(s) could not be extended`);
+    else toast.success(`${selectedIds.size} listing(s) extended`);
+    setSelectedIds(new Set());
+    fetchProducts();
+  }
+
+  // Fix Round 6 (video-gap #9): manual display order. `products` is
+  // already in display order (sort_order asc, newest first on ties);
+  // moving swaps the two neighbours' positions and persists the new
+  // index as sort_order for every row whose position changed — the
+  // storefront reads the same ordering, so what the admin sees is
+  // exactly what buyers get.
+  async function moveProduct(product: any, dir: -1 | 1) {
+    const idx = products.findIndex((p: any) => p.id === product.id);
+    const swap = idx + dir;
+    if (idx < 0 || swap < 0 || swap >= products.length) return;
+    const reordered = [...products];
+    [reordered[idx], reordered[swap]] = [reordered[swap], reordered[idx]];
+    setProducts(reordered);
+    let failed = 0;
+    for (let i = 0; i < reordered.length; i++) {
+      if ((reordered[i].sort_order ?? 0) !== i) {
+        const { error } = await db.from("products").update({ sort_order: i }).eq("id", reordered[i].id);
+        if (error) failed++;
+      }
+    }
+    if (failed > 0) { toast.error("Could not save the new order"); fetchProducts(); }
+  }
 
   async function bulkSetActive(active: boolean) {
     if (selectedIds.size === 0) return;
@@ -186,7 +248,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
       const patch: Record<string, unknown> = {};
       if (hasPrice) {
         if (batchPriceMode === "set") {
-          patch.price = val;
+          patch.price = roundMoney(val);
         } else {
           const p = products.find((x: any) => x.id === id);
           if (!p) { failed++; continue; }
@@ -281,7 +343,9 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
     setLoading(true);
     try {
       const [prodRes, catRes] = await Promise.all([
-          db.from("products").select("*").order("created_at", { ascending: false }),
+          // Fix Round 6 (video-gap #9): the hub lists in storefront
+          // display order (sort_order asc, newest first on ties).
+          db.from("products").select("*").order("sort_order", { ascending: true }).order("created_at", { ascending: false }),
           db.from("categories").select("*").order("name", { ascending: true })
       ]);
       if (prodRes.error) throw prodRes.error;
@@ -301,7 +365,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
       const variants = variantsPayload(newProduct.variants);
       const { error } = await db.from("products").insert([{
         title: newProduct.title,
-        price: parseFloat(newProduct.price),
+        price: roundMoney(parseFloat(newProduct.price)),
         image: newProduct.image || null,
         stock: newProduct.use_inventory_stock ? 0 : (parseInt(newProduct.stock) || 0),
         category: newProduct.category,
@@ -311,6 +375,9 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
         delivery_eta_hours: newProduct.delivery_eta_hours === "" ? null : parseInt(newProduct.delivery_eta_hours) || null,
         fulfilment_type: newProduct.fulfilment_type,
         warranty_days: newProduct.warranty_days === "" ? null : Math.max(0, parseInt(newProduct.warranty_days) || 0) || null,
+        // Fix Round 6 (video-gap #3): listing duration — the server
+        // derives listing_expires_at from it (blank = never expires).
+        listing_duration_days: newProduct.listing_duration_days === "" ? null : Math.max(0, parseInt(newProduct.listing_duration_days) || 0) || null,
         use_inventory_stock: newProduct.use_inventory_stock,
         specs: Object.keys(newProduct.specs).length ? newProduct.specs : null,
         variants: variants.length ? variants : null,
@@ -318,7 +385,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
       if (error) throw error;
       setNewProduct({
         title: "", price: "", image: "", stock: "10", category: dbCategories[0]?.name || "", game_type: "All",
-        description: "", min_quantity: "1", delivery_eta_hours: "", fulfilment_type: "manual", warranty_days: "", use_inventory_stock: false,
+        description: "", min_quantity: "1", delivery_eta_hours: "", fulfilment_type: "manual", warranty_days: "", listing_duration_days: "", use_inventory_stock: false,
         specs: {}, variants: [],
       });
       setShowAddForm(false);
@@ -479,6 +546,9 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                                 <FormItem label="Warranty (days, optional)">
                                     <input type="number" min={1} value={newProduct.warranty_days} onChange={e=>setNewProduct({...newProduct, warranty_days:e.target.value})} placeholder="e.g. 30" className="w-full bg-white border border-slate-300 rounded px-4 py-2.5 text-sm font-bold" />
                                 </FormItem>
+                                <FormItem label="Listing duration (days, optional)">
+                                    <input type="number" min={1} value={newProduct.listing_duration_days} onChange={e=>setNewProduct({...newProduct, listing_duration_days:e.target.value})} placeholder="Blank = never expires" className="w-full bg-white border border-slate-300 rounded px-4 py-2.5 text-sm font-bold" />
+                                </FormItem>
                             </div>
                             <FormItem label="Description">
                                 <textarea value={newProduct.description} onChange={e=>setNewProduct({...newProduct, description:e.target.value})} rows={3} className="w-full bg-white border border-slate-300 rounded px-4 py-2.5 text-sm font-medium resize-none" />
@@ -555,17 +625,30 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                 {([
                   ["all", `All active (${products.filter(p => p.is_active !== false).length})`],
                   ["low", `Low stock ≤3 (${products.filter(p => p.is_active !== false && (p.stock || 0) <= 3).length})`],
+                  ["expiring", `Expire soon (${products.filter(isExpiringSoon).length})`],
                   ["inactive", `Inactive (${products.filter(p => p.is_active === false).length})`],
                 ] as const).map(([id, label]) => (
                   <button key={id} onClick={() => setHubTab(id)} className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${hubTab === id ? "bg-slate-900 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
                     {label}
                   </button>
                 ))}
+                {/* Fix Round 6: Select All for the bulk bar (video-gap #4 completion) */}
+                <button
+                  onClick={() => {
+                    const visible = hubProducts.map((p: any) => p.id);
+                    const allSelected = visible.length > 0 && visible.every((id: string) => selectedIds.has(id));
+                    setSelectedIds(allSelected ? new Set() : new Set(visible));
+                  }}
+                  className="px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all"
+                >
+                  {hubProducts.length > 0 && hubProducts.every((p: any) => selectedIds.has(p.id)) ? "Clear selection" : `Select all (${hubProducts.length})`}
+                </button>
                 {selectedIds.size > 0 && (
                   <span className="flex items-center gap-2 ml-2">
                     <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{selectedIds.size} selected</span>
                     <button onClick={() => bulkSetActive(true)} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Activate</button>
                     <button onClick={() => bulkSetActive(false)} className="px-3 py-1.5 bg-slate-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Deactivate</button>
+                    <button onClick={bulkExtend} className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Extend</button>
                     <button onClick={() => setBatchOpen(!batchOpen)} className="px-3 py-1.5 bg-[#0C2254] text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Batch Update</button>
                     <button onClick={bulkDelete} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Delete</button>
                   </span>
@@ -623,15 +706,22 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                       }}
                       onEdit={() => setEditing({
                         ...product,
+                        // Fix Round 5 (item 1): round on read — the
+                        // edit form must open showing "16.49", never a
+                        // raw float artifact like 16.489999771118164.
+                        price: moneyInputValue(product.price),
+                        listing_duration_days: product.listing_duration_days ?? "",
                         delivery_eta_hours: product.delivery_eta_hours ?? "",
                         min_quantity: product.min_quantity ?? 1,
                         specs: product.specs || {},
                         variants: Array.isArray(product.variants)
-                          ? product.variants.map((v: any) => ({ label: v.label, priceDelta: String(v.priceDelta ?? 0), stock: v.stock == null ? "" : String(v.stock) }))
+                          ? product.variants.map((v: any) => ({ label: v.label, priceDelta: moneyInputValue(v.priceDelta ?? 0), stock: v.stock == null ? "" : String(v.stock) }))
                           : [],
                       })}
                       onDelete={() => handleDeleteProduct(product)}
                       onSaved={fetchProducts}
+                      onMoveUp={() => moveProduct(product, -1)}
+                      onMoveDown={() => moveProduct(product, 1)}
                     />
                 ))}
             </div>
@@ -669,6 +759,16 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                             </select>
                         </FormItem>
                         <FormItem label="Warranty (days, blank = none)"><input type="number" min={1} value={editing.warranty_days ?? ""} onChange={(e) => setEditing({ ...editing, warranty_days: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                        <FormItem label="Listing duration (days, blank = never expires)">
+                            <input type="number" min={1} value={editing.listing_duration_days ?? ""} onChange={(e) => setEditing({ ...editing, listing_duration_days: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
+                            {editing.listing_expires_at && (
+                              <p className="text-[11px] text-slate-400 font-medium mt-1">
+                                {new Date(editing.listing_expires_at).getTime() <= Date.now()
+                                  ? `Expired on ${new Date(editing.listing_expires_at).toLocaleDateString()} — saving a duration renews it from today.`
+                                  : `Currently expires ${new Date(editing.listing_expires_at).toLocaleDateString()} — saving renews from today.`}
+                              </p>
+                            )}
+                        </FormItem>
                     </div>
                     <div className="flex flex-wrap gap-6">
                         <label className="flex items-center gap-2 cursor-pointer">
@@ -694,7 +794,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                         <button onClick={handleUpdateProduct} disabled={loading} className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black text-[12px] uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-50">Save Changes</button>
                         <button onClick={() => handleDeleteProduct(editing)} className="px-8 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-black text-[12px] uppercase tracking-widest hover:bg-red-50 transition-all">Delete Product</button>
                     </div>
-                    <InventoryManager productId={editing.id} />
+                    <InventoryManager productId={editing.id} derived={!!editing.use_inventory_stock} manualStock={editing.stock} />
                 </div>
             )}
             </div>
@@ -713,14 +813,14 @@ function FormItem({ label, children }: any) {
     );
 }
 
-function ProductCard({ product, onEdit, onDelete, selected, onToggleSelect, onSaved }: any) {
+function ProductCard({ product, onEdit, onDelete, selected, onToggleSelect, onSaved, onMoveUp, onMoveDown }: any) {
     const [priceDraft, setPriceDraft] = useState<string | null>(null);
     const [savingPrice, setSavingPrice] = useState(false);
     const inactive = product.is_active === false;
 
     async function savePrice() {
       if (priceDraft === null) return;
-      const value = parseFloat(priceDraft);
+      const value = roundMoney(parseFloat(priceDraft));
       if (!Number.isFinite(value) || value < 0) { toast.error("Enter a valid price"); return; }
       setSavingPrice(true);
       try {
@@ -746,8 +846,14 @@ function ProductCard({ product, onEdit, onDelete, selected, onToggleSelect, onSa
                 <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={onEdit} className="bg-white p-2 rounded-lg text-slate-600 hover:text-[#E62E04] shadow-xl border border-slate-100"><Edit size={16} /></button>
                     <button onClick={onDelete} className="bg-white p-2 rounded-lg text-slate-600 hover:text-red-600 shadow-xl border border-slate-100"><Trash2 size={16} /></button>
+                    {/* Fix Round 6 (video-gap #9): display-order controls */}
+                    <button onClick={onMoveUp} title="Move up (storefront order)" className="bg-white p-2 rounded-lg text-slate-600 hover:text-slate-900 shadow-xl border border-slate-100"><ChevronUp size={16} /></button>
+                    <button onClick={onMoveDown} title="Move down (storefront order)" className="bg-white p-2 rounded-lg text-slate-600 hover:text-slate-900 shadow-xl border border-slate-100"><ChevronDown size={16} /></button>
                 </div>
-                <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
+                {/* pointer-events-none: the chips are display-only, and
+                    the strip must never swallow clicks meant for the
+                    card's action buttons (Fix Round 6 rig finding). */}
+                <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2 pointer-events-none">
                     <span className="px-3 py-1 bg-white/90 backdrop-blur-md rounded-lg text-[12px] font-black uppercase tracking-widest text-slate-900 border border-white/20">
                         {product.category}
                     </span>
@@ -763,6 +869,13 @@ function ProductCard({ product, onEdit, onDelete, selected, onToggleSelect, onSa
                     {product.warranty_days ? (
                         <span className="px-3 py-1 bg-white/90 rounded-lg text-[12px] font-black uppercase tracking-widest text-emerald-700">{product.warranty_days}-day warranty</span>
                     ) : null}
+                    {/* Fix Round 6 (video-gap #3): listing-expiry chip */}
+                    {product.listing_expires_at ? (() => {
+                        const ms = new Date(product.listing_expires_at).getTime() - Date.now();
+                        if (ms <= 0) return <span className="px-3 py-1 bg-red-600/90 rounded-lg text-[12px] font-black uppercase tracking-widest text-white">Expired</span>;
+                        const days = Math.ceil(ms / 86_400_000);
+                        return <span className={`px-3 py-1 rounded-lg text-[12px] font-black uppercase tracking-widest ${days <= 7 ? "bg-amber-500/90 text-white" : "bg-white/90 text-slate-700"}`}>{days <= 7 ? `Expires in ${days}d` : `Expires ${new Date(product.listing_expires_at).toLocaleDateString()}`}</span>;
+                    })() : null}
                 </div>
             </div>
             <div className="p-5 space-y-4">
@@ -773,7 +886,7 @@ function ProductCard({ product, onEdit, onDelete, selected, onToggleSelect, onSa
                     <div className="flex-1">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pricing (USD)</p>
                         {priceDraft === null ? (
-                            <button onClick={() => setPriceDraft(String(product.price ?? ""))} className="text-xl font-black text-[#E62E04] tracking-tight hover:underline" title="Click to edit price">
+                            <button onClick={() => setPriceDraft(moneyInputValue(product.price))} className="text-xl font-black text-[#E62E04] tracking-tight hover:underline" title="Click to edit price">
                                 {Number(product.price).toFixed(2)}
                             </button>
                         ) : (
@@ -867,7 +980,7 @@ function VariantsEditor({ value, onChange }: { value: { label: string; priceDelt
 // Each row is ONE deliverable account. When a payment is verified the
 // order service assigns the oldest available row, writes its credentials
 // into the order's vault fields and marks the row assigned.
-function InventoryManager({ productId }: { productId: string }) {
+function InventoryManager({ productId, derived, manualStock }: { productId: string; derived?: boolean; manualStock?: unknown }) {
   const [items, setItems] = useState<any[]>([]);
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
@@ -923,6 +1036,19 @@ function InventoryManager({ productId }: { productId: string }) {
           {counts.available || 0} available · {counts.assigned || 0} assigned · {counts.used || 0} used · {counts.flagged || 0} flagged
         </span>
       </div>
+      {/* Fix Round 5 (item 5): say which number is the sellable stock.
+          Two stock models coexist by design — a manual counter XOR a
+          count derived from these inventory rows — and the tour read
+          "stock 25, inventory 0" as a contradiction. It is not one when
+          the mode is labelled: derived → the Stock field above always
+          equals available − reserved (re-synced on every inventory
+          write); manual → the Stock field is the counter and these rows
+          are only pre-loaded credentials for auto-delivery. */}
+      <p className="text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+        {derived
+          ? "Stock mode: DERIVED — the Stock number for this product is computed from the available rows below (minus units reserved by unpaid orders) and updates automatically."
+          : `Stock mode: MANUAL — the sellable stock is the Stock counter above (${manualStock ?? 0}); the rows below are pre-loaded credentials for auto-delivery and do not change that counter.`}
+      </p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <input value={login} onChange={(e) => setLogin(e.target.value)} placeholder="Account login / email" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
         <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Account password" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />

@@ -31,6 +31,12 @@ export function AdminCategories() {
     intake_schema: [] as { key: string; label: string; type: string; options: string; required: boolean }[],
   });
   const [productsCount, setProductsCount] = useState(0);
+  // Fix Round 5 (item 2): REAL per-category product counts. Products
+  // carry their category as a name string (products.category), so the
+  // count for a category is the number of products whose category name
+  // matches — computed from the products fetch below, never a global
+  // total repeated on every card (the live bug this fixes).
+  const [countsByCategory, setCountsByCategory] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchCategories();
@@ -58,8 +64,15 @@ export function AdminCategories() {
       } else {
         setCategories(data || []);
       }
-      const prodRes = await db.from("products").select("id");
-      setProductsCount((prodRes.data || []).length);
+      const prodRes = await db.from("products").select("id, category");
+      const prods = prodRes.data || [];
+      setProductsCount(prods.length);
+      const byCat: Record<string, number> = {};
+      for (const p of prods) {
+        const name = (p as any).category;
+        if (name) byCat[name] = (byCat[name] || 0) + 1;
+      }
+      setCountsByCategory(byCat);
     } catch (e: any) {
       console.error(e.message);
     } finally {
@@ -268,6 +281,9 @@ export function AdminCategories() {
                 <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
                   <div className="text-[10px] font-bold text-primary-600 px-2 py-0.5 bg-primary-50 rounded-full uppercase tracking-widest">
                     Active
+                  </div>
+                  <div className="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    {countsByCategory[cat.name] || 0} product{(countsByCategory[cat.name] || 0) === 1 ? "" : "s"}
                   </div>
                   <ChevronRight size={14} className="text-slate-300" />
                 </div>

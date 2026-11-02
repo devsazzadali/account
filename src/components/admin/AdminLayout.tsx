@@ -356,14 +356,10 @@ export function AdminLayout({ children, activeTab, setActiveTab }: AdminLayoutPr
             setActiveTab={goToTab}
             collapsed={collapsed}
           />
-          <MenuItem
-            id="seller_info"
-            label="Seller Information"
-            icon={<ShieldCheck size={20} />}
-            activeTab={activeTab}
-            setActiveTab={goToTab}
-            collapsed={collapsed}
-          />
+          {/* Fix Round 5 (item 4): the standalone "Seller Information"
+              item that used to sit here duplicated the Store Management
+              submenu entry (both → seller_info). Removed — the page is
+              reached via Store Management → Seller Information. */}
           <MenuItem
             id="feedback"
             label="Feedback"

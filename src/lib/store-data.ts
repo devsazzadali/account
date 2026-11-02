@@ -18,6 +18,15 @@ import type {
 
 type ProductRow = Awaited<ReturnType<typeof prisma.product.findFirst>>;
 
+// Fix Round 6 (video-gap #3): the server-side storefront reads apply
+// the same listing-expiry rule as the generic API scope — an expired
+// listing is not sold, listed, or sitemap-indexed anywhere. (This SSR
+// layer previously bypassed the rule entirely and kept rendering
+// expired products with a Buy Now button.)
+const notExpired = () => ({
+  OR: [{ listingExpiresAt: null }, { listingExpiresAt: { gt: new Date() } }],
+});
+
 function toStoreProduct(
   row: NonNullable<ProductRow>,
   schema: { key: string; label: string }[] = [],
@@ -72,8 +81,10 @@ export async function getHomeData(limit = 30): Promise<HomeData> {
   try {
     const [products, categories, reviews] = await Promise.all([
       prisma.product.findMany({
-        where: { isActive: true },
-        orderBy: { createdAt: "desc" },
+        where: { isActive: true, AND: [notExpired()] },
+        // Fix Round 6 (video-gap #9): storefront display order is the
+        // admin-set sort_order; newest first only breaks ties.
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
         take: limit,
       }),
       prisma.category.findMany({ orderBy: { name: "asc" } }),
@@ -114,6 +125,8 @@ export const getProductById = cache(async function getProductById(
   try {
     const row = await prisma.product.findUnique({ where: { id } });
     if (!row || !row.isActive) return null;
+    // Fix Round 6: an expired listing's product page is gone too.
+    if (row.listingExpiresAt && row.listingExpiresAt.getTime() <= Date.now()) return null;
     // Real acquisitions: orders for this product that actually reached
     // the buyer (escrow delivered/completed). The `sold` column is a
     // seeded counter that does not correspond to orders — never show it
@@ -164,7 +177,7 @@ export async function getSitemapProducts(): Promise<
 > {
   try {
     return await prisma.product.findMany({
-      where: { isActive: true },
+      where: { isActive: true, AND: [notExpired()] },
       select: { id: true, createdAt: true },
       orderBy: { createdAt: "desc" },
     });

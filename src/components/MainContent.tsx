@@ -289,7 +289,10 @@ export function MainContent({
         try {
             setLoading(true);
             const [prodRes, catRes, revRes] = await Promise.all([
-                db.from('products').select('*').order('created_at', { ascending: false }),
+                // Fix Round 6 (video-gap #9): storefront honours the
+                // admin-set manual display order (sort_order asc),
+                // newest first only as the tiebreak.
+                db.from('products').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
                 db.from('categories').select('*').order('name', { ascending: true }),
                 db.from('reviews').select('*').order('created_at', { ascending: false }).limit(6)
             ]);

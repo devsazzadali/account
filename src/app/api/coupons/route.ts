@@ -5,7 +5,7 @@
 // DELETE /api/coupons?id=…       → delete (admin)
 // Redemption itself is validated + priced server-side in order-service.
 
-import { requireAdmin, isResponse } from "@/src/lib/auth-server";
+import { requireAdmin, requireAdminStrict, isResponse } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 import { serializeRow, serializeRows } from "@/src/lib/serialize";
 
@@ -81,7 +81,9 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const gate = await requireAdmin(req);
+  // Fix Round 7 (roles matrix): coupon DELETION is full-admin only —
+  // moderators can create/edit coupons but never destroy them.
+  const gate = await requireAdminStrict(req);
   if (isResponse(gate)) return gate;
   const id = new URL(req.url).searchParams.get("id") || "";
   if (!id) return Response.json({ error: "id required" }, { status: 422 });

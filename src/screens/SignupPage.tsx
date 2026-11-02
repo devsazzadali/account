@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Lock, Mail, Shield, Zap, ArrowRight, CheckCircle2, Globe, Github, Loader2 } from "lucide-react";
+import { User, Lock, Mail, Shield, Zap, ArrowRight, CheckCircle2, Globe, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
@@ -22,7 +22,10 @@ export function SignupPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSocialLogin = async (provider: 'google' | 'github') => {
+  // Fix Round 7 (item 10): only providers actually enabled on the
+  // hosted Neon Auth project get a button — Google yes, GitHub no
+  // (verified 2026-11-02; see LoginPage for the full note).
+  const handleSocialLogin = async (provider: 'google') => {
     try {
       const { error } = await auth.signInWithOAuth({
         provider,
@@ -269,24 +272,15 @@ export function SignupPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                    <button 
-                        type="button" 
+                <div>
+                    <button
+                        type="button"
                         onClick={() => handleSocialLogin('google')}
-                        className="flex flex-col items-center justify-center py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-red-50 hover:text-red-600"
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-red-50 hover:text-red-600"
                     >
-                        <Globe className="w-4 h-4 mb-1" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Google</span>
+                        <Globe className="w-4 h-4" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Continue with Google</span>
                     </button>
-                    <button 
-                        type="button" 
-                        onClick={() => handleSocialLogin('github')}
-                        className="flex flex-col items-center justify-center py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-slate-50 hover:text-slate-900"
-                    >
-                        <Github className="w-4 h-4 mb-1" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Github</span>
-                    </button>
-                    
                 </div>
             </form>
 

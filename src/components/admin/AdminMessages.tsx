@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
-import { lsGet, lsRemove } from "@/src/lib/storage";
+import { lsGet, lsRemove, lsSet } from "@/src/lib/storage";
 import {
   GENERAL_THREAD_KEY,
   threadKeyOf,
@@ -35,7 +35,16 @@ interface AdminThread {
 }
 
 
-export function AdminMessages() {
+export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) => void } = {}) {
+  // Fix Round 6 (item 5): Order History rows are clickable — they hand
+  // the order id to the Sold Orders screen (same localStorage preselect
+  // pattern as Customers → Messages) and switch tabs; AdminOrders opens
+  // that order's detail on arrival.
+  const openOrder = (orderId: string) => {
+    if (!setActiveTab) return;
+    lsSet("openOrderId", orderId);
+    setActiveTab("orders");
+  };
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   // Selection = one THREAD of one user (Fix Round 4).
@@ -103,8 +112,28 @@ export function AdminMessages() {
   }, [selection]);
 
   async function fetchUserOrders(username: string) {
-    const { data } = await db.from('orders').select('*, products(title)').eq('username', username).order('created_at', { ascending: false });
-    setUserOrders(data || []);
+    // Fix Round 5 (item 3): a buyer's orders are keyed three ways —
+    // the username snapshot on the order, their user_id, and their
+    // customer_email. Matching by username alone (the old query) hid
+    // orders placed under a different snapshot (e.g. before a rename,
+    // or via a flow that stamped only the email), which is how this
+    // panel could show 2 orders while Sold Orders showed 0 for the
+    // same store. Union all three keys and de-duplicate by order id.
+    const profile =
+      allProfiles.find((p) => p.username === username) ||
+      (await db.from('profiles').select('id, email').eq('username', username).single()).data;
+    const queries = [
+      db.from('orders').select('*, products(title)').eq('username', username),
+    ];
+    if (profile?.email) queries.push(db.from('orders').select('*, products(title)').eq('customer_email', profile.email));
+    if (profile?.id) queries.push(db.from('orders').select('*, products(title)').eq('user_id', profile.id));
+    const results = await Promise.all(queries);
+    const byId = new Map<string, any>();
+    for (const r of results) for (const o of r.data || []) byId.set(o.id, o);
+    const merged = [...byId.values()].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+    setUserOrders(merged);
   }
 
   async function fetchProfiles() {
@@ -137,11 +166,14 @@ export function AdminMessages() {
         const { data, error } = await db.from('messages').select('*').order('created_at', { ascending: true });
         if (error) throw error;
         setMessages(data || []);
-        if (data && data.length > 0 && !selectionRef.current && window.innerWidth > 1024) {
-            // Auto-open the most recently active thread.
-            const last = data[data.length - 1];
-            setSelection({ username: last.username, threadKey: threadKeyOf(last.subject) });
-        }
+        // Fix Round 5 (item 6): NO auto-open here. This fetch used to
+        // auto-select the most recently active thread on desktop, and
+        // the selection effect immediately marked that thread's messages
+        // read server-side — so merely opening the Messages page (or a
+        // realtime refetch) drained the unread badge (observed live:
+        // 14 → 13 and 14 → 9 with no thread ever clicked). A thread is
+        // now marked read only when the admin explicitly opens it (or
+        // arrives via the deliberate Customers → message preselect).
         setLoading(false);
     } catch (err: any) {
         setLoading(false);
@@ -465,7 +497,7 @@ export function AdminMessages() {
                   {viewMode !== 'chat' && (
                       <div className="space-y-4">
                           {userOrders.map(order => (
-                             <div key={order.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                             <div key={order.id} onClick={() => openOrder(order.id)} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
                                  <div className="flex justify-between items-start mb-2">
                                      <h4 className="font-bold text-slate-900 uppercase tracking-tight">{order.products?.title || 'Unknown Product'}</h4>
                                  </div>
@@ -566,7 +598,7 @@ export function AdminMessages() {
                     </div>
                     <div className="space-y-3">
                         {userOrders.slice(0, 5).map(order => (
-                          <div key={order.id} className="bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-[#E62E04]/20 transition-all cursor-pointer group">
+                          <div key={order.id} onClick={() => openOrder(order.id)} className="bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-[#E62E04]/20 transition-all cursor-pointer group">
                               <div className="flex justify-between items-start mb-1.5">
                                   <div className="text-[12px] font-black text-slate-800 truncate pr-2 uppercase tracking-tight">{order.products?.title || 'Asset'}</div>
                               </div>

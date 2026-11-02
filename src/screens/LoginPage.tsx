@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Lock, ArrowRight, Zap, Crown, CheckCircle2, Github, Mail, Globe, Loader2, ShieldCheck } from "lucide-react";
+import { User, Lock, ArrowRight, Zap, Crown, CheckCircle2, Mail, Globe, Loader2, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
@@ -30,7 +30,13 @@ export function LoginPage() {
     return null;
   };
 
-  const handleSocialLogin = async (provider: 'google' | 'github') => {
+  // Fix Round 7 (item 10): provider availability was verified against
+  // the hosted Neon Auth project (2026-11-02): Google is ENABLED,
+  // GitHub is NOT ("Provider is not supported or enabled"). Only
+  // configured providers get a button — no dead buttons. Enabling
+  // another provider is a Neon Auth console step; re-add its button
+  // here once it is switched on there.
+  const handleSocialLogin = async (provider: 'google') => {
     try {
       const { error } = await auth.signInWithOAuth({
         provider,
@@ -253,24 +259,15 @@ export function LoginPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                    <button 
-                        type="button" 
+                <div>
+                    <button
+                        type="button"
                         onClick={() => handleSocialLogin('google')}
-                        className="flex flex-col items-center justify-center py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-red-50 hover:text-red-600"
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-red-50 hover:text-red-600"
                     >
-                        <Globe className="w-5 h-5 mb-1" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Google</span>
+                        <Globe className="w-5 h-5" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Continue with Google</span>
                     </button>
-                    <button 
-                        type="button" 
-                        onClick={() => handleSocialLogin('github')}
-                        className="flex flex-col items-center justify-center py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-slate-50 hover:text-slate-900"
-                    >
-                        <Github className="w-5 h-5 mb-1" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Github</span>
-                    </button>
-                    
                 </div>
             </form>
 

@@ -462,9 +462,21 @@ export async function createOrder(input: {
     const open = await tx.storeSetting.findUnique({ where: { key: "store_open" } });
     if (open?.value === "false") throw new ServiceError("The store is temporarily closed and is not accepting new orders right now.", 503);
 
+    // Fix Round 7 (customer suspend): a suspended buyer cannot order.
+    // The flag is user_risk_profiles.is_blocked, toggled from Admin →
+    // Customers. Reads of their history stay open; creation stops.
+    const risk = await tx.userRiskProfile.findUnique({ where: { userId: input.userId }, select: { isBlocked: true } });
+    if (risk?.isBlocked) throw new ServiceError("This account is suspended and cannot place orders. Please contact support.", 403);
+
     const product = await tx.product.findUnique({ where: { id: input.productId } });
     if (!product) throw new ServiceError("Product not found", 404);
     if (!product.isActive) throw new ServiceError("This product is no longer available", 409);
+    // Fix Round 6 (video-gap #3): an expired listing cannot be ordered
+    // even by a direct API call — the storefront hides it, and this is
+    // the server-side half of the same rule.
+    if (product.listingExpiresAt && product.listingExpiresAt.getTime() <= Date.now()) {
+      throw new ServiceError("This listing has expired and is no longer on sale", 409);
+    }
     if (qty < product.minQuantity) {
       throw new ServiceError(`Minimum order quantity for this product is ${product.minQuantity}`, 422);
     }

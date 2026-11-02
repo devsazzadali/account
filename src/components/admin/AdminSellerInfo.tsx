@@ -10,6 +10,7 @@
 import React, { useEffect, useState } from "react";
 import { Store, Mail, Loader2, CheckCircle2, AlertTriangle, Clock, ShoppingBag, Star, DollarSign, Eye, EyeOff } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { SalesByDayChart, type SalesDay } from "./SalesByDayChart";
 
 interface SellerStats {
   completion_rate: number | null;
@@ -28,6 +29,7 @@ interface SellerStats {
 export function AdminSellerInfo({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const [identity, setIdentity] = useState<any>(null);
   const [seller, setSeller] = useState<SellerStats | null>(null);
+  const [salesByDay, setSalesByDay] = useState<SalesDay[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export function AdminSellerInfo({ setActiveTab }: { setActiveTab?: (tab: string)
           fetch("/api/admin/settings", { credentials: "same-origin" }).then((r) => r.json()).catch(() => null),
         ]);
         setSeller(statsRes?.seller || null);
+        setSalesByDay(Array.isArray(statsRes?.sales_by_day) ? statsRes.sales_by_day : []);
         setIdentity({
           name: statsRes?.store_name,
           description: statsRes?.store_description,
@@ -135,6 +138,9 @@ export function AdminSellerInfo({ setActiveTab }: { setActiveTab?: (tab: string)
           against orders placed in the same window. These are your store's own numbers — there is no platform score or seller level in a single-seller store.
         </p>
       </div>
+
+      {/* Sales by day (Fix Round 6, video-gap #8 — same real series as Admin Home) */}
+      <SalesByDayChart days={salesByDay} compact />
     </div>
   );
 }

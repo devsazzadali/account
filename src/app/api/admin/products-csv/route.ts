@@ -99,7 +99,8 @@ export async function POST(req: Request) {
       const r = rows[i];
       const rowNo = i + 2;
       const title = r.title;
-      const price = Number(r.price);
+      // Fix Round 5 (item 1): prices land at exactly 2 decimals.
+      const price = Math.round(Number(r.price) * 100) / 100;
       if (!title) { errors.push({ row: rowNo, message: "title is required" }); continue; }
       if (!Number.isFinite(price) || price < 0) { errors.push({ row: rowNo, message: "price must be a number ≥ 0" }); continue; }
       const data: Record<string, unknown> = {
@@ -142,7 +143,7 @@ export async function POST(req: Request) {
             if (!v || typeof v.label !== "string" || !v.label.trim()) throw new Error("variant is missing a label");
             return {
               label: v.label,
-              priceDelta: Number(v.priceDelta) || 0,
+              priceDelta: Math.round((Number(v.priceDelta) || 0) * 100) / 100,
               stock: v.stock == null || v.stock === "" ? null : Math.max(0, Math.floor(Number(v.stock)) || 0),
             };
           });

@@ -4,7 +4,7 @@
 //        are never returned or accepted here).
 // PUT  → save the editable subset (every key in SETTING_KEYS).
 
-import { requireAdmin, isResponse } from "@/src/lib/auth-server";
+import { requireAdminStrict, isResponse } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 import { getAllSettings, setSettings, SETTING_KEYS } from "@/src/lib/settings-store";
 import { emailConfigured } from "@/src/lib/mailer";
@@ -51,7 +51,7 @@ async function payload() {
 }
 
 export async function GET(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req); // Fix Round 7: settings/payment config are full-admin only (no moderator access)
   if (isResponse(gate)) return gate;
   return Response.json(await payload());
 }
@@ -100,7 +100,7 @@ function validUrl(v: string): boolean {
 }
 
 export async function PUT(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req); // Fix Round 7: settings/payment config are full-admin only (no moderator access)
   if (isResponse(gate)) return gate;
   const body = await req.json().catch(() => ({}));
   const values: Record<string, string> = {};

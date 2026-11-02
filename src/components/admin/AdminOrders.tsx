@@ -30,6 +30,7 @@ import {
 import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
 import { AdminOrderDetails } from "./AdminOrderDetails";
+import { lsGet, lsRemove } from "@/src/lib/storage";
 
 export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const [orders, setOrders] = useState<any[]>([]);
@@ -82,17 +83,40 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
       }));
       setOrders(rows);
 
-      // Counts use the canonical states: payment pending_verification =
-      // "Pending", paid + PREPARING = "Waiting" (on the store to deliver).
-      // Disputed is its own tab, joined from the same orders list (P1) —
-      // disputes themselves stay visible in the order detail.
-      const countsMap = {
+      // Fix Round 6 (item 5): a Messages → Order History click hands
+      // over an order id — open its detail directly on arrival.
+      const openId = lsGet("openOrderId");
+      if (openId) {
+        lsRemove("openOrderId");
+        const target = rows.find((r: any) => r.id === openId);
+        if (target) setSelectedOrder(target);
+      }
+
+      // Fix Round 5 (item 3): tab counts come from the ONE canonical
+      // server-side summary (/api/store/stats → orders_summary,
+      // src/lib/order-summary.ts) — the same numbers Admin Home and
+      // Seller Information show. The row-filter predicates below mirror
+      // the summary's definitions exactly (case-insensitive terminal
+      // states), so a count can never disagree with the list it labels.
+      // The local computation remains only as a fallback if the stats
+      // endpoint is unreachable.
+      const stats = await fetch("/api/store/stats").then((r) => r.json()).catch(() => null);
+      const s = stats?.orders_summary;
+      const lc = (o: any) => (o.status || "").toLowerCase();
+      const countsMap = s ? {
+        All: s.total,
+        Pending: s.pending,
+        Waiting: s.waiting,
+        Completed: s.completed,
+        Disputed: s.disputed,
+        Canceled: s.canceled,
+      } : {
         All: rows.length,
-        Pending: rows.filter(o => o.payment_status === 'pending_verification' || (o.payment_status === 'unpaid' && o.status === 'New Order')).length,
-        Waiting: rows.filter(o => o.payment_status === 'paid' && (o.status === 'PREPARING' || o.status === 'Delivering')).length,
-        Completed: rows.filter(o => o.status === 'Completed').length,
-        Disputed: rows.filter(o => o.status === 'Disputed').length,
-        Canceled: rows.filter(o => o.status === 'Canceled').length,
+        Pending: rows.filter(o => o.payment_status === 'pending_verification' || (o.payment_status === 'unpaid' && lc(o) === 'new order')).length,
+        Waiting: rows.filter(o => o.payment_status === 'paid' && (lc(o) === 'preparing' || lc(o) === 'delivering')).length,
+        Completed: rows.filter(o => lc(o) === 'completed').length,
+        Disputed: rows.filter(o => lc(o) === 'disputed').length,
+        Canceled: rows.filter(o => lc(o) === 'canceled' || lc(o) === 'cancelled').length,
       };
       setCounts(countsMap);
 
@@ -108,13 +132,16 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
   }, [fetchInitialData]);
 
   const filteredOrders = orders.filter(order => {
-    // Status Tab Filter
+    // Status Tab Filter — definitions mirror the canonical summary
+    // (src/lib/order-summary.ts); terminal states compare
+    // case-insensitively so legacy lowercase rows land in their tab.
+    const st = (order.status || "").toLowerCase();
     const matchesTab = activeTab === "All" ||
-                      (activeTab === "Pending" && (order.payment_status === "pending_verification" || (order.payment_status === "unpaid" && order.status === "New Order"))) ||
-                      (activeTab === "Waiting" && order.payment_status === "paid" && (order.status === "PREPARING" || order.status === "Delivering")) ||
-                      (activeTab === "Completed" && order.status === "Completed") ||
-                      (activeTab === "Disputed" && order.status === "Disputed") ||
-                      (activeTab === "Canceled" && order.status === "Canceled");
+                      (activeTab === "Pending" && (order.payment_status === "pending_verification" || (order.payment_status === "unpaid" && st === "new order"))) ||
+                      (activeTab === "Waiting" && order.payment_status === "paid" && (st === "preparing" || st === "delivering")) ||
+                      (activeTab === "Completed" && st === "completed") ||
+                      (activeTab === "Disputed" && st === "disputed") ||
+                      (activeTab === "Canceled" && (st === "canceled" || st === "cancelled"));
 
     if (!matchesTab) return false;
     if (subStatus && order.status !== subStatus) return false;
@@ -376,7 +403,7 @@ function OrderRow({ order, onDetail }: { order: any, onDetail: () => void, key?:
 
         {/* Unit Price (col-span-2) */}
         <div className="col-span-2">
-          <span className="text-[13px] font-bold text-slate-900">${(order.total_price || 0).toLocaleString()}</span>
+          <span className="text-[13px] font-bold text-slate-900">${Number(order.total_price || 0).toFixed(2)}</span>
         </div>
 
         {/* Type (col-span-1) */}
@@ -418,7 +445,7 @@ function OrderRow({ order, onDetail }: { order: any, onDetail: () => void, key?:
 
         {/* Total Amount (col-span-1) */}
         <div className="col-span-1 text-right">
-           <p className="text-[14px] font-bold text-slate-900">${(order.total_price || 0).toLocaleString()}</p>
+           <p className="text-[14px] font-bold text-slate-900">${Number(order.total_price || 0).toFixed(2)}</p>
         </div>
       </div>
     </div>

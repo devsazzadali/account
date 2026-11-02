@@ -15,6 +15,9 @@ import { lsGet, lsSet } from "@/src/lib/storage";
 
 export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) => void }) {
   const [profiles, setProfiles] = useState<any[]>([]);
+  // Fix Round 7 (item 7): suspension state per user id, from
+  // user_risk_profiles.is_blocked — shown in the list and the drill-in.
+  const [riskMap, setRiskMap] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("All");
@@ -27,16 +30,36 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
   async function fetchProfiles() {
     setLoading(true);
     try {
-      const { data, error } = await db
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const [{ data, error }, riskRes] = await Promise.all([
+        db.from("profiles").select("*").order("created_at", { ascending: false }),
+        db.from("user_risk_profiles").select("user_id, is_blocked"),
+      ]);
       if (error) throw error;
       setProfiles(data || []);
+      const map: Record<string, boolean> = {};
+      for (const r of riskRes.data || []) map[r.user_id] = !!r.is_blocked;
+      setRiskMap(map);
     } catch (e: any) {
       console.error(e.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleToggleSuspend(user: any, next: boolean) {
+    try {
+      const res = await fetch("/api/admin/risk", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id, blocked: next }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Request failed");
+      setRiskMap((prev) => ({ ...prev, [user.id]: next }));
+      toast.success(next ? `${user.username || "Customer"} suspended — they can no longer order or write.` : `${user.username || "Customer"} reactivated.`);
+    } catch (e: any) {
+      toast.error("Could not update suspension: " + e.message);
     }
   }
 
@@ -162,6 +185,9 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
                     </td>
                     <td className="px-8 py-5">
                       <RoleBadge role={profile.role} isPremium={profile.is_premium} />
+                      {riskMap[profile.id] && (
+                        <span className="mt-1 inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-red-50 text-red-600">Suspended</span>
+                      )}
                     </td>
                     <td className="px-8 py-5">
                       <span className="text-slate-700 font-bold text-[13px]">{new Date(profile.created_at).toLocaleDateString()}</span>
@@ -224,7 +250,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
                 {isEditing ? (
                   <UserEditForm user={selectedUser} onSave={handleUpdateUser} onCancel={() => setIsEditing(false)} loading={editLoading} />
                 ) : (
-                  <UserDetailsView user={selectedUser} onEdit={() => setIsEditing(true)} setActiveTab={setActiveTab} onClose={() => setSelectedUser(null)} />
+                  <UserDetailsView user={selectedUser} suspended={!!riskMap[selectedUser.id]} onToggleSuspend={handleToggleSuspend} onEdit={() => setIsEditing(true)} setActiveTab={setActiveTab} onClose={() => setSelectedUser(null)} />
                 )}
               </div>
             </motion.div>
@@ -261,7 +287,32 @@ function RoleBadge({ role, isPremium }: { role?: string, isPremium?: boolean }) 
   );
 }
 
-function UserDetailsView({ user, onEdit, setActiveTab, onClose }: any) {
+function UserDetailsView({ user, suspended, onToggleSuspend, onEdit, setActiveTab, onClose }: any) {
+  // Fix Round 7 (item 7): the drill-in — this customer's orders, spend
+  // and wallet, loaded per customer when the detail opens.
+  const [orders, setOrders] = useState<any[] | null>(null);
+  const [wallet, setWallet] = useState<any | null>(null);
+  const [busySuspend, setBusySuspend] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [oRes, wRes] = await Promise.all([
+        db.from("orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        db.from("wallets").select("*").eq("user_id", user.id).single(),
+      ]);
+      if (cancelled) return;
+      setOrders(oRes.data || []);
+      setWallet(wRes.data || null);
+    })();
+    return () => { cancelled = true; };
+  }, [user.id]);
+
+  const num = (v: any) => Number(v ?? 0) || 0;
+  const spend = (orders || [])
+    .filter((o) => String(o.payment_status).toLowerCase() === "paid" && !["canceled", "cancelled"].includes(String(o.status).toLowerCase()))
+    .reduce((s, o) => s + num(o.total_price), 0);
+
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-6">
@@ -271,6 +322,7 @@ function UserDetailsView({ user, onEdit, setActiveTab, onClose }: any) {
         <div className="min-w-0">
           <h4 className="text-xl md:text-2xl font-black text-slate-900 mb-1 truncate">{user.full_name || "Anonymous"}</h4>
           <p className="text-[14px] text-slate-500 font-medium truncate">@{user.username}</p>
+          {suspended && <span className="mt-1 inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-red-50 text-red-600">Suspended — cannot order or write</span>}
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -282,7 +334,31 @@ function UserDetailsView({ user, onEdit, setActiveTab, onClose }: any) {
            <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Membership</div>
            <div className="text-[13px] font-bold text-slate-900">{user.is_premium ? "Premium Tier" : "Basic Node"}</div>
         </div>
+        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+           <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Orders · Lifetime Spend</div>
+           <div className="text-[13px] font-bold text-slate-900">{orders === null ? "Loading…" : `${orders.length} orders · $${spend.toFixed(2)} paid`}</div>
+        </div>
+        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+           <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Wallet Balance</div>
+           <div className="text-[13px] font-bold text-slate-900">{wallet === null ? "—" : `$${num(wallet.balance).toFixed(2)}`}</div>
+        </div>
       </div>
+
+      {orders !== null && orders.length > 0 && (
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Recent Orders</div>
+          <div className="divide-y divide-slate-50 border border-slate-100 rounded-2xl overflow-hidden">
+            {orders.slice(0, 5).map((o) => (
+              <div key={o.id} className="flex items-center justify-between px-4 py-3 bg-white">
+                <span className="text-[12px] font-black text-slate-800">{o.id}</span>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{o.status} · {o.payment_status}</span>
+                <span className="text-[12px] font-black text-slate-900">${num(o.total_price).toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="pt-6 flex flex-col sm:flex-row gap-4">
         <button onClick={onEdit} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
           <Edit2 size={16} /> Edit Profile
@@ -290,6 +366,15 @@ function UserDetailsView({ user, onEdit, setActiveTab, onClose }: any) {
         <button onClick={() => { lsSet("selectedUserChat", user.username); setActiveTab?.("messages"); onClose(); }} className="flex-1 py-4 bg-primary-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center justify-center gap-2">
           <MessageSquare size={16} /> Send Message
         </button>
+        {user.role !== "admin" && (
+          <button
+            disabled={busySuspend}
+            onClick={async () => { setBusySuspend(true); await onToggleSuspend(user, !suspended); setBusySuspend(false); }}
+            className={`flex-1 py-4 rounded-2xl font-black text-[12px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${suspended ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-red-600 text-white hover:bg-red-700"}`}
+          >
+            <ShieldAlert size={16} /> {busySuspend ? "Working…" : suspended ? "Unsuspend" : "Suspend"}
+          </button>
+        )}
       </div>
     </div>
   );

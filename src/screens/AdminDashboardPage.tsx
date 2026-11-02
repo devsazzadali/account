@@ -107,7 +107,7 @@ export function AdminDashboardPage() {
         {activeTab === "categories" && <AdminCategories />}
         {activeTab === "orders" && <AdminOrders setActiveTab={setActiveTab} />}
         {activeTab === "payments" && <AdminPayments />}
-        {activeTab === "messages" && <AdminMessages />}
+        {activeTab === "messages" && <AdminMessages setActiveTab={setActiveTab} />}
         {activeTab === "customers" && <AdminCustomers setActiveTab={setActiveTab} />}
         {activeTab === "seller_info" && <AdminSellerInfo setActiveTab={setActiveTab} />}
         {activeTab === "feedback" && <AdminFeedback />}

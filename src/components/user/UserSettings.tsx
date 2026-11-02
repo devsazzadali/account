@@ -27,6 +27,34 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
   // this mirrors the header pill's resend (same auth call, same states).
   const [verifyState, setVerifyState] = useState<"idle" | "sending" | "sent">("idle");
 
+  // Fix Round 7 (item 9): Delete Account — type-to-confirm flow; the
+  // server (/api/me/delete) anonymises the profile and blocks the
+  // account; orders stay on the store's records.
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteText, setDeleteText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDeleteAccount() {
+    if (deleteText !== "DELETE" || deleting) return;
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/me/delete", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: "DELETE" }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Deletion failed");
+      toast.success("Your account has been deleted.");
+      await auth.signOut().catch(() => {});
+      window.location.assign("/");
+    } catch (e: any) {
+      toast.error(e.message);
+      setDeleting(false);
+    }
+  }
+
   const emailVerified = !!user?.email_confirmed_at;
 
   async function handleResendVerification() {
@@ -362,6 +390,22 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                                     <button onClick={handleManageCore} className="px-8 py-4 bg-white text-slate-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-orange-50 transition-all shadow-lg">Change Password</button>
                                 </div>
                             </div>
+
+                            {/* Fix Round 7 (item 9): danger zone — Delete Account */}
+                            <div className="bg-white border-2 border-red-100 rounded-[3rem] p-10 md:p-16 shadow-xl">
+                                <h4 className="text-[12px] font-black text-red-500 uppercase tracking-[0.3em] flex items-center gap-3 mb-4">
+                                    <AlertCircle size={18} /> Danger Zone
+                                </h4>
+                                <p className="text-[14px] text-slate-500 font-medium leading-relaxed max-w-xl mb-8">
+                                    Deleting your account removes your name, username and profile details and
+                                    permanently closes the account. Your past orders stay on the store&rsquo;s
+                                    records. Deletion is not possible while your wallet holds a balance or an
+                                    order is still in progress. This cannot be undone.
+                                </p>
+                                <button onClick={() => { setDeleteText(""); setDeleteOpen(true); }} className="px-10 py-5 bg-red-600 text-white font-black text-[12px] uppercase tracking-widest rounded-[1.5rem] hover:bg-red-700 transition-all shadow-xl">
+                                    Delete My Account
+                                </button>
+                            </div>
                         </motion.div>
                     )}
 
@@ -404,6 +448,34 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                 </AnimatePresence>
             </div>
         </div>
+
+        {/* Fix Round 7 (item 9): Delete Account confirm modal */}
+        <AnimatePresence>
+            {deleteOpen && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => !deleting && setDeleteOpen(false)} className="fixed inset-0 bg-slate-900/80 backdrop-blur-md" />
+                    <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl p-8">
+                        <h3 className="text-xl font-black text-slate-900 mb-2">Delete your account?</h3>
+                        <p className="text-[13px] text-slate-500 font-medium leading-relaxed mb-6">
+                            Your profile details will be removed and the account permanently closed.
+                            Past orders remain on the store&rsquo;s records. Type <span className="font-black text-red-600">DELETE</span> to confirm.
+                        </p>
+                        <input
+                            value={deleteText}
+                            onChange={(e) => setDeleteText(e.target.value)}
+                            placeholder="Type DELETE"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:border-red-400 mb-6"
+                        />
+                        <div className="flex gap-3">
+                            <button disabled={deleting} onClick={() => setDeleteOpen(false)} className="flex-1 py-3.5 bg-slate-100 text-slate-600 rounded-xl font-black text-[11px] uppercase tracking-widest">Keep Account</button>
+                            <button disabled={deleteText !== "DELETE" || deleting} onClick={handleDeleteAccount} className="flex-1 py-3.5 bg-red-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-red-700 disabled:opacity-40 flex items-center justify-center gap-2">
+                                {deleting ? <Loader2 size={14} className="animate-spin" /> : "Delete Forever"}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
     </div>
   );
 }

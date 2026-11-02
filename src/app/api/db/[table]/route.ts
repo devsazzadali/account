@@ -133,7 +133,32 @@ function convertInput(input: Row, modelName?: string): Row {
     if (allowed && !allowed.has(camel)) continue;
     out[camel] = v;
   }
+  // Fix Round 5 (item 1): money writes are rounded to exactly 2
+  // decimals at the API boundary, whichever client sent them — a raw
+  // float artifact (16.489999771118164) can never be persisted as a
+  // product price through this endpoint.
+  if (modelName === "Product" && typeof out.price === "number") {
+    out.price = Math.round(out.price * 100) / 100;
+  }
   return out;
+}
+
+/**
+ * Fix Round 6 (video-gap #3): when a product write carries a listing
+ * duration, derive the expiry from it — now + duration days; a
+ * missing/blank/non-positive duration clears the expiry entirely.
+ * Shared by POST (create) and PATCH (edit / extend / renew).
+ */
+function applyListingDuration(row: Row): void {
+  if (!("listingDurationDays" in row)) return;
+  const days = Number(row.listingDurationDays);
+  if (Number.isFinite(days) && days > 0) {
+    row.listingDurationDays = Math.floor(days);
+    row.listingExpiresAt = new Date(Date.now() + Math.floor(days) * 86_400_000);
+  } else {
+    row.listingDurationDays = null;
+    row.listingExpiresAt = null;
+  }
 }
 
 interface Ctx {
@@ -241,6 +266,19 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
   if (policy === "admin" && !ctx.isAdmin) return ctx.user ? fail("Admin access required", 403) : fail("Authentication required", 401);
   if (policy === "user" && !ctx.user) return fail("Authentication required", 401);
 
+  // Fix Round 7 (customer suspend): a suspended buyer is READ-ONLY
+  // through this API — they can still see their orders and messages,
+  // but every write (message sends, profile edits, anything) stops
+  // until an admin lifts the suspension. Staff roles are exempt.
+  if (method !== "GET" && ctx.user && !ctx.isAdmin) {
+    const rp = await prisma.userRiskProfile
+      .findUnique({ where: { userId: ctx.user.id }, select: { isBlocked: true } })
+      .catch(() => null);
+    if (rp?.isBlocked) {
+      return fail("This account is suspended — changes are disabled. Please contact support.", 403);
+    }
+  }
+
   const sp = new URL(req.url).searchParams;
   const model = delegate(table);
 
@@ -248,7 +286,20 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
     if (method === "GET") {
       const filters = parseFilters(sp);
       const scope = scopeFor(table, ctx);
-      const where = scope ? { AND: [filters, scope] } : filters;
+      let where: Row = scope ? { AND: [filters, scope] } : filters;
+      // Fix Round 6 (video-gap #3): an expired listing stops selling —
+      // it disappears from every NON-ADMIN product read (storefront,
+      // search, product page, checkout fetch). Admins keep seeing it in
+      // the console, flagged as expired. Checkout re-checks server-side
+      // in createOrder as well; this scope is the display half.
+      if (table === "products" && !ctx.isAdmin) {
+        where = {
+          AND: [
+            where,
+            { OR: [{ listingExpiresAt: null }, { listingExpiresAt: { gt: new Date() } }] },
+          ],
+        };
+      }
       const orderBy = parseOrder(sp);
       const take = sp.get("limit") ? Number(sp.get("limit")) : undefined;
       const skip = sp.get("offset") ? Number(sp.get("offset")) : undefined;
@@ -265,6 +316,13 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
     if (method === "POST") {
       const body = await req.json();
       const items = (Array.isArray(body) ? body : [body]).map((r: Row) => convertInput(r, TABLES[table].model));
+      // Fix Round 6 (video-gap #3): the listing expiry is computed
+      // SERVER-side whenever a duration is supplied — expires =
+      // now + duration; a blank/zero duration clears the expiry
+      // (the listing never expires). Client clocks never set it.
+      if (table === "products") {
+        for (const it of items) applyListingDuration(it);
+      }
       // Force ownership fields for user-level inserts.
       if (table === "reviews" && ctx.user) {
         for (const it of items) it.username = (ctx.profile?.username as string) || it.username;
@@ -329,7 +387,16 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
 
     if (method === "PATCH") {
       const body = convertInput((await req.json()) as Row, TABLES[table].model);
-      if (table === "profiles" && !ctx.isAdmin) {
+      // Fix Round 6: same server-side expiry computation on update —
+      // this is also what makes the hub's bulk "Extend" work: PATCHing
+      // the duration renews the listing from now.
+      if (table === "products") applyListingDuration(body);
+      // Fix Round 7 (roles matrix): role changes are FULL-ADMIN only.
+      // This used to strip `role` only for non-staff, which let any
+      // moderator rewrite any user's role — including promoting
+      // themselves to admin. Now only role === "admin" keeps the
+      // field; everyone else (users AND moderators) has it stripped.
+      if (table === "profiles" && ctx.profile?.role !== "admin") {
         delete body.role;
         delete body.mustResetPassword;
         delete body.id;
@@ -341,6 +408,25 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
       const updated: Row[] = [];
       for (const row of existing as { id: string }[]) {
         updated.push(await model.update({ where: { id: row.id }, data: body }));
+      }
+      // Fix Round 5 (item 5): keep the derived-stock cache honest on
+      // EVERY inventory write path. POST/DELETE re-synced already;
+      // PATCH did not — editing an inventory row's status (available →
+      // flagged) silently left products.stock at the stale number
+      // while checkout used the live formula. Likewise, flipping a
+      // product's use_inventory_stock toggle on must re-derive its
+      // stock immediately, not at the next inventory/order event.
+      if (table === "inventory") {
+        const full = await model.findMany({ where, select: { productId: true } });
+        const pids = [...new Set((full as Row[]).map((r) => r.productId as string).filter(Boolean))];
+        for (const pid of pids) await prisma.$transaction((tx) => syncDerivedStock(tx, pid));
+      }
+      if (table === "products") {
+        for (const r of updated as Row[]) {
+          if (r.useInventoryStock) {
+            await prisma.$transaction((tx) => syncDerivedStock(tx, String(r.id)));
+          }
+        }
       }
       return ok(serializeRows(updated as unknown as Row[]));
     }
