@@ -86,3 +86,17 @@ const INFO: Record<FulfilmentType, DeliveryInfo> = {
 export function deliveryInfo(raw?: string | null): DeliveryInfo {
   return INFO[normalizeFulfilment(raw)];
 }
+
+/**
+ * The buyer-visible ETA promise for a product's `delivery_eta_hours`
+ * (video-gap #1): "Delivery within ~24 hours of payment verification".
+ * Single source for the PDP, checkout and the buyer order page so the
+ * promise reads identically everywhere — and it is the same window the
+ * admin "ETA passed" flag measures from order creation. Returns null
+ * when the product carries no ETA: callers render nothing rather than
+ * invent a promise the store never made.
+ */
+export function etaLine(etaHours?: number | null): string | null {
+  if (etaHours == null || !Number.isFinite(etaHours) || etaHours <= 0) return null;
+  return `Delivery within ~${etaHours} hours of payment verification`;
+}

@@ -65,7 +65,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
       // Fetch Orders with Joined Data (product embed → display fields)
       const { data, error } = await db
         .from("orders")
-        .select("*, products(title, image, delivery_eta_hours)")
+        .select("*, products(title, image, delivery_eta_hours, category, game_type)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -74,6 +74,11 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
         product_title: o.products?.title || "Product",
         product_image: o.products?.image || null,
         product_eta_hours: o.products?.delivery_eta_hours ?? null,
+        // Game & Category filters (video-gap #2): orders carry neither
+        // field — both live on the ordered product, so map them from the
+        // embed onto the row and filter on these.
+        product_category: o.products?.category ?? null,
+        product_game_type: o.products?.game_type ?? null,
       }));
       setOrders(rows);
 
@@ -115,8 +120,8 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
     if (subStatus && order.status !== subStatus) return false;
 
     // Advanced Filters
-    const matchesGame = filters.game === "All" || order.game_type === filters.game;
-    const matchesCategory = filters.category === "All" || order.category === filters.category;
+    const matchesGame = filters.game === "All" || order.product_game_type === filters.game;
+    const matchesCategory = filters.category === "All" || order.product_category === filters.category;
     const matchesOrderNum = !filters.orderNumber || order.id.toLowerCase().includes(filters.orderNumber.toLowerCase());
     const matchesTitle = !filters.productTitle || (order.product_title && order.product_title.toLowerCase().includes(filters.productTitle.toLowerCase()));
     const matchesRemarks = !filters.remarks || (order.internal_remarks && order.internal_remarks.toLowerCase().includes(filters.remarks.toLowerCase()));
@@ -195,9 +200,11 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
                 className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-700 outline-none focus:border-[#E62E04] transition-all"
               >
                 <option value="All">All</option>
-                <option value="Free Fire">Free Fire</option>
-                <option value="PUBG">PUBG</option>
-                <option value="Valorant">Valorant</option>
+                {/* Game options come from the catalog actually on order
+                    (video-gap #2) — never a hard-coded list. */}
+                {Array.from(new Set(orders.map((o: any) => o.product_game_type).filter(Boolean))).sort().map((g: any) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
               </select>
             </FilterField>
             <FilterField label="CATEGORY:">

@@ -19,10 +19,11 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ShieldCheck, CreditCard, Lock, CheckCircle, Wallet,
   ArrowLeft, Shield, AlertCircle, ChevronRight, Loader2,
-  Package, Mail, CheckCheck
+  Package, Mail, CheckCheck, Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { auth } from "../lib/auth-client";
+import { etaLine } from "../lib/fulfilment";
 import { toast } from "react-hot-toast";
 import { PageLoader } from "../components/SkeletonUI";
 
@@ -30,6 +31,7 @@ interface Product {
   id: string; title: string; price: number; image: string; stock: number;
   category?: string;
   fulfilment_type?: string;
+  delivery_eta_hours?: number | null;
   min_quantity?: number;
   variants?: { label: string; priceDelta: number; stock?: number | null }[] | null;
 }
@@ -128,6 +130,8 @@ export function CheckoutPage() {
   const outOfStock = !product || stockCap <= 0 || qty > stockCap || storeClosed;
   const walletSufficient = walletBalance !== null && walletBalance >= total;
   const isService = product?.fulfilment_type === "service";
+  // Buyer-visible ETA promise (video-gap #1) — wording from fulfilment.ts.
+  const etaText = etaLine(product?.delivery_eta_hours);
   const missingIntake = isService
     ? intakeSchema.filter((f) => f.required && !(intake[f.key] || "").trim())
     : [];
@@ -307,6 +311,11 @@ export function CheckoutPage() {
                       <span className={`ml-2 inline-block text-[10px] font-black px-2.5 py-1 rounded-lg border ${product.stock > 0 ? "text-emerald-600 bg-emerald-50 border-emerald-100" : "text-red-500 bg-red-50 border-red-100"}`}>
                         {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
                       </span>
+                      {etaText && (
+                        <p className="mt-2.5 flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                          <Clock size={13} className="text-primary-600" /> {etaText}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

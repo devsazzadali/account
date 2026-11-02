@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
 import { SellerTrustCard, StockIntelligence, DeliveryTimeline, TrustBadges } from "../components/ProductTrustSystem";
-import { deliveryInfo } from "../lib/fulfilment";
+import { deliveryInfo, etaLine } from "../lib/fulfilment";
 import { StoreClosedBanner } from "../components/StoreClosedBanner";
 import { PageLoader } from "../components/SkeletonUI";
 
@@ -331,9 +331,9 @@ export function ProductDetailsPage({
                         <span className="text-4xl font-display font-bold text-slate-900">${unitPrice.toFixed(2)}</span>
                         <span className="text-slate-400 text-xs font-bold uppercase">USD</span>
                     </div>
-                    {product.deliveryEtaHours ? (
+                    {etaLine(product.deliveryEtaHours) ? (
                         <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-slate-500">
-                            <Clock size={13} className="text-primary-600" /> Delivery within ~{product.deliveryEtaHours} hours of payment verification
+                            <Clock size={13} className="text-primary-600" /> {etaLine(product.deliveryEtaHours)}
                         </p>
                     ) : null}
                     {/* Fulfilment type + warranty (fulfilment types build) */}

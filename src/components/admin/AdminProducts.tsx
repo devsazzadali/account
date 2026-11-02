@@ -143,6 +143,69 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
     fetchProducts();
   }
 
+  // Bulk delete + batch update (video-gap #4) — same per-id db pattern
+  // as bulkSetActive / handleDeleteProduct, behind a native confirm.
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchPriceMode, setBatchPriceMode] = useState<"set" | "pct">("set");
+  const [batchPriceValue, setBatchPriceValue] = useState("");
+  const [batchStatus, setBatchStatus] = useState<"keep" | "active" | "inactive">("keep");
+
+  async function bulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} selected product(s)? This cannot be undone.`)) return;
+    let failed = 0;
+    for (const id of selectedIds) {
+      const { error } = await db.from("products").delete().eq("id", id);
+      if (error) failed++;
+    }
+    if (failed > 0) toast.error(`${failed} product(s) could not be deleted`);
+    else toast.success(`${selectedIds.size} product(s) deleted`);
+    if (editing && selectedIds.has(editing.id)) setEditing(null);
+    setSelectedIds(new Set());
+    fetchProducts();
+  }
+
+  async function applyBatchUpdate() {
+    if (selectedIds.size === 0) return;
+    const hasPrice = batchPriceValue.trim() !== "";
+    const val = Number(batchPriceValue);
+    if (hasPrice && (!Number.isFinite(val) || (batchPriceMode === "set" && val < 0))) {
+      toast.error("Enter a valid price (≥ 0) or a percentage like -10 or 15");
+      return;
+    }
+    if (!hasPrice && batchStatus === "keep") {
+      toast.error("Set a price change or a status first");
+      return;
+    }
+    const parts: string[] = [];
+    if (hasPrice) parts.push(batchPriceMode === "set" ? `price → $${val.toFixed(2)}` : `price ${val > 0 ? "+" : ""}${val}%`);
+    if (batchStatus !== "keep") parts.push(`status → ${batchStatus}`);
+    if (!confirm(`Apply batch update to ${selectedIds.size} product(s)?\n${parts.join(" · ")}`)) return;
+    let failed = 0;
+    for (const id of selectedIds) {
+      const patch: Record<string, unknown> = {};
+      if (hasPrice) {
+        if (batchPriceMode === "set") {
+          patch.price = val;
+        } else {
+          const p = products.find((x: any) => x.id === id);
+          if (!p) { failed++; continue; }
+          patch.price = Math.max(0, Math.round(Number(p.price) * (1 + val / 100) * 100) / 100);
+        }
+      }
+      if (batchStatus !== "keep") patch.is_active = batchStatus === "active";
+      const { error } = await db.from("products").update(patch).eq("id", id);
+      if (error) failed++;
+    }
+    if (failed > 0) toast.error(`${failed} product(s) could not be updated`);
+    else toast.success(`Batch update applied to ${selectedIds.size} product(s)`);
+    setSelectedIds(new Set());
+    setBatchOpen(false);
+    setBatchPriceValue("");
+    setBatchStatus("keep");
+    fetchProducts();
+  }
+
   async function downloadCsv(type: "products" | "inventory") {
     setCsvBusy(true);
     try {
@@ -503,9 +566,38 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                     <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{selectedIds.size} selected</span>
                     <button onClick={() => bulkSetActive(true)} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Activate</button>
                     <button onClick={() => bulkSetActive(false)} className="px-3 py-1.5 bg-slate-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Deactivate</button>
+                    <button onClick={() => setBatchOpen(!batchOpen)} className="px-3 py-1.5 bg-[#0C2254] text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Batch Update</button>
+                    <button onClick={bulkDelete} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Delete</button>
                   </span>
                 )}
             </div>
+
+            {/* Batch update panel (video-gap #4): bulk price and/or status */}
+            {selectedIds.size > 0 && batchOpen && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-end gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Price</label>
+                  <div className="flex gap-2">
+                    <select value={batchPriceMode} onChange={(e) => setBatchPriceMode(e.target.value as "set" | "pct")} className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 outline-none focus:border-red-400">
+                      <option value="set">Set to $</option>
+                      <option value="pct">Adjust %</option>
+                    </select>
+                    <input type="number" step="any" value={batchPriceValue} onChange={(e) => setBatchPriceValue(e.target.value)} placeholder={batchPriceMode === "set" ? "9.99" : "-10 or 15"} className="h-10 w-28 px-3 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 outline-none focus:border-red-400" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Status</label>
+                  <select value={batchStatus} onChange={(e) => setBatchStatus(e.target.value as "keep" | "active" | "inactive")} className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 outline-none focus:border-red-400">
+                    <option value="keep">No change</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <button onClick={applyBatchUpdate} className="h-10 px-4 bg-[#E62E04] text-white rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-red-700 transition-all">Apply to {selectedIds.size}</button>
+                <button onClick={() => setBatchOpen(false)} className="h-10 px-3 text-slate-400 text-[11px] font-black uppercase tracking-widest hover:text-slate-600">Close</button>
+                <p className="w-full text-[11px] font-medium text-slate-400">Applies to the {selectedIds.size} selected listing(s). Leave the price empty to change status only; percentage adjusts each listing's own current price.</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {loading ? (

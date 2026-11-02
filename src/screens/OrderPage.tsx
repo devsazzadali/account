@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
+import { etaLine } from "../lib/fulfilment";
 import { PageLoader } from "../components/SkeletonUI";
 import { TotpVault } from "../components/TotpVault";
 
@@ -35,8 +36,9 @@ interface Order {
   delivered_quantity?: number;
   intake_data?: Record<string, string> | null;
   created_at: string;
+  delivered_at?: string | null;
   customer_email: string;
-  products?: { title: string; image: string; fulfilment_type?: string; category?: string } | null;
+  products?: { title: string; image: string; fulfilment_type?: string; category?: string; delivery_eta_hours?: number | null } | null;
   credential_username?: string | null;
   credential_password?: string | null;
   credential_notes?: string | null;
@@ -185,6 +187,19 @@ export function OrderPage() {
   const isService = order.products?.fulfilment_type === "service";
   const deliveredQty = order.delivered_quantity ?? 0;
   const isPartial = isPaid && deliveredQty > 0 && deliveredQty < order.quantity && ["PREPARING", "Delivering"].includes(order.status);
+  // Buyer-visible ETA (video-gap #1): the promise (etaLine, from
+  // fulfilment.ts), the expected-by moment (created_at + ETA — the same
+  // window the admin "ETA passed" flag measures), and the overdue state
+  // using the admin flag's exact conditions so both sides agree.
+  const etaText = etaLine(order.products?.delivery_eta_hours);
+  const expectedBy = etaText
+    ? new Date(new Date(order.created_at).getTime() + Number(order.products?.delivery_eta_hours) * 3600_000)
+    : null;
+  const etaOverdue = isPaid && !order.delivered_at && expectedBy != null &&
+    Date.now() > expectedBy.getTime() &&
+    !["Completed", "Canceled", "Refunded"].includes(order.status);
+  const etaPending = isPaid && !order.delivered_at && expectedBy != null && !etaOverdue &&
+    !["Completed", "Canceled", "Refunded", "Disputed"].includes(order.status);
   const orderEvents: any[] = Array.isArray((order as any).events) ? (order as any).events : [];
   const partialConfirmed = orderEvents.some((e) => e.event === "partial_confirmed");
   const proofs: any[] = Array.isArray((order as any).proofs) ? (order as any).proofs : [];
@@ -233,6 +248,35 @@ export function OrderPage() {
             )}
           </div>
         </div>
+
+        {/* Delivery ETA (video-gap #1) — the promise the buyer was sold */}
+        {etaText && order.payment_status !== "paid" && !["Canceled", "Refunded"].includes(order.status) && (
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm flex items-center gap-3">
+            <Clock size={18} className="text-primary-600 shrink-0" />
+            <p className="text-xs font-bold text-slate-600">{etaText}</p>
+          </div>
+        )}
+        {etaPending && expectedBy && (
+          <div className="bg-blue-50 border border-blue-200 rounded-[2rem] p-6 flex gap-4">
+            <Clock size={22} className="text-blue-600 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-xs font-black text-blue-900 mb-1">Delivery expected by {expectedBy.toLocaleString()}</h4>
+              <p className="text-[11px] text-blue-700 leading-relaxed">{etaText}. This page updates on its own when your delivery lands.</p>
+            </div>
+          </div>
+        )}
+        {etaOverdue && expectedBy && (
+          <div className="bg-red-50 border border-red-200 rounded-[2rem] p-6 flex gap-4">
+            <AlertTriangle size={22} className="text-red-600 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-xs font-black text-red-900 mb-1">Delivery is overdue — ETA passed</h4>
+              <p className="text-[11px] text-red-700 leading-relaxed">
+                Delivery was expected by {expectedBy.toLocaleString()} ({etaText?.replace("Delivery within ", "promised within ")}).
+                Your payment stays protected in escrow — if the store still hasn't delivered, you can open a dispute from this page or contact support via the chat widget.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Payment panel (unpaid) */}
         {order.payment_status === "unpaid" && order.status !== "Canceled" && (

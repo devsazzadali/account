@@ -61,12 +61,16 @@ export async function GET(req: Request) {
     });
   }
   const products = await prisma.product.findMany({ orderBy: { createdAt: "desc" }, take: 10000 });
-  const header = ["id", "title", "price", "stock", "category", "game_type", "badge", "sold", "min_quantity", "delivery_eta_hours", "use_inventory_stock", "is_active", "description"];
+  // Offer depth (video-gap #5): fulfilment_type / warranty_days / specs /
+  // variants ride along (specs + variants JSON-encoded) so an
+  // export → import round-trip loses nothing.
+  const header = ["id", "title", "price", "stock", "category", "game_type", "badge", "sold", "min_quantity", "delivery_eta_hours", "use_inventory_stock", "is_active", "description", "fulfilment_type", "warranty_days", "specs", "variants"];
   const lines = [header.join(",")];
   for (const p of products) {
     lines.push([
       p.id, p.title, Number(p.price).toFixed(2), p.stock, p.category || "", p.gameType || "", p.badge || "", p.sold,
       p.minQuantity, p.deliveryEtaHours ?? "", p.useInventoryStock ? "true" : "false", p.isActive ? "true" : "false", p.description || "",
+      p.fulfilmentType || "manual", p.warrantyDays ?? "", JSON.stringify(p.specs ?? {}), JSON.stringify(p.variants ?? []),
     ].map(csvCell).join(","));
   }
   return new Response(lines.join("\n"), {
@@ -110,6 +114,40 @@ export async function POST(req: Request) {
       if (r.delivery_eta_hours) data.deliveryEtaHours = Math.max(1, Math.floor(Number(r.delivery_eta_hours))) || null;
       if (r.use_inventory_stock) data.useInventoryStock = r.use_inventory_stock.toLowerCase() === "true";
       if (r.is_active) data.isActive = r.is_active.toLowerCase() !== "false";
+      // Offer depth (video-gap #5). An empty cell leaves the stored value
+      // untouched; a malformed value is a row error — never a silent
+      // strip. Validation runs identically in dry-run mode because it
+      // happens before the dry-run branch below.
+      if (r.fulfilment_type) {
+        const ft = r.fulfilment_type.toLowerCase();
+        if (!["instant", "manual", "service"].includes(ft)) { errors.push({ row: rowNo, message: "fulfilment_type must be instant, manual or service" }); continue; }
+        data.fulfilmentType = ft;
+      }
+      if (r.warranty_days) {
+        const w = Math.floor(Number(r.warranty_days));
+        data.warrantyDays = Number.isFinite(w) && w > 0 ? w : null;
+      }
+      if (r.specs) {
+        try {
+          const parsed = JSON.parse(r.specs);
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("specs is not a JSON object");
+          data.specs = parsed;
+        } catch { errors.push({ row: rowNo, message: "specs must be a JSON object" }); continue; }
+      }
+      if (r.variants) {
+        try {
+          const parsed = JSON.parse(r.variants);
+          if (!Array.isArray(parsed)) throw new Error("variants is not a JSON array");
+          data.variants = parsed.map((v: any) => {
+            if (!v || typeof v.label !== "string" || !v.label.trim()) throw new Error("variant is missing a label");
+            return {
+              label: v.label,
+              priceDelta: Number(v.priceDelta) || 0,
+              stock: v.stock == null || v.stock === "" ? null : Math.max(0, Math.floor(Number(v.stock)) || 0),
+            };
+          });
+        } catch { errors.push({ row: rowNo, message: "variants must be a JSON array of {label, priceDelta, stock}" }); continue; }
+      }
       // Manual stock is only honoured for non-derived products.
       if (r.stock && data.useInventoryStock !== true) data.stock = Math.max(0, Math.floor(Number(r.stock)) || 0);
 
