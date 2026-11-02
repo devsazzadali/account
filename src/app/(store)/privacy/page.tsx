@@ -17,7 +17,7 @@ export default function PrivacyPage() {
           heading: "Data we collect",
           body: [
             "Account data: your name/username, email address, and a securely hashed password (or your identity-provider profile if you sign in with Google or GitHub).",
-            "Order data: the products you order, amounts, payment status, the Transaction ID and sender number you submit for manual payments, delivery status, and any dispute you open.",
+            "Order data: the products you order, amounts, payment status, delivery status, and any dispute you open. Card payments are processed by Stripe on its secure checkout page — we receive the payment confirmation and its reference from Stripe and never see or store your full card number. Wallet payments settle from your store wallet balance, which is funded by card top-ups and by refunds.",
             "Wallet data: your balance and the ledger of credits and debits (top-ups, purchases, refunds, adjustments).",
             "Support data: messages you send us through the support chat or your dashboard.",
             "Technical data: the session cookie needed to keep you signed in, and standard request logs.",
@@ -26,7 +26,7 @@ export default function PrivacyPage() {
         {
           heading: "Why we use it",
           body: [
-            "To operate your account, process and verify payments, deliver products into your order vault, hold and release escrow, resolve disputes, credit refunds, prevent fraud (including Transaction-ID abuse), and answer your support messages. We do not sell personal data.",
+            "To operate your account, process and verify payments, deliver products into your order vault, hold and release escrow, resolve disputes, credit refunds, prevent fraud, and answer your support messages. We do not sell personal data.",
           ],
         },
         {

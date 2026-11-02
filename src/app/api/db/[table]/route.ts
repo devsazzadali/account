@@ -17,6 +17,7 @@ import { prisma } from "@/src/lib/db";
 import { fetchAuthUser, ensureProfile } from "@/src/lib/auth-server";
 import { serializeRow, serializeRows } from "@/src/lib/serialize";
 import { syncDerivedStock } from "@/src/lib/order-service";
+import { threadKeyOf, threadStatusWhere } from "@/src/lib/message-threads";
 
 type Row = Record<string, unknown>;
 
@@ -280,11 +281,19 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
       // Thread ticket state (P3): a buyer message (re)opens the thread;
       // a store reply moves it to awaiting_reply. The state is kept on
       // every row of the thread so any reader sees one consistent value.
+      // Fix Round 4: threads are per (username, subject group) — a
+      // message in one ticket must not flip another ticket's state.
       if (table === "messages") {
-        const usernames = [...new Set(items.map((it) => it.username as string).filter(Boolean))];
         const next = ctx.isAdmin ? "awaiting_reply" : "open";
-        for (const uname of usernames) {
-          await prisma.message.updateMany({ where: { username: uname }, data: { ticketStatus: next } });
+        const threadGroups = new Map<string, { username: string; key: string }>();
+        for (const it of items) {
+          const uname = it.username as string | undefined;
+          if (!uname) continue;
+          const key = threadKeyOf(it.subject as string | undefined);
+          threadGroups.set(`${uname}::${key}`, { username: uname, key });
+        }
+        for (const g of threadGroups.values()) {
+          await prisma.message.updateMany({ where: threadStatusWhere(g.username, g.key), data: { ticketStatus: next } });
         }
         // Real notifications (R3): a store reply must actually reach the
         // customer — create a `notifications` row for the thread owner.

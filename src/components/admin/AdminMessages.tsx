@@ -14,12 +14,37 @@ import { db } from "../../lib/dbclient";
 import { auth } from "../../lib/auth-client";
 import { toast } from "react-hot-toast";
 import { lsGet, lsRemove } from "@/src/lib/storage";
+import {
+  GENERAL_THREAD_KEY,
+  threadKeyOf,
+  threadTitleOf,
+  subjectForNewMessage,
+} from "../../lib/message-threads";
+
+// Fix Round 4 (item 3): the desk groups by THREAD — (username,
+// subject group) per src/lib/message-threads.ts — so a customer's
+// titled tickets appear as their own conversations next to the
+// general "Customer Support" thread, and replies + ticket state act
+// on the selected thread only.
+interface AdminThread {
+  id: string;
+  username: string;
+  threadKey: string;
+  title: string;
+  msgs: any[];
+}
 
 
 export function AdminMessages() {
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  // Selection = one THREAD of one user (Fix Round 4).
+  const [selection, setSelection] = useState<{ username: string; threadKey: string } | null>(null);
+  const selectedUser = selection?.username ?? null;
+  const selectedThreadKey = selection?.threadKey ?? GENERAL_THREAD_KEY;
+  const pendingPreselectRef = useRef(false);
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
   const [replyText, setReplyText] = useState("");
   const [isReplying, setIsReplying] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,10 +70,11 @@ export function AdminMessages() {
   useEffect(() => {
     fetchMessages();
     fetchProfiles();
-    
+
     const preSelected = lsGet("selectedUserChat");
     if (preSelected) {
-      setSelectedUser(preSelected);
+      setSelection({ username: preSelected, threadKey: GENERAL_THREAD_KEY });
+      pendingPreselectRef.current = true;
       setViewMode("chat");
       lsRemove("selectedUserChat");
     }
@@ -66,11 +92,15 @@ export function AdminMessages() {
   }, []);
 
   useEffect(() => {
-    if (selectedUser) {
-      fetchUserOrders(selectedUser);
-      markMessagesAsRead(selectedUser);
+    if (selection) {
+      fetchUserOrders(selection.username);
+      const msgs = messages.filter(
+        (m) => m.username === selection.username && threadKeyOf(m.subject) === selection.threadKey,
+      );
+      markMessagesAsRead(msgs);
     }
-  }, [selectedUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection]);
 
   async function fetchUserOrders(username: string) {
     const { data } = await db.from('orders').select('*, products(title)').eq('username', username).order('created_at', { ascending: false });
@@ -83,18 +113,22 @@ export function AdminMessages() {
   }
 
   const startNewChat = (username: string) => {
-    setSelectedUser(username);
+    setSelection({ username, threadKey: GENERAL_THREAD_KEY });
     setViewMode("chat");
     setShowNewChatModal(false);
   };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, selectedUser]);
+  }, [messages, selection]);
 
-  async function markMessagesAsRead(username: string) {
+  async function markMessagesAsRead(msgs: any[]) {
+    const ids = msgs
+      .filter((m) => m.status === 'unread' && m.message !== '[ADMIN_INITIATED]')
+      .map((m) => m.id);
+    if (ids.length === 0) return;
     try {
-      await db.from('messages').update({ status: 'replied' }).eq('username', username).eq('status', 'unread');
+      await db.from('messages').update({ status: 'replied' }).in('id', ids);
     } catch (e) { console.error(e); }
   }
 
@@ -103,9 +137,10 @@ export function AdminMessages() {
         const { data, error } = await db.from('messages').select('*').order('created_at', { ascending: true });
         if (error) throw error;
         setMessages(data || []);
-        if (data && data.length > 0 && !selectedUser && window.innerWidth > 1024) {
-            const uniqueUsers = Array.from(new Set(data.map((m: any) => m.username))) as string[];
-            if (uniqueUsers.length > 0) setSelectedUser(uniqueUsers[0]);
+        if (data && data.length > 0 && !selectionRef.current && window.innerWidth > 1024) {
+            // Auto-open the most recently active thread.
+            const last = data[data.length - 1];
+            setSelection({ username: last.username, threadKey: threadKeyOf(last.subject) });
         }
         setLoading(false);
     } catch (err: any) {
@@ -122,7 +157,7 @@ export function AdminMessages() {
     try {
         const { error } = await db.from('messages').insert({
             username: selectedUser,
-            subject: "Helpdesk Ticket",
+            subject: subjectForNewMessage(selectedThreadKey, true),
             message: "[ADMIN_INITIATED]",
             reply: textToSend,
             status: 'replied'
@@ -166,9 +201,13 @@ export function AdminMessages() {
     }
   }
 
-  async function setTicketStatus(username: string, status: "closed" | "open") {
+  async function setTicketStatus(thread: AdminThread | undefined, status: "closed" | "open") {
+    if (!thread || thread.msgs.length === 0) {
+      toast.error("No messages in this thread yet");
+      return;
+    }
     try {
-      const { error } = await db.from('messages').update({ ticket_status: status }).eq('username', username);
+      const { error } = await db.from('messages').update({ ticket_status: status }).in('id', thread.msgs.map((m) => m.id));
       if (error) throw error;
       toast.success(status === "closed" ? "Ticket closed" : "Ticket reopened");
       fetchMessages();
@@ -177,37 +216,56 @@ export function AdminMessages() {
     }
   }
 
-  const groupedUsers = useMemo(() => {
-      const map = new Map<string, any[]>();
+  const groupedThreads = useMemo(() => {
+      const map = new Map<string, AdminThread>();
       messages.forEach(msg => {
-          if (!map.has(msg.username)) map.set(msg.username, []);
-          map.get(msg.username)!.push(msg);
+          const tKey = threadKeyOf(msg.subject);
+          const id = `${msg.username}::${tKey}`;
+          if (!map.has(id)) {
+            map.set(id, { id, username: msg.username, threadKey: tKey, title: threadTitleOf(tKey), msgs: [] });
+          }
+          map.get(id)!.msgs.push(msg);
       });
       return map;
   }, [messages]);
 
-  const threadStatus = (user: string) => {
-    const msgs = groupedUsers.get(user) || [];
-    const last = msgs[msgs.length - 1];
+  const threadLastTime = (t: AdminThread) => {
+    const last = t.msgs[t.msgs.length - 1];
+    return last?.created_at ? new Date(last.created_at).getTime() : 0;
+  };
+
+  const threadStatusOf = (t: AdminThread) => {
+    const last = t.msgs[t.msgs.length - 1];
     return (last?.ticket_status as string) || "open";
   };
 
-  const sortedUserList = useMemo(() => {
-    return Array.from(groupedUsers.keys())
-      .filter(u => u && (u as string).toLowerCase().includes(searchQuery.toLowerCase()))
-      .filter(u => ticketFilter === "all" || threadStatus(u as string) === ticketFilter)
-      .sort((a, b) => {
-          const msgsA = groupedUsers.get(a) || [];
-          const msgsB = groupedUsers.get(b) || [];
-          const lastMsgA = msgsA[msgsA.length - 1];
-          const lastMsgB = msgsB[msgsB.length - 1];
-          if (!lastMsgA || !lastMsgB) return 0;
-          return new Date(lastMsgB.created_at).getTime() - new Date(lastMsgA.created_at).getTime();
-      });
-  }, [groupedUsers, searchQuery, ticketFilter]);
+  const sortedThreadList = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return Array.from(groupedThreads.values())
+      .filter(t => t.username && (t.username.toLowerCase().includes(q) || t.title.toLowerCase().includes(q)))
+      .filter(t => ticketFilter === "all" || threadStatusOf(t) === ticketFilter)
+      .sort((a, b) => threadLastTime(b) - threadLastTime(a));
+  }, [groupedThreads, searchQuery, ticketFilter]);
 
-  const activeThread = selectedUser ? groupedUsers.get(selectedUser) || [] : [];
+  const selectedThread = selection
+    ? groupedThreads.get(`${selection.username}::${selection.threadKey}`)
+    : undefined;
+  const activeThread = selectedThread?.msgs || [];
+  const selectedThreadStatus = selectedThread ? threadStatusOf(selectedThread) : "open";
   const selectedProfile = allProfiles.find(p => p.username === selectedUser);
+
+  // A preselected user (customers desk → "message" action) lands on
+  // their most recent thread once messages have loaded.
+  useEffect(() => {
+    if (!pendingPreselectRef.current || !selection) return;
+    const mine = Array.from(groupedThreads.values()).filter(t => t.username === selection.username);
+    if (mine.length === 0) return;
+    pendingPreselectRef.current = false;
+    if (!mine.some(t => t.threadKey === selection.threadKey)) {
+      const latest = mine.reduce((a, b) => (threadLastTime(b) > threadLastTime(a) ? b : a));
+      setSelection({ username: selection.username, threadKey: latest.threadKey });
+    }
+  }, [groupedThreads, selection]);
 
   const quickReplies = [
     { label: "Greeting", text: "Hello! Thank you for contacting our support." },
@@ -265,21 +323,24 @@ export function AdminMessages() {
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {sortedUserList.map((user) => {
-            const msgs = groupedUsers.get(user) || [];
+          {sortedThreadList.map((thread) => {
+            const msgs = thread.msgs;
             const lastMsg = msgs[msgs.length - 1];
             if (!lastMsg) return null;
+            const user = thread.username;
             const isUnread = msgs.some((m: any) => m.status === 'unread' && m.message !== '[ADMIN_INITIATED]');
-            
+            const isTicket = thread.threadKey !== GENERAL_THREAD_KEY;
+            const status = threadStatusOf(thread);
+
             return (
-              <button 
-                key={user}
-                onClick={() => { setSelectedUser(user); setViewMode("chat"); }}
+              <button
+                key={thread.id}
+                onClick={() => { setSelection({ username: thread.username, threadKey: thread.threadKey }); setViewMode("chat"); }}
                 className={`w-full p-4 flex items-start gap-3 border-b border-slate-50 transition-all relative ${
-                  selectedUser === user ? "bg-red-50/50" : "hover:bg-slate-50"
+                  selectedThread?.id === thread.id ? "bg-red-50/50" : "hover:bg-slate-50"
                 }`}
               >
-                {selectedUser === user && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#E62E04]" />}
+                {selectedThread?.id === thread.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#E62E04]" />}
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-[14px] ${isUnread ? 'bg-[#E62E04] text-white' : 'bg-slate-100 text-slate-400'}`}>
                   {user[0].toUpperCase()}
                 </div>
@@ -290,15 +351,20 @@ export function AdminMessages() {
                       {lastMsg.created_at ? new Date(lastMsg.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ""}
                     </span>
                   </div>
+                  {isTicket && (
+                    <div className="text-[11px] font-bold text-slate-700 truncate leading-tight" title={thread.title}>
+                      Ticket: {thread.title}
+                    </div>
+                  )}
                   <div className="text-[11px] text-slate-500 truncate leading-tight">
                     {lastMsg.message === '[ADMIN_INITIATED]' ? `You: ${lastMsg.reply}` : lastMsg.message}
                   </div>
                   <span className={`inline-block mt-1.5 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${
-                    threadStatus(user) === 'closed' ? 'bg-slate-100 text-slate-400' :
-                    threadStatus(user) === 'awaiting_reply' ? 'bg-blue-50 text-blue-600' :
+                    status === 'closed' ? 'bg-slate-100 text-slate-400' :
+                    status === 'awaiting_reply' ? 'bg-blue-50 text-blue-600' :
                     'bg-amber-50 text-amber-600'
                   }`}>
-                    {threadStatus(user) === 'awaiting_reply' ? 'Awaiting reply' : threadStatus(user)}
+                    {status === 'awaiting_reply' ? 'Awaiting reply' : status}
                   </span>
                 </div>
                 {isUnread && <div className="w-2 h-2 bg-[#E62E04] rounded-full mt-2 animate-pulse" />}
@@ -328,23 +394,28 @@ export function AdminMessages() {
                         <span className="text-[13px] text-[#E62E04] font-medium tracking-tight">ID:{selectedProfile?.id?.substring(0, 7) || '1493869'}</span>
                         <span className="text-[13px] text-slate-500 font-medium">Offline</span>
                       </div>
+                      {selectedThreadKey !== GENERAL_THREAD_KEY && (
+                        <span className="text-[11px] font-bold text-slate-500 truncate" title={threadTitleOf(selectedThreadKey)}>
+                          Ticket: {threadTitleOf(selectedThreadKey)}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  {/* Ticket state controls (P3) */}
+                  {/* Ticket state controls (P3) — per thread (Fix Round 4) */}
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg ${
-                      threadStatus(selectedUser) === 'closed' ? 'bg-slate-100 text-slate-400' :
-                      threadStatus(selectedUser) === 'awaiting_reply' ? 'bg-blue-50 text-blue-600' :
+                      selectedThreadStatus === 'closed' ? 'bg-slate-100 text-slate-400' :
+                      selectedThreadStatus === 'awaiting_reply' ? 'bg-blue-50 text-blue-600' :
                       'bg-amber-50 text-amber-600'
                     }`}>
-                      Ticket: {threadStatus(selectedUser) === 'awaiting_reply' ? 'Awaiting reply' : threadStatus(selectedUser)}
+                      Ticket: {selectedThreadStatus === 'awaiting_reply' ? 'Awaiting reply' : selectedThreadStatus}
                     </span>
-                    {threadStatus(selectedUser) === 'closed' ? (
-                      <button onClick={() => setTicketStatus(selectedUser, 'open')} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50">
+                    {selectedThreadStatus === 'closed' ? (
+                      <button onClick={() => setTicketStatus(selectedThread, 'open')} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50">
                         Reopen
                       </button>
                     ) : (
-                      <button onClick={() => setTicketStatus(selectedUser, 'closed')} className="px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-800">
+                      <button onClick={() => setTicketStatus(selectedThread, 'closed')} className="px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-800">
                         Close ticket
                       </button>
                     )}

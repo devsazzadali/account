@@ -27,6 +27,10 @@ export interface DeliveryInfo {
   tabCopy: string;
   /** Product-page delivery timeline steps. */
   steps: { label: string; sub: string }[];
+  /** Checkout step-1 "What You Get" bullets. */
+  checkoutPoints: string[];
+  /** Checkout confirmation note shown after a wallet payment. */
+  paidNote: string;
 }
 
 const ESCROW_TAIL =
@@ -48,6 +52,13 @@ const INFO: Record<FulfilmentType, DeliveryInfo> = {
       { label: "Auto Assignment", sub: "From stock" },
       { label: "Credentials Ready", sub: "In your vault" },
     ],
+    checkoutPoints: [
+      "Full account credentials (email + password) in your order vault",
+      "Instant delivery — credentials are delivered automatically right after payment is verified",
+      "48-hour escrow buyer protection after delivery",
+      "Replacement or wallet refund if the credentials don't work",
+    ],
+    paidNote: "your credentials are in the vault on your order page.",
   },
   manual: {
     type: "manual",
@@ -64,6 +75,13 @@ const INFO: Record<FulfilmentType, DeliveryInfo> = {
       { label: "Store Prepares", sub: "Manual delivery" },
       { label: "Credentials Ready", sub: "In your vault" },
     ],
+    checkoutPoints: [
+      "Full account credentials (email + password) in your order vault",
+      "Manual delivery — the store sends your credentials after payment is verified",
+      "48-hour escrow buyer protection after delivery",
+      "Replacement or wallet refund if the credentials don't work",
+    ],
+    paidNote: "the store will send your credentials to the vault on your order page — you'll get a notification when they're ready.",
   },
   service: {
     type: "service",
@@ -80,6 +98,13 @@ const INFO: Record<FulfilmentType, DeliveryInfo> = {
       { label: "Work in Progress", sub: "Progress posted" },
       { label: "Delivered", sub: "Proof on order page" },
     ],
+    checkoutPoints: [
+      "The service performed using the details you provided at checkout",
+      "Progress updates and completion proof posted on your order page",
+      "48-hour escrow buyer protection after completion",
+      "Redo or wallet refund if the service isn't delivered as described",
+    ],
+    paidNote: "the store will start the work and post progress on your order page.",
   },
 };
 

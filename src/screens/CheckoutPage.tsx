@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { auth } from "../lib/auth-client";
-import { etaLine } from "../lib/fulfilment";
+import { deliveryInfo, etaLine } from "../lib/fulfilment";
 import { toast } from "react-hot-toast";
 import { PageLoader } from "../components/SkeletonUI";
 
@@ -132,6 +132,11 @@ export function CheckoutPage() {
   const isService = product?.fulfilment_type === "service";
   // Buyer-visible ETA promise (video-gap #1) — wording from fulfilment.ts.
   const etaText = etaLine(product?.delivery_eta_hours);
+  // ALL delivery wording on every checkout step comes from the ONE
+  // source (src/lib/fulfilment.ts) so a manual product says "Manual"
+  // everywhere and an instant product says "Instant" everywhere —
+  // no per-screen strings (Fix Round 4, item 1).
+  const info = deliveryInfo(product?.fulfilment_type);
   const missingIntake = isService
     ? intakeSchema.filter((f) => f.required && !(intake[f.key] || "").trim())
     : [];
@@ -385,9 +390,7 @@ export function CheckoutPage() {
                     <CheckCheck size={14} className="text-emerald-600" /> What You Get
                   </h3>
                   <div className="space-y-3">
-                    {(isService
-                      ? ["The service performed using the details you provided at checkout", "Progress updates and completion proof posted on your order page", "48-hour escrow buyer protection after completion", "Redo or wallet refund if the service isn't delivered as described"]
-                      : ["Full account credentials (email + password) in your order vault", "Automatic delivery when the item is in stock", "48-hour escrow buyer protection after delivery", "Replacement or wallet refund if the credentials don't work"]).map((item, i) => (
+                    {info.checkoutPoints.map((item, i) => (
                       <div key={i} className="flex items-center gap-3">
                         <div className="w-5 h-5 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
                           <CheckCircle size={12} className="text-emerald-600" />
@@ -570,6 +573,20 @@ export function CheckoutPage() {
                     <span className="text-sm font-black text-slate-900">Total</span>
                     <span className="text-3xl font-black text-primary-600">${total.toFixed(2)}</span>
                   </div>
+                  {/* Delivery promise on the payment step too — same
+                      single source as the review step and the PDP, so
+                      "Manual" never silently disappears before paying. */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5">
+                    <span className={`inline-block text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border ${info.auto ? "text-emerald-600 bg-emerald-50 border-emerald-100" : "text-amber-600 bg-amber-50 border-amber-100"}`}>
+                      {info.label}
+                    </span>
+                    <p className="mt-2 text-[12px] font-medium text-slate-600 leading-relaxed">{info.line}</p>
+                    {etaText && (
+                      <p className="mt-1.5 flex items-center gap-1.5 text-[12px] font-bold text-slate-500">
+                        <Clock size={13} className="text-primary-600" /> {etaText}
+                      </p>
+                    )}
+                  </div>
                   <button
                     disabled={processing || outOfStock}
                     onClick={handlePlaceOrder}
@@ -603,7 +620,7 @@ export function CheckoutPage() {
               <h2 className="text-3xl font-display font-bold text-slate-900 mb-2">Order Placed!</h2>
               <p className="text-slate-500 text-sm mb-4 max-w-md">
                 {paidViaWallet
-                  ? "Paid from your wallet. Redirecting to your order — your credentials are in the vault."
+                  ? `Paid from your wallet. Redirecting to your order — ${info.paidNote}`
                   : "Redirecting to your order — you can complete payment there."}
               </p>
               <div className="flex items-center gap-2 text-[10px] font-black text-primary-600 uppercase tracking-widest">

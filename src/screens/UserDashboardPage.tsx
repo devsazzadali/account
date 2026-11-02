@@ -10,7 +10,7 @@ import {
 import { db } from "../lib/dbclient";
 import { auth } from "../lib/auth-client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserMessages } from "../components/user/UserMessages";
 import { UserSettings } from "../components/user/UserSettings";
@@ -31,14 +31,22 @@ export function UserDashboardPage() {
   const router = useRouter();
 
   // Deep-linking (F-07/F-08/F-18): header links, the profile dropdown and
-  // product-page buttons land here with ?tab=<panel>; read it on load so
-  // the requested panel — not always the overview — is what opens.
+  // product-page buttons land here with ?tab=<panel>. The active tab
+  // FOLLOWS the search param — including client-side navigations while
+  // the dashboard is already mounted (Fix Round 4, item 2: dropdown
+  // links used to change only the URL; the panel switched solely on a
+  // manual reload). Fresh loads behave exactly as before.
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
   useEffect(() => {
-    const tab = new URLSearchParams(window.location.search).get("tab");
-    if (tab && (DASHBOARD_TABS as readonly string[]).includes(tab)) {
-      setActiveTab(tab as DashboardTab);
+    if (tabParam && (DASHBOARD_TABS as readonly string[]).includes(tabParam)) {
+      setActiveTab(tabParam as DashboardTab);
+    } else if (tabParam === null) {
+      // Plain /dashboard (no param) always means the overview panel.
+      setActiveTab("dashboard");
     }
-  }, []);
+    // An unknown ?tab= value is ignored — the current panel stays.
+  }, [tabParam]);
 
   // Switching panels keeps the URL in sync (shareable / reloadable)
   // without a navigation or refetch.
