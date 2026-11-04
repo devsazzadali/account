@@ -18,16 +18,16 @@
 // comment describes, now scoped per thread instead of per user.
 
 export const GENERAL_THREAD_KEY = "general";
-export const GENERAL_THREAD_TITLE = "Customer Support";
+const GENERAL_THREAD_TITLE = "Customer Support";
 
 /** Subject written by the customer desk for general-thread messages. */
-export const GENERAL_SUBJECT = "Inbox Inquiry";
+const GENERAL_SUBJECT = "Inbox Inquiry";
 /** Subject written by the store desk when replying in the general thread. */
-export const ADMIN_GENERAL_SUBJECT = "Helpdesk Ticket";
+const ADMIN_GENERAL_SUBJECT = "Helpdesk Ticket";
 
 const GENERAL_SUBJECTS = ["Inbox Inquiry", "Live Chat Inquiry", "Helpdesk Ticket"];
 
-export function isGeneralSubject(subject?: string | null): boolean {
+function isGeneralSubject(subject?: string | null): boolean {
   const s = (subject || "").trim();
   return s === "" || GENERAL_SUBJECTS.includes(s);
 }

@@ -42,7 +42,7 @@ const BG = "#F8F9FB";
 const INK = "#1e293b";
 const MUTED = "#64748b";
 
-export function esc(s: string): string {
+function esc(s: string): string {
   return String(s)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

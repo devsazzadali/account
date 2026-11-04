@@ -93,11 +93,6 @@ export async function getAllSettings(): Promise<Record<string, string>> {
   return out;
 }
 
-export async function getSetting(key: string): Promise<string> {
-  const all = await getAllSettings();
-  return all[key] ?? "";
-}
-
 export async function setSettings(values: Record<string, string>): Promise<void> {
   for (const [key, value] of Object.entries(values)) {
     await prisma.storeSetting.upsert({
@@ -128,21 +123,15 @@ export async function getPaymentConfig(forSignedInUser: boolean) {
   };
 }
 
-/** Whether the storefront is accepting new orders (Hide Shop switch). */
-export async function isStoreOpen(): Promise<boolean> {
-  const v = await getSetting(SETTING_KEYS.storeOpen);
-  return v !== "false";
-}
-
 /** ── Storefront CMS resolver ─────────────────────────────────────────────
  * Reads the raw settings map and resolves every admin-editable storefront
  * value, falling back to the built-in design copy/structure whenever the
  * admin has not customized a field (empty string = "use the design
  * default"). Read at request time — admin changes appear immediately,
  * no redeploy needed. */
-export const HOME_SECTION_IDS: HomeSectionId[] = ["featured", "trending", "categories", "reviews"];
+const HOME_SECTION_IDS: HomeSectionId[] = ["featured", "trending", "categories", "reviews"];
 
-export const STOREFRONT_DESIGN = {
+const STOREFRONT_DESIGN = {
   heroBadge: "Discover Premium Excellence",
   heroSubheadline:
     "Elevate your digital presence with our curated selection of verified, high-tier accounts. Experience pure exclusivity.",

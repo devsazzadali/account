@@ -109,12 +109,6 @@ export function forbidden(message = "Insufficient permissions"): Response {
   return Response.json({ error: message }, { status: 403 });
 }
 
-export async function requireUser(req: Request): Promise<SessionContext | Response> {
-  const ctx = await getSessionContext(req);
-  if (!ctx) return unauthorized();
-  return ctx;
-}
-
 export async function requireAdmin(req: Request): Promise<SessionContext | Response> {
   const ctx = await getSessionContext(req);
   if (!ctx) return unauthorized();

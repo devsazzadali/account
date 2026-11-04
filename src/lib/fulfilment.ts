@@ -6,9 +6,9 @@
 // product's real `fulfilmentType` through this helper. A manual product
 // must never be labelled "Instant" / "Auto" anywhere, and vice versa.
 
-export type FulfilmentType = "instant" | "manual" | "service";
+type FulfilmentType = "instant" | "manual" | "service";
 
-export function normalizeFulfilment(raw?: string | null): FulfilmentType {
+function normalizeFulfilment(raw?: string | null): FulfilmentType {
   return raw === "instant" || raw === "service" ? raw : "manual";
 }
 

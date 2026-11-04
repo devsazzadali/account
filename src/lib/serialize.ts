@@ -19,7 +19,7 @@ function isDecimalLike(v: unknown): v is { toNumber: () => number } {
   );
 }
 
-export function serializeValue(v: unknown): unknown {
+function serializeValue(v: unknown): unknown {
   if (v === null || v === undefined) return v ?? null;
   if (v instanceof Date) return v.toISOString();
   if (isDecimalLike(v)) return v.toNumber();

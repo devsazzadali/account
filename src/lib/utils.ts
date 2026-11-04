@@ -1,10 +1,3 @@
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
 /**
  * Round a money value to exactly 2 decimals (Fix Round 5, item 1).
  * Prices are Decimal(10,2) in the schema, but legacy rows / float

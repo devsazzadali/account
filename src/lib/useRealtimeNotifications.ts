@@ -8,7 +8,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { db } from "./dbclient";
 
-export type NotificationType = "order" | "payment" | "alert" | "delivery" | "support";
+type NotificationType = "order" | "payment" | "alert" | "delivery" | "support";
 
 export interface AppNotification {
   id: string;

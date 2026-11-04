@@ -14,5 +14,3 @@ export function JsonLd({
     />
   );
 }
-
-export default JsonLd;

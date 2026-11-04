@@ -3,14 +3,13 @@
 
 export const SITE_URL = "https://www.accountstoreone.com";
 export const SITE_NAME = "Account Store One";
-export const SITE_TAGLINE = "Premium Marketplace";
 export const SITE_DESCRIPTION =
   "Buy verified premium accounts and subscriptions — Netflix, Spotify, IPTV, gaming accounts and more — with instant delivery, escrow buyer protection and 24/7 support.";
 export const OG_IMAGE = "/opengraph-image";
 /** Default currency across the store (matches the live site). */
-export const CURRENCY = "USD";
+const CURRENCY = "USD";
 
-export function absoluteUrl(path: string): string {
+function absoluteUrl(path: string): string {
   if (path.startsWith("http")) return path;
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }

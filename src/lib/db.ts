@@ -32,8 +32,6 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-export default prisma;
-
 /**
  * Interactive transaction with a window sized for the Neon serverless
  * adapter. Prisma's defaults (maxWait 2s / timeout 5s) are too tight for

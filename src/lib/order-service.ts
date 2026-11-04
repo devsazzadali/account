@@ -37,7 +37,7 @@ import { LOW_STOCK_THRESHOLD } from "./email-templates";
 import { orderCode } from "./order-ref";
 
 export const SERVICE_FEE = 0.5;
-export const ESCROW_HOLD_MS = 48 * 60 * 60 * 1000;
+const ESCROW_HOLD_MS = 48 * 60 * 60 * 1000;
 
 type Tx = Prisma.TransactionClient;
 
@@ -45,7 +45,7 @@ type Tx = Prisma.TransactionClient;
 // Every state transition writes an order_events row in the SAME
 // transaction, so the timeline in Order Details can never disagree with
 // the order's real state.
-export async function logOrderEvent(
+async function logOrderEvent(
   tx: Tx,
   orderId: string,
   actor: "buyer" | "admin" | "system" | "stripe",
@@ -168,7 +168,7 @@ export interface IntakeField {
   options?: string[];
 }
 
-export function parseIntakeSchema(raw: unknown): IntakeField[] {
+function parseIntakeSchema(raw: unknown): IntakeField[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((f): f is Record<string, unknown> => !!f && typeof f === "object")

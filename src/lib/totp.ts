@@ -54,7 +54,7 @@ async function hmacSha1(key: Uint8Array, message: Uint8Array): Promise<Uint8Arra
 
 /** RFC 4226 HOTP: HMAC-SHA1 over the 8-byte big-endian counter, dynamic
  *  truncation, `digits` decimal digits (zero-padded). */
-export async function hotp(secret: Uint8Array, counter: number, digits = 6): Promise<string> {
+async function hotp(secret: Uint8Array, counter: number, digits = 6): Promise<string> {
   const msg = new Uint8Array(8);
   let c = counter;
   for (let i = 7; i >= 0; i--) {

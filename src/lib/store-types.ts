@@ -64,7 +64,7 @@ export interface ProductRating {
  * always resolved to a concrete string (design copy when unset). */
 export type HomeSectionId = "featured" | "trending" | "categories" | "reviews";
 
-export interface CmsSectionConfig {
+interface CmsSectionConfig {
   enabled: boolean;
   /** Resolved title (design copy when the admin has not overridden it). */
   title: string;
