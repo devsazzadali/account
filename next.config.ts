@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
   ],
   images: {
     remotePatterns: [
+      { protocol: 'https', hostname: '*.public.blob.vercel-storage.com' },
       { protocol: 'https', hostname: 'picsum.photos' },
       { protocol: 'https', hostname: 'api.dicebear.com' },
       { protocol: 'https', hostname: 'transparenttextures.com' },
