@@ -31,15 +31,15 @@ export function Footer({
                   className="w-10 h-10 rounded-xl object-cover shadow-lg"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-xl bg-[#0C2254] flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center shadow-lg">
                   <Zap className="w-6 h-6 text-white fill-current" />
                 </div>
               )}
               <span className="text-2xl font-display font-bold tracking-tight text-slate-900">
                 <BrandWordmark
                   brand={brand}
-                  accentClassName="text-[#F4751F]"
-                  builtin={<>Account<span className="text-[#F4751F]">Store</span></>}
+                  accentClassName="text-primary-500"
+                  builtin={<>Account<span className="text-primary-500">Store</span></>}
                 />
               </span>
             </div>
@@ -116,7 +116,7 @@ export function Footer({
 
       <button
         onClick={scrollToTop}
-        className="fixed bottom-[10.5rem] right-4 sm:right-6 md:bottom-10 md:right-10 w-14 h-14 bg-[#0C2254] text-white rounded-2xl shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 z-50 flex items-center justify-center group"
+        className="fixed bottom-[10.5rem] right-4 sm:right-6 md:bottom-10 md:right-10 w-14 h-14 bg-primary-600 text-white rounded-2xl shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 z-50 flex items-center justify-center group"
       >
         <ArrowUp className="w-6 h-6 group-hover:-translate-y-1 transition-transform" />
       </button>

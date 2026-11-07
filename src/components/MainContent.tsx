@@ -2,7 +2,7 @@
 
 import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award, Plus, Minus, AlertCircle, ShieldCheck, Check, Briefcase } from "lucide-react";
 import { deliveryInfo } from "../lib/fulfilment";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -331,6 +331,22 @@ export function MainContent({
       // Fallback if DB empty (optional, but requested to remove demo results)
       return [];
   }, [dbCategories]);
+
+  // Per-category product counts for the home category tiles. Counting
+  // source of truth (Fix Round 5): products carry their category as a
+  // NAME string, so the real count for a category is the loaded
+  // products grouped by that name — the same grouping the "Category
+  // Wise Products" sections below already render from. Derived from
+  // the same allProducts list the storefront displays (active,
+  // unexpired listings), so a tile's count matches what opening the
+  // category can actually show.
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of allProducts) {
+      if (p.category) counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
+    }
+    return counts;
+  }, [allProducts]);
   const reviews = useMemo(() => dbReviews, [dbReviews]);
 
   const products = useMemo(() => {
@@ -359,6 +375,38 @@ export function MainContent({
     }
     return counts;
   }, [products]);
+
+  // Category-view default tab (live spot-check fix, 2026-11-02): when a
+  // category view opens, land on the first tab that actually has offers
+  // for that category. The tabs split the category's offers into
+  // non-subscription ("Available Accounts") vs subscription (the
+  // Streaming category's offers, see visibleProducts) — a category
+  // whose offers are ALL subscriptions must not greet the visitor with
+  // the empty Accounts tab. Applied once per category entry: going
+  // back to 'All' re-arms it, and a manual tab switch during the visit
+  // is never overridden. When both tabs have offers — or neither does —
+  // the standing default ("accounts") is kept.
+  const kindDefaultAppliedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (selectedCategory === "All") {
+      kindDefaultAppliedFor.current = null;
+      return;
+    }
+    // Wait until the view's product list has actually loaded, and
+    // never fight the search view (the category view is hidden then).
+    if (searchQuery || loading) return;
+    if (kindDefaultAppliedFor.current === selectedCategory) return;
+    const subsCount = products.reduce(
+      (n, p) => n + (p.category === "Streaming" ? 1 : 0),
+      0,
+    );
+    setKindTab(
+      products.length - subsCount === 0 && subsCount > 0
+        ? "subscriptions"
+        : "accounts",
+    );
+    kindDefaultAppliedFor.current = selectedCategory;
+  }, [selectedCategory, products, loading, searchQuery]);
 
   // The category grid after every filter is applied (F-05). Products
   // without delivery metadata count as "manual" (the schema default).
@@ -561,15 +609,19 @@ export function MainContent({
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-12">
-                    {categories.map((cat, idx) => (
-                        <div 
-                            key={cat.id || idx} 
+                    {categories.map((cat, idx) => {
+                        const count = categoryCounts.get(cat.name) ?? 0;
+                        return (
+                        <div
+                            key={cat.id || idx}
                             onClick={() => handleCategoryClick(cat.name)}
                             className="bg-slate-50 border border-slate-100 rounded-2xl p-5 flex flex-col items-center justify-center text-center hover:bg-white hover:border-primary-500/30 hover:shadow-md transition-all duration-500 cursor-pointer relative group h-28 shadow-sm"
                         >
                             <span className="text-xs font-semibold text-slate-900 group-hover:text-primary-600 transition-colors uppercase tracking-widest">{cat.name}</span>
+                            <span className="mt-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">{count} {count === 1 ? "product" : "products"}</span>
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {/* Category Wise Products */}
@@ -755,7 +807,7 @@ export function MainContent({
                 <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight"><SplitTitle title={sections.reviews.title} accentClassName="text-primary-600" /></h2>
             </div>
             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                <span className="text-primary-600">{reviews.length}</span>{" "}Total Reviews
+                <span className="text-primary-600">{reviews.length}</span>{" "}Recent Reviews
             </div>
         </div>
 

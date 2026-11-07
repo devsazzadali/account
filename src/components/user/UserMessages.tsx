@@ -162,24 +162,24 @@ export function UserMessages() {
         const { data: profile } = await db.from('profiles').select('username').eq('id', session.user.id).single();
         if (profile?.username) {
             setUsername(profile.username);
-            fetchMessages(profile.username);
-            fetchLastOrder(profile.username);
-        } else {
-            fetchMessages(username);
-            fetchLastOrder(username);
         }
+        fetchMessages();
+        fetchLastOrder();
     } else {
         setLoading(false);
     }
   }
 
-  async function fetchMessages(overrideUser?: string) {
-    const targetUser = overrideUser || username;
+  // ধাপ ৫ক৩ — no client-side username filter on either fetch: the
+  // server scopes message rows to the session's stable identity (user
+  // id, username as legacy fallback), so filtering by the CURRENT
+  // username here would hide history written under a previous name.
+  // Orders are likewise ownership-scoped server-side.
+  async function fetchMessages() {
     try {
         const { data, error } = await db
             .from('messages')
             .select('*')
-            .eq('username', targetUser)
             .order('created_at', { ascending: true });
 
         if (error) throw error;
@@ -190,13 +190,11 @@ export function UserMessages() {
     }
   }
 
-  async function fetchLastOrder(overrideUser?: string) {
-    const targetUser = overrideUser || username;
+  async function fetchLastOrder() {
     try {
       const { data } = await db
         .from('orders')
         .select('*, products(title, image)')
-        .eq('username', targetUser)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -487,7 +485,6 @@ export function UserMessages() {
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white shrink-0 font-bold ${isGeneral ? "bg-[#1dbf73]" : "bg-[#404145]"}`}>
                         {isGeneral ? "S" : (t.title[0] || "T").toUpperCase()}
                     </div>
-                    {isGeneral && <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#1dbf73] rounded-full border-2 border-white" />}
                 </div>
                 <div className="flex-1 text-left min-w-0">
                     <div className="flex justify-between items-center mb-0.5">
@@ -495,7 +492,6 @@ export function UserMessages() {
                           {t.title}
                           {tFav && <Star size={12} className="text-amber-500 shrink-0" fill="currentColor" />}
                         </span>
-                        {isGeneral && <span className="text-[11px] text-[#74767e]">Online</span>}
                     </div>
                     <p className="text-[12px] text-[#74767e] truncate font-normal">{threadPreview(t)}</p>
                 </div>
@@ -538,14 +534,15 @@ export function UserMessages() {
                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${activeThread.key === GENERAL_THREAD_KEY ? "bg-[#1dbf73]" : "bg-[#404145]"}`}>
                     {activeThread.key === GENERAL_THREAD_KEY ? "S" : (activeThread.title[0] || "T").toUpperCase()}
                  </div>
-                 {activeThread.key === GENERAL_THREAD_KEY && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#1dbf73] rounded-full border-2 border-white" />}
               </div>
               <div>
                  <div className="text-[15px] font-bold text-[#404145] flex items-center gap-2">
                     {activeThread.title}
                  </div>
-                 <p className="text-[12px] text-[#1dbf73] font-medium flex items-center gap-2">
-                    Online
+                 <p className="text-[12px] text-[#74767e] font-medium flex items-center gap-2">
+                    {/* ধাপ ৫ক৩ — honest copy: no presence/response-time
+                        claim the system cannot know. */}
+                    Store support — replies land right here
                     {/* Ticket state (P3) — mirrors the admin desk, per thread */}
                     {activeMessages.length > 0 && (() => {
                       const label = ticketStatus === "awaiting_reply" ? "answered" : ticketStatus;
@@ -704,7 +701,7 @@ export function UserMessages() {
                 <div className="mx-4 mb-2 flex items-center gap-2 bg-[#f1fdf7] border border-[#1dbf73]/30 rounded-lg px-3 py-2">
                   <Paperclip size={13} className="text-[#1dbf73] shrink-0" />
                   <span className="text-[12px] font-bold text-[#404145] truncate flex-1">{pendingAttachment.name}</span>
-                  <button type="button" onClick={() => setPendingAttachment(null)} className="text-[#74767e] hover:text-red-500 shrink-0" title="Remove attachment"><X size={14} /></button>
+                  <button type="button" onClick={() => setPendingAttachment(null)} className="text-[#74767e] hover:text-slate-600 shrink-0" title="Remove attachment"><X size={14} /></button>
                 </div>
               )}
               <div className="px-4 py-3 bg-[#f5f5f5] flex items-center justify-between border-t border-[#e4e5e7] rounded-b-md">
@@ -756,7 +753,7 @@ export function UserMessages() {
                  <ShieldCheck size={12} className="text-[#1dbf73]" />
                  Secure Conversation
               </div>
-              <p>Press Enter to send</p>
+              <p className="hidden sm:block">Press Enter to send</p>
            </div>
         </div>
       </div>
@@ -772,7 +769,7 @@ export function UserMessages() {
                   </div>
                   <div>
                      <div className="text-[13px] font-bold text-[#404145]">Help Center</div>
-                     <div className="text-[11px] text-[#74767e]">24/7 Availability</div>
+                     <div className="text-[11px] text-[#74767e]">Send a message any time</div>
                   </div>
                </div>
                <div className="flex items-center gap-3">
@@ -780,8 +777,8 @@ export function UserMessages() {
                      <Clock size={20} />
                   </div>
                   <div>
-                     <div className="text-[13px] font-bold text-[#404145]">Avg. Response</div>
-                     <div className="text-[11px] text-[#74767e]">Within 1 hour</div>
+                     <div className="text-[13px] font-bold text-[#404145]">Support Replies</div>
+                     <div className="text-[11px] text-[#74767e]">Right here in this conversation</div>
                   </div>
                </div>
             </div>

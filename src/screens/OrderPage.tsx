@@ -288,7 +288,7 @@ export function OrderPage() {
               <button
                 disabled={busy === "pay_card"}
                 onClick={payByCard}
-                className="w-full py-3.5 bg-[#0C2254] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-primary-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
               >
                 {busy === "pay_card" ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />} Pay ${Number(order.total_price).toFixed(2)} by Card
               </button>
@@ -330,7 +330,14 @@ export function OrderPage() {
             <div className="space-y-0">
               {STATUS_TIMELINE.map((status, i) => {
                 const isDone = i <= stepIndex;
-                const isActive = i === stepIndex;
+                // "Delivering" and "Completed" are accomplished stages:
+                // when the order sits in one of them, delivery HAS
+                // happened / the order HAS completed, so the current
+                // step reads Complete — never "In Progress...". (The
+                // final step of a completed order previously kept the
+                // in-progress label forever.)
+                const stageAccomplished = order.status === "Delivering" || order.status === "Completed";
+                const isActive = i === stepIndex && !stageAccomplished;
                 return (
                   <div key={status} className="flex items-start gap-4 relative">
                     {i < STATUS_TIMELINE.length - 1 && (
@@ -432,7 +439,7 @@ export function OrderPage() {
         {/* Credential Vault */}
         {hasCredentials ? (
           <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
-            <div className="bg-[#0C2254] p-5 flex items-center justify-between">
+            <div className="bg-primary-800 p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                   {revealed ? <ShieldCheck size={20} className="text-white" /> : <Lock size={20} className="text-white" />}

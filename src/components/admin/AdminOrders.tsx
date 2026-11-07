@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { orderCode } from "../../lib/order-ref";
 import { 
   Search, 
@@ -45,12 +45,18 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
   const [filters, setFilters] = useState({
     game: "All",
     category: "All",
-    orderNumber: "",
     productTitle: "",
     remarks: "",
     fromDate: "",
     toDate: ""
   });
+
+  // QA3 D4: controlled order-number filter state. The filter input binds to
+  // this, and the topbar order scan sets it BEFORE a refetch re-renders with
+  // the stale empty value — React restores controlled inputs to their state
+  // value on re-render, so binding to a plain ref keeps the value stable.
+  const orderNumberRef = useRef("");
+  const [orderNumberTick, setOrderNumberTick] = useState(0);
 
   const fetchInitialData = useCallback(async () => {
     try {
@@ -66,7 +72,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
       // Fetch Orders with Joined Data (product embed → display fields)
       const { data, error } = await db
         .from("orders")
-        .select("*, products(title, image, delivery_eta_hours, category, game_type)")
+        .select("*, products(title, image, price, delivery_eta_hours, category, game_type)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -74,6 +80,13 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
         ...o,
         product_title: o.products?.title || "Product",
         product_image: o.products?.image || null,
+        // Unit price paid (QA3 D1): derived exactly from the order's own
+        // numbers — subtotal = total + discount − service fee ($0.50) —
+        // divided by quantity. Falls back to the product's current list
+        // price only if the order math is unavailable.
+        unit_price: o.quantity
+          ? (Number(o.total_price || 0) + Number(o.discount_amount || 0) - 0.5) / Number(o.quantity)
+          : (o.products?.price ?? null),
         product_eta_hours: o.products?.delivery_eta_hours ?? null,
         // Game & Category filters (video-gap #2): orders carry neither
         // field — both live on the ordered product, so map them from the
@@ -83,19 +96,26 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
       }));
       setOrders(rows);
 
-      // Fix Round 6 (item 5): a Messages → Order History click hands
-      // over an order id — open its detail directly on arrival.
+      // Fix Round 6 (item 5) / QA3: a Messages → Order History click (or
+      // the topbar order scan) hands over an order id — open its detail
+      // directly on arrival.
       const openId = lsGet("openOrderId");
       if (openId) {
         lsRemove("openOrderId");
         const target = rows.find((r: any) => r.id === openId);
         if (target) setSelectedOrder(target);
       }
+      const scanQ = lsGet("orderScanQuery");
+      if (scanQ) {
+        lsRemove("orderScanQuery");
+        orderNumberRef.current = scanQ;
+        setOrderNumberTick((t) => t + 1);
+      }
 
       // Fix Round 5 (item 3): tab counts come from the ONE canonical
       // server-side summary (/api/store/stats → orders_summary,
       // src/lib/order-summary.ts) — the same numbers Admin Home and
-      // Seller Information show. The row-filter predicates below mirror
+      // Store Information show. The row-filter predicates below mirror
       // the summary's definitions exactly (case-insensitive terminal
       // states), so a count can never disagree with the list it labels.
       // The local computation remains only as a fallback if the stats
@@ -131,6 +151,23 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
     fetchInitialData();
   }, [fetchInitialData]);
 
+  // QA3 D4: pick up topbar order scans while the Orders screen is already
+  // mounted. AdminLayout raises a window event on Enter (localStorage alone
+  // would only be seen on the next mount/refetch).
+  useEffect(() => {
+    const onScan = () => {
+      const scanQ = lsGet("orderScanQuery");
+      if (scanQ) {
+        lsRemove("orderScanQuery");
+        orderNumberRef.current = scanQ;
+        setOrderNumberTick((t) => t + 1);
+      }
+    };
+    window.addEventListener("orderScanRequested", onScan);
+    return () => window.removeEventListener("orderScanRequested", onScan);
+  }, []);
+
+  void orderNumberTick; // re-render trigger for order-number filter changes
   const filteredOrders = orders.filter(order => {
     // Status Tab Filter — definitions mirror the canonical summary
     // (src/lib/order-summary.ts); terminal states compare
@@ -144,12 +181,12 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
                       (activeTab === "Canceled" && (st === "canceled" || st === "cancelled"));
 
     if (!matchesTab) return false;
-    if (subStatus && order.status !== subStatus) return false;
+    if (subStatus && st !== subStatus.toLowerCase()) return false;
 
     // Advanced Filters
     const matchesGame = filters.game === "All" || order.product_game_type === filters.game;
     const matchesCategory = filters.category === "All" || order.product_category === filters.category;
-    const matchesOrderNum = !filters.orderNumber || order.id.toLowerCase().includes(filters.orderNumber.toLowerCase());
+    const matchesOrderNum = !orderNumberRef.current || order.id.toLowerCase().includes(orderNumberRef.current.toLowerCase());
     const matchesTitle = !filters.productTitle || (order.product_title && order.product_title.toLowerCase().includes(filters.productTitle.toLowerCase()));
     const matchesRemarks = !filters.remarks || (order.internal_remarks && order.internal_remarks.toLowerCase().includes(filters.remarks.toLowerCase()));
     
@@ -168,10 +205,11 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
   });
 
   const resetFilters = () => {
+    orderNumberRef.current = "";
+    setOrderNumberTick((t) => t + 1);
     setFilters({
       game: "All",
       category: "All",
-      orderNumber: "",
       productTitle: "",
       remarks: "",
       fromDate: "",
@@ -180,7 +218,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
   };
 
   if (selectedOrder) {
-    return <AdminOrderDetails order={selectedOrder} onBack={() => setSelectedOrder(null)} />;
+    return <AdminOrderDetails order={selectedOrder} onBack={() => setSelectedOrder(null)} setActiveTab={setActiveTab} />;
   }
 
   const tabs = [
@@ -203,13 +241,13 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
               onClick={() => setLocalTab(tab.id)}
               className={`py-4 text-[11px] font-black uppercase tracking-[0.15em] transition-all border-b-2 whitespace-nowrap relative ${
                 activeTab === tab.id 
-                ? "border-[#E62E04] text-[#E62E04]" 
+                ? "border-[#F4751F] text-[#F4751F]" 
                 : "border-transparent text-slate-400 hover:text-slate-600"
               }`}
             >
               {tab.label}
               {activeTab === tab.id && (
-                <div className="absolute inset-x-0 bottom-[-2px] h-[2px] bg-[#E62E04] shadow-[0_0_10px_rgba(230,46,4,0.4)]" />
+                <div className="absolute inset-x-0 bottom-[-2px] h-[2px] bg-primary-500 shadow-[0_0_10px_rgba(29,191,115,0.4)]" />
               )}
             </button>
           ))}
@@ -224,7 +262,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
               <select 
                 value={filters.game}
                 onChange={(e) => setFilters({...filters, game: e.target.value})}
-                className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-700 outline-none focus:border-[#E62E04] transition-all"
+                className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-700 outline-none focus:border-primary-500 transition-all"
               >
                 <option value="All">All</option>
                 {/* Game options come from the catalog actually on order
@@ -238,7 +276,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
               <select 
                 value={filters.category}
                 onChange={(e) => setFilters({...filters, category: e.target.value})}
-                className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-700 outline-none focus:border-[#E62E04] transition-all"
+                className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-700 outline-none focus:border-primary-500 transition-all"
               >
                 <option value="All">All</option>
                 {categories.map(cat => (
@@ -250,9 +288,10 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
               <input 
                 type="text" 
                 placeholder="Order number" 
-                value={filters.orderNumber}
-                onChange={(e) => setFilters({...filters, orderNumber: e.target.value})}
-                className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium placeholder:text-slate-400 outline-none focus:border-[#E62E04] transition-all" 
+                key={orderNumberTick}
+                defaultValue={orderNumberRef.current}
+                onChange={(e) => { orderNumberRef.current = e.target.value; setOrderNumberTick((t) => t + 1); }}
+                className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium placeholder:text-slate-400 outline-none focus:border-primary-500 transition-all" 
               />
             </FilterField>
             <FilterField label="PRODUCT TITLE:">
@@ -261,7 +300,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
                 placeholder="Product Title" 
                 value={filters.productTitle}
                 onChange={(e) => setFilters({...filters, productTitle: e.target.value})}
-                className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium placeholder:text-slate-400 outline-none focus:border-[#E62E04] transition-all" 
+                className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium placeholder:text-slate-400 outline-none focus:border-primary-500 transition-all" 
               />
             </FilterField>
           </div>
@@ -273,7 +312,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
                 placeholder="Internal remarks" 
                 value={filters.remarks}
                 onChange={(e) => setFilters({...filters, remarks: e.target.value})}
-                className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium placeholder:text-slate-400 outline-none focus:border-[#E62E04] transition-all" 
+                className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium placeholder:text-slate-400 outline-none focus:border-primary-500 transition-all" 
               />
             </FilterField>
             <div className="col-span-2 flex items-center gap-4">
@@ -283,7 +322,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
                     type="date" 
                     value={filters.fromDate}
                     onChange={(e) => setFilters({...filters, fromDate: e.target.value})}
-                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-600 outline-none focus:border-[#E62E04] transition-all" 
+                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-600 outline-none focus:border-primary-500 transition-all" 
                   />
                 </FilterField>
               </div>
@@ -294,7 +333,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
                     type="date" 
                     value={filters.toDate}
                     onChange={(e) => setFilters({...filters, toDate: e.target.value})}
-                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-600 outline-none focus:border-[#E62E04] transition-all" 
+                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-600 outline-none focus:border-primary-500 transition-all" 
                   />
                 </FilterField>
               </div>
@@ -302,7 +341,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
             <div>
               <button 
                 onClick={fetchInitialData}
-                className="w-full h-11 bg-[#E62E04] text-white font-bold text-[13px] uppercase rounded-xl hover:bg-red-700 transition-all active:scale-95 shadow-sm"
+                className="w-full h-11 bg-primary-600 text-white font-bold text-[13px] uppercase rounded-xl hover:bg-primary-700 transition-all active:scale-95 shadow-sm"
               >
                 SEARCH
               </button>
@@ -318,7 +357,7 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
                 onClick={() => setSubStatus(subStatus === s ? null : s)}
                 className={`px-5 py-2 border rounded text-sm font-bold transition-colors uppercase ${
                   subStatus === s
-                    ? "border-[#E62E04] text-[#E62E04] bg-red-50"
+                    ? "border-primary-600 text-primary-700 bg-primary-50"
                     : "border-slate-300 text-slate-400 bg-white hover:text-slate-800"
                 }`}
               >
@@ -346,14 +385,14 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
             <div className="divide-y divide-slate-100">
               {loading ? (
                 <div className="p-32 text-center">
-                  <div className="w-12 h-12 rounded-full border-4 border-red-100 border-t-[#E62E04] animate-spin mx-auto mb-6" />
+                  <div className="w-12 h-12 rounded-full border-4 border-primary-100 border-t-primary-600 animate-spin mx-auto mb-6" />
                 </div>
               ) : filteredOrders.length === 0 ? (
                 <div className="p-32 text-center flex flex-col items-center justify-center">
                    <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-6 text-slate-300">
                       <ShoppingBag size={32} />
                    </div>
-                   <h3 className="text-xl font-bold text-[#0A0F1C] italic tracking-tight mb-2 uppercase">NO ACTIVE ORDERS</h3>
+                   <h3 className="text-xl font-bold text-slate-900 italic tracking-tight mb-2 uppercase">NO ACTIVE ORDERS</h3>
                    <p className="text-[14px] font-medium text-slate-400">No results found matching your current protocol filters.</p>
                 </div>
               ) : (
@@ -396,14 +435,17 @@ function OrderRow({ order, onDetail }: { order: any, onDetail: () => void, key?:
             <h4 className="font-bold text-slate-900 text-[13px] leading-tight truncate mb-1">{order.product_title || 'Netflix Premium 1 Month'}</h4>
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <span>#{orderCode(order.id)}</span>
-                {showWarning && <AlertCircle size={10} className="text-[#E62E04]" />}
+                {showWarning && <AlertCircle size={10} className="text-[#F4751F]" />}
             </div>
           </div>
         </div>
 
-        {/* Unit Price (col-span-2) */}
+        {/* Unit Price (col-span-2) — price per unit paid, not the total */}
         <div className="col-span-2">
-          <span className="text-[13px] font-bold text-slate-900">${Number(order.total_price || 0).toFixed(2)}</span>
+          <span className="text-[13px] font-bold text-slate-900">${Number(order.unit_price ?? order.total_price ?? 0).toFixed(2)}</span>
+          {Number(order.quantity) > 1 && (
+            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">× {order.quantity}</span>
+          )}
         </div>
 
         {/* Type (col-span-1) */}
@@ -414,7 +456,7 @@ function OrderRow({ order, onDetail }: { order: any, onDetail: () => void, key?:
         {/* Status (col-span-2) — fulfilment state + payment state */}
         <div className="col-span-2 flex flex-col items-start gap-1.5">
            <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border ${
-              isCanceled ? 'bg-red-50 text-[#E62E04] border-red-100' :
+              isCanceled ? 'bg-red-50 text-red-600 border-red-100' :
               order.status === 'completed' || order.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
               order.status === 'Disputed' ? 'bg-red-50 text-red-600 border-red-100' :
               'bg-amber-50 text-amber-600 border-amber-100'
@@ -456,7 +498,7 @@ function FilterField({ label, children }: { label: string, children: React.React
   return (
     <div className="space-y-3">
       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1 flex items-center gap-2">
-          <div className="w-1 h-1 rounded-full bg-[#E62E04]" />
+          <div className="w-1 h-1 rounded-full bg-primary-500/50" />
           {label}
       </label>
       {children}

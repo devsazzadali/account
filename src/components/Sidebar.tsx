@@ -10,6 +10,7 @@ import { MessageCircle, ThumbsUp, Crown, ShieldCheck, Star } from "lucide-react"
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "../lib/auth-client";
+import { fetchStoreStats } from "../lib/store-stats-client";
 
 interface StoreStats {
   store_name: string;
@@ -43,9 +44,8 @@ export function Sidebar({
   };
 
   useEffect(() => {
-    fetch("/api/store/stats")
-      .then((r) => r.json())
-      .then((j) => setStats(j.stats || null))
+    fetchStoreStats()
+      .then((j) => setStats((j?.stats as StoreStats) || null))
       .catch(() => setStats(null));
   }, []);
 
@@ -107,9 +107,9 @@ export function Sidebar({
 
           <div className="h-px bg-slate-100 my-3"></div>
 
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center gap-3">
             <span className="text-slate-500">Total reviews</span>
-            <span className="text-primary-600 font-medium bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100">{stats.total_reviews}</span>
+            <span className="text-primary-600 font-medium bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100 whitespace-nowrap shrink-0">{stats.total_reviews}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-slate-500">Average rating</span>

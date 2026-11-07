@@ -11,7 +11,7 @@
 // filtered table every few seconds and fires callbacks for inserted /
 // updated rows.
 
-type Result<T = any> = { data: T; error: { message: string; code?: string } | null };
+type Result<T = any> = { data: T; error: { message: string; code?: string } | null; count?: number };
 
 interface Filter {
   op: string;
@@ -89,7 +89,7 @@ class QueryBuilder implements PromiseLike<Result<any>> {
         const res = await fetch(`/api/db/${this.table}?${params.toString()}`, { credentials: "same-origin" });
         const json = await res.json();
         if (this.maybeSingleFlag && json.error) return { data: null, error: null };
-        return { data: json.data ?? null, error: json.error ?? null };
+        return { data: json.data ?? null, error: json.error ?? null, count: typeof json.count === "number" ? json.count : undefined };
       }
       const q = this.filterQuery();
       const url = `/api/db/${this.table}${q ? `?${q}` : ""}`;
@@ -142,12 +142,18 @@ interface ChannelHandler {
   table: string;
   filter?: string;
   callback: (payload: { new: any; old: any; eventType: string }) => void;
-  // False until the handler's first successful poll has built its
+  // False until the handler's first SUCCESSFUL poll has built its
   // baseline snapshot. INSERT callbacks must never fire for rows that
   // already existed when the subscription started — the previous
   // size-based guard only suppressed the FIRST row of the first tick,
   // so every other pre-existing row replayed as a phantom "new" event
   // (e.g. a stale "New Order!" toast + chime on every admin login).
+  // "Successful" is strict: an HTTP error status or an { error } body
+  // means the poll FAILED even though fetch() itself resolved (ধাপ
+  // ৫ক২ — such a response used to mark the handler initialized with
+  // an EMPTY snapshot, so the whole recent window replayed as phantom
+  // INSERTs on the next tick: 21 chimes + a saturated bell badge from
+  // a single injected 500, measured in the browser).
   initialized?: boolean;
 }
 
@@ -155,6 +161,7 @@ export class PollingChannel {
   private handlers: ChannelHandler[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
   private snapshot = new Map<string, string>();
+  private ticking = false;
 
   on(type: string, filter: { event?: string; schema?: string; table?: string; filter?: string }, callback: ChannelHandler["callback"]) {
     if (type === "postgres_changes") {
@@ -166,36 +173,51 @@ export class PollingChannel {
   subscribe() {
     if (this.timer) return this;
     const tick = async () => {
-      for (const h of this.handlers) {
-        try {
-          let url = `/api/db/${h.table}?order=created_at.desc&limit=25`;
-          if (h.filter) {
-            const m = h.filter.match(/^([a-z_]+)=eq\.(.+)$/);
-            if (m) url += `&eq.${m[1]}=${enc(m[2])}`;
-          }
-          const res = await fetch(url, { credentials: "same-origin" });
-          const json = await res.json();
-          const rows: any[] = json.data || [];
-          for (const row of rows) {
-            const key = `${h.table}:${row.id}`;
-            const serialized = JSON.stringify(row);
-            const prev = this.snapshot.get(key);
-            if (prev === undefined) {
-              if (h.initialized && (h.event === "INSERT" || h.event === "*")) {
-                h.callback({ new: row, old: null, eventType: "INSERT" });
-              }
-            } else if (prev !== serialized && (h.event === "UPDATE" || h.event === "*")) {
-              h.callback({ new: row, old: null, eventType: "UPDATE" });
+      // A slow poll (cold database, flaky network) must not stack
+      // overlapping ticks on top of itself — the next interval tick
+      // retries instead.
+      if (this.ticking) return;
+      this.ticking = true;
+      try {
+        for (const h of this.handlers) {
+          try {
+            let url = `/api/db/${h.table}?order=created_at.desc&limit=25`;
+            if (h.filter) {
+              const m = h.filter.match(/^([a-z_]+)=eq\.(.+)$/);
+              if (m) url += `&eq.${m[1]}=${enc(m[2])}`;
             }
-            this.snapshot.set(key, serialized);
+            const res = await fetch(url, { credentials: "same-origin" });
+            const json = await res.json().catch(() => null);
+            if (!res.ok || !json || json.error || !Array.isArray(json.data)) {
+              // Failed poll: leave the snapshot AND the initialized
+              // flag untouched, so the first successful poll becomes
+              // the silent baseline (never a phantom replay).
+              throw new Error(`poll failed for ${h.table}`);
+            }
+            const rows: any[] = json.data;
+            for (const row of rows) {
+              const key = `${h.table}:${row.id}`;
+              const serialized = JSON.stringify(row);
+              const prev = this.snapshot.get(key);
+              if (prev === undefined) {
+                if (h.initialized && (h.event === "INSERT" || h.event === "*")) {
+                  h.callback({ new: row, old: null, eventType: "INSERT" });
+                }
+              } else if (prev !== serialized && (h.event === "UPDATE" || h.event === "*")) {
+                h.callback({ new: row, old: null, eventType: "UPDATE" });
+              }
+              this.snapshot.set(key, serialized);
+            }
+            // Baseline for this handler is only trusted after a full,
+            // successful first poll — a failed first fetch must not turn
+            // history into "new" events on the next tick either.
+            h.initialized = true;
+          } catch {
+            // polling is best-effort; next tick retries
           }
-          // Baseline for this handler is only trusted after a full,
-          // successful first poll — a failed first fetch must not turn
-          // history into "new" events on the next tick either.
-          h.initialized = true;
-        } catch {
-          // polling is best-effort; next tick retries
         }
+      } finally {
+        this.ticking = false;
       }
     };
     // First tick only builds the snapshot so we don't replay history.

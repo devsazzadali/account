@@ -5,20 +5,20 @@
 // (sent only when the email provider is configured — see mailer).
 // GET → recent announcements (admin).
 
-import { requireAdmin, isResponse } from "@/src/lib/auth-server";
+import { requireAdminStrict, isResponse } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 import { queueEmail, flushEmailOutbox } from "@/src/lib/mailer";
 import { serializeRows } from "@/src/lib/serialize";
 
 export async function GET(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req) // Manager scope: announcement broadcast is a full-admin surface (managers are order-scoped);
   if (isResponse(gate)) return gate;
   const rows = await prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 50 });
   return Response.json({ announcements: serializeRows(rows as unknown as Record<string, unknown>[]) });
 }
 
 export async function POST(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req) // Manager scope: announcement broadcast is a full-admin surface (managers are order-scoped);
   if (isResponse(gate)) return gate;
   const body = await req.json().catch(() => ({}));
   const title = String(body.title || "").trim();

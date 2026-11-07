@@ -5,7 +5,7 @@
 // DELETE /api/coupons?id=…       → delete (admin)
 // Redemption itself is validated + priced server-side in order-service.
 
-import { requireAdmin, requireAdminStrict, isResponse } from "@/src/lib/auth-server";
+import { requireAdminStrict, isResponse } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 import { serializeRow, serializeRows } from "@/src/lib/serialize";
 
@@ -14,14 +14,15 @@ function normCode(v: unknown): string {
 }
 
 export async function GET(req: Request) {
-  const gate = await requireAdmin(req);
+  // Manager scope: coupons are a full-admin surface — managers are order-scoped only.
+  const gate = await requireAdminStrict(req);
   if (isResponse(gate)) return gate;
   const rows = await prisma.coupon.findMany({ orderBy: { createdAt: "desc" } });
   return Response.json({ coupons: serializeRows(rows as unknown as Record<string, unknown>[]) });
 }
 
 export async function POST(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req);
   if (isResponse(gate)) return gate;
   const body = await req.json().catch(() => ({}));
   const code = normCode(body.code);
@@ -60,7 +61,7 @@ const EDITABLE: Record<string, string> = {
 };
 
 export async function PATCH(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req);
   if (isResponse(gate)) return gate;
   const body = await req.json().catch(() => ({}));
   const id = String(body.id || "");
@@ -81,8 +82,8 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  // Fix Round 7 (roles matrix): coupon DELETION is full-admin only —
-  // moderators can create/edit coupons but never destroy them.
+  // Coupon deletion is full-admin only (manager scope: coupons are
+  // entirely outside the order-management surface).
   const gate = await requireAdminStrict(req);
   if (isResponse(gate)) return gate;
   const id = new URL(req.url).searchParams.get("id") || "";

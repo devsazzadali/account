@@ -28,7 +28,7 @@ function LayoutContent({
       </main>
       <Footer brand={cms.brand} />
       <MobileTabBar />
-      <LiveSupportWidget />
+      <LiveSupportWidget storeName={cms.brand.name} />
     </div>
   );
 }

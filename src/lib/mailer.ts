@@ -18,6 +18,10 @@
 //   Endpoint: env RESEND_API_BASE_URL (default https://api.resend.com;
 //             overridable so tests can use a local stub — the real API
 //             is never called by the test suite).
+//   Link base: store_settings "site_url" → env SITE_URL → the canonical
+//             domain constant in seo.ts. Every absolute link inside a
+//             rendered email is built from this base (email-templates
+//             siteBase()), so mail follows the live deployment.
 //
 // With no API key configured, rows stay "pending" — an honest queue,
 // never a fake "sent". Provider failures retry with exponential
@@ -26,6 +30,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
+import { SITE_URL as DEFAULT_SITE_URL } from "./seo";
 import {
   StoreIdentity,
   OrderMailContext,
@@ -107,6 +112,7 @@ async function storeIdentity(db: Db): Promise<StoreIdentity> {
     name: (s["store_name"] || process.env.STORE_NAME || "Account Store One").trim(),
     logoUrl: (s["store_logo_url"] || "").trim(),
     supportEmail: (s["support_email"] || process.env.STORE_SUPPORT_EMAIL || "").trim(),
+    siteUrl: (s["site_url"] || process.env.SITE_URL || DEFAULT_SITE_URL).trim(),
   };
 }
 

@@ -23,10 +23,9 @@ inventory with a 48-hour escrow window.
 | `NEON_AUTH_BASE_URL` | Neon Auth endpoint (from the Neon console) |
 | `NEON_AUTH_JWKS_URL` | Neon Auth JWKS URL (session verification) |
 | `NEXT_PUBLIC_SITE_URL` | Canonical public URL of the store |
-| `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` | Enable card checkout. Without them the Stripe option shows "not configured" and nothing is faked. |
+| `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` | Optional environment fallback for card checkout. The primary path is the admin dashboard (Settings → Payments), where the same credentials are stored write-only in the DB; a method only shows as enabled when real credentials exist — nothing is faked. |
+| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | Optional environment fallback for PayPal credentials (also manageable from Settings → Payments; the PayPal checkout flow is not connected yet, so PayPal is never offered to buyers). |
 | `RESEND_API_KEY` | Transactional email (order + delivery notifications) |
-| `STORE_BKASH_NUMBER` / `STORE_NAGAD_NUMBER` | Fallback manual-payment numbers (the admin Settings page can override them in the DB) |
-| `STORE_PAYMENT_INSTRUCTIONS` | Optional checkout instructions text |
 | `FIRST_ADMIN_EMAIL` (+ `FIRST_ADMIN_PASSWORD`, `FIRST_ADMIN_NAME`) | First-admin bootstrap, see below |
 
 ## First admin (one-time)
@@ -41,10 +40,12 @@ Then sign in at `/login` and open `/admin`. Roles are enforced server-side
 
 ## How money moves
 
-- Orders start **unpaid**. Manual bKash/Nagad payments are verified by an
-  admin in **Admin → Payment Verification**; approval marks the order paid
-  and auto-delivers from inventory when stock exists. Wallet payments and
-  refunds are transactional and written to the `wallet_transactions` ledger.
+- Orders start **unpaid** and are paid by card (Stripe) or from the store
+  wallet. The store is international-only: there are no Bangladeshi/manual
+  gateways — the manual submission endpoints are closed (410) and the
+  **Admin → Payment Verification** queue only reviews legacy submissions.
+  Wallet payments and refunds are transactional and written to the
+  `wallet_transactions` ledger.
 - Escrow: a paid order's funds stay "in escrow" until the buyer confirms
   receipt, an admin completes the order, or 48h pass after delivery.
   Disputes freeze escrow; resolution = refund-to-wallet or replacement.

@@ -72,18 +72,38 @@ export function normalizeTicketTitle(raw: string): string {
   return title;
 }
 
+/** Prisma `where` fragment matching one thread's SUBJECT group. */
+export function threadSubjectWhere(key: string) {
+  const subject = threadSubjectOf(key);
+  if (subject === null) {
+    return { OR: [{ subject: null }, { subject: { in: GENERAL_SUBJECTS } }] };
+  }
+  return { subject };
+}
+
 /**
  * Prisma `where` matching exactly one thread's rows — used to keep
  * ticket_status in sync per thread. The general thread's rows carry
  * mixed legacy subjects (or none), hence the OR.
  */
 export function threadStatusWhere(username: string, key: string) {
-  const subject = threadSubjectOf(key);
-  if (subject === null) {
-    return {
-      username,
-      OR: [{ subject: null }, { subject: { in: GENERAL_SUBJECTS } }],
-    };
-  }
-  return { username, subject };
+  return { username, ...threadSubjectWhere(key) };
+}
+
+/**
+ * ধাপ ৫ক৩ — stable-identity thread matching. Message rows are stamped
+ * with the owner's auth/profile id (`user_id`) on every write path, and
+ * reads scope by that id with the username as a legacy fallback — so a
+ * username change (Settings → PATCH /api/me) can no longer strand a
+ * conversation. This `where` matches a thread by EITHER identity: the
+ * stable id when known, plus the username for rows written before the
+ * stamp existed.
+ */
+export function threadRowsWhere(
+  identity: { username: string; userId?: string | null },
+  key: string,
+) {
+  const owners: Record<string, unknown>[] = [{ username: identity.username }];
+  if (identity.userId) owners.push({ userId: identity.userId });
+  return { AND: [{ OR: owners }, threadSubjectWhere(key)] };
 }

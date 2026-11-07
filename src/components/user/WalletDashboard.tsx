@@ -23,6 +23,7 @@ interface LedgerTx {
   amount: number;
   balance_after: number | null;
   description: string | null;
+  note: string | null;
   created_at: string;
 }
 
@@ -35,8 +36,9 @@ interface PendingTopup {
 const txStyle: Record<string, { bg: string; border: string; icon: React.ReactNode; text: string }> = {
   topup: { bg: "bg-blue-50", border: "border-blue-100", icon: <ArrowDownLeft size={16} className="text-blue-500" />, text: "text-blue-600" },
   refund: { bg: "bg-emerald-50", border: "border-emerald-100", icon: <ArrowDownLeft size={16} className="text-emerald-500" />, text: "text-emerald-600" },
-  purchase: { bg: "bg-red-50", border: "border-red-100", icon: <ArrowUpRight size={16} className="text-red-500" />, text: "text-red-600" },
+  purchase: { bg: "bg-slate-50", border: "border-slate-100", icon: <ArrowUpRight size={16} className="text-slate-500" />, text: "text-slate-600" },
   adjustment: { bg: "bg-slate-50", border: "border-slate-100", icon: <DollarSign size={16} className="text-slate-500" />, text: "text-slate-600" },
+  admin_adjustment: { bg: "bg-primary-50", border: "border-primary-100", icon: <DollarSign size={16} className="text-primary-500" />, text: "text-primary-700" },
 };
 
 export function WalletDashboard() {
@@ -115,8 +117,8 @@ export function WalletDashboard() {
   return (
     <div className="space-y-6 font-sans pb-10">
       {/* Balance hero */}
-      <div className="relative bg-[#0C2254] rounded-[2.5rem] p-8 overflow-hidden shadow-2xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#F4751F]/15 blur-[80px] rounded-full" />
+      <div className="relative bg-primary-800 rounded-[2.5rem] p-8 overflow-hidden shadow-2xl">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/20 blur-[80px] rounded-full" />
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center">
@@ -158,7 +160,7 @@ export function WalletDashboard() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
               <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" max="1000" step="0.01" placeholder="Amount (USD)" className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 transition-all" />
-              <button disabled={topupBusy} onClick={startCardTopup} className="px-6 py-3.5 bg-[#0C2254] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40 flex items-center justify-center gap-2">
+              <button disabled={topupBusy} onClick={startCardTopup} className="px-6 py-3.5 bg-primary-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40 flex items-center justify-center gap-2">
                 {topupBusy ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />} Add Money by Card
               </button>
             </div>
@@ -202,8 +204,8 @@ export function WalletDashboard() {
                 <motion.div key={tx.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-all">
                   <div className={`w-9 h-9 rounded-xl ${cfg.bg} border ${cfg.border} flex items-center justify-center shrink-0`}>{cfg.icon}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-900 truncate">{tx.description || tx.type}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{tx.type} · {timeAgo(tx.created_at)}{tx.balance_after !== null && ` · Balance $${Number(tx.balance_after).toFixed(2)}`}</p>
+                    <p className="text-sm font-bold text-slate-900 truncate">{tx.description || tx.note || tx.type}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{tx.type} · {timeAgo(tx.created_at)}{tx.balance_after != null && Number.isFinite(Number(tx.balance_after)) && ` · Balance $${Number(tx.balance_after).toFixed(2)}`}</p>
                   </div>
                   <span className={`text-sm font-black ${cfg.text}`}>{amt >= 0 ? "+" : "−"}${Math.abs(amt).toFixed(2)}</span>
                 </motion.div>

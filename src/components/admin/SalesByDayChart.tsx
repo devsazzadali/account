@@ -56,7 +56,7 @@ export function SalesByDayChart({ days, compact = false }: { days: SalesDay[]; c
                   ${d.revenue.toFixed(0)}
                 </span>
                 <div
-                  className={`w-full rounded-t-md transition-all ${d.revenue > 0 ? "bg-[#0C2254] group-hover:bg-[#F4751F]" : "bg-slate-100"}`}
+                  className={`w-full rounded-t-md transition-all ${d.revenue > 0 ? "bg-primary-500 group-hover:bg-primary-600" : "bg-slate-100"}`}
                   style={{ height: `${max > 0 ? Math.max(3, (d.revenue / max) * 100) : 3}%` }}
                 />
               </div>

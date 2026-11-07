@@ -1,15 +1,19 @@
 // AccountStoreOne — Stripe Checkout session creation.
-// INERT unless STRIPE_SECRET_KEY exists in env: returns 501 with a plain
-// "not configured" error and the checkout UI disables the card option.
-// No card data ever touches this server; buyers pay on Stripe's page and
-// the webhook (/api/payments/stripe/webhook) settles the order.
+// INERT unless Stripe is enabled AND configured (credentials from the
+// admin dashboard Settings → Payments, env as fallback): returns 501
+// with a plain "not configured" error and the checkout UI disables the
+// card option. No card data ever touches this server; buyers pay on
+// Stripe's page and the webhook (/api/payments/stripe/webhook) settles
+// the order.
 
 import { getSessionContext, unauthorized } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
+import { getStripeConfig } from "@/src/lib/settings-store";
 
 export async function POST(req: Request) {
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) {
+  const stripeCfg = await getStripeConfig();
+  const secret = stripeCfg.secretKey;
+  if (!stripeCfg.enabled) {
     return Response.json(
       { error: "Card payments are not configured on this store yet. Please pay from your wallet balance, or contact support." },
       { status: 501 },

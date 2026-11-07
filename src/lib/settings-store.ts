@@ -1,8 +1,13 @@
 // AccountStoreOne — store settings (admin-editable, persisted in Neon).
 // Resolution order: `store_settings` table → environment → built-in default.
-// SECRETS ARE NEVER STORED HERE — Stripe keys etc. live in env only.
-// The store's manual-payment numbers come from settings/env, never from
-// hardcoded values in code.
+// Payment credentials (Stripe/PayPal) may be stored here by the admin from
+// the dashboard (Settings → Payments): they are WRITE-ONLY through the
+// settings API (never echoed by any endpoint — see SECRET_SETTING_KEYS in
+// the admin settings route) and resolve settings-first with env as the
+// fallback, exactly like the mailer's Resend key.
+// This store is INTERNATIONAL ONLY (owner ruling 2026-11-07): no
+// Bangladeshi mobile-money rail exists anywhere in settings or config —
+// the old manual number fields were removed, not renamed.
 
 import { prisma } from "./db";
 import type { HomeSectionId, StorefrontSettings } from "./store-types";
@@ -15,10 +20,32 @@ export const SETTING_KEYS = {
   storeBannerUrl: "store_banner_url",
   storeOpen: "store_open",
   supportHours: "support_hours",
-  bkashNumber: "payment_number_bkash",
-  nagadNumber: "payment_number_nagad",
-  paymentInstructions: "payment_instructions",
+  // Absolute base for links inside transactional emails (mailer reads
+  // it into the store identity; falls back to env SITE_URL, then the
+  // canonical domain constant). Point it at the live deployment.
+  siteUrl: "site_url",
+  // ── Payment methods (admin-managed from Settings → Payments) ──
+  // Credentials resolve settings → env (see getStripeConfig /
+  // getPayPalConfig below). Secret values are write-only via the admin
+  // settings API and are never returned by any endpoint.
+  stripePublishableKey: "stripe_publishable_key",
+  stripeSecretKey: "stripe_secret_key",
+  stripeWebhookSecret: "stripe_webhook_secret",
+  stripeEnabled: "stripe_enabled",
+  paypalClientId: "paypal_client_id",
+  paypalClientSecret: "paypal_client_secret",
+  paypalEnabled: "paypal_enabled",
   notifyNewOrder: "notify_new_order",
+  // ── Review baseline (imported shop history) ──
+  // The store's pre-existing review history lives on the marketplace
+  // shop it was imported from; only a small sample of individual
+  // reviews is stored as rows (marked with the "Z2U · " username
+  // prefix, display-only). These three keys hold the shop's official
+  // aggregates so /api/store/stats can combine them with reviews
+  // created locally, without double-counting the imported sample.
+  reviewBaselineCount: "review_baseline_count",
+  reviewBaselineAvg: "review_baseline_avg",
+  reviewBaselinePositivePct: "review_baseline_positive_pct",
   // ── Storefront CMS (hero, announcement bar, homepage sections) ──
   heroEnabled: "hero_enabled",
   heroBadgeText: "hero_badge_text",
@@ -49,9 +76,6 @@ export const SETTING_KEYS = {
 const ENV_FALLBACKS: Record<string, string | undefined> = {
   store_name: process.env.STORE_NAME,
   support_email: process.env.STORE_SUPPORT_EMAIL,
-  payment_number_bkash: process.env.STORE_BKASH_NUMBER || process.env.STORE_PAYMENT_NUMBER,
-  payment_number_nagad: process.env.STORE_NAGAD_NUMBER || process.env.STORE_PAYMENT_NUMBER,
-  payment_instructions: process.env.STORE_PAYMENT_INSTRUCTIONS,
 };
 
 const DEFAULTS: Record<string, string> = {
@@ -63,11 +87,20 @@ const DEFAULTS: Record<string, string> = {
   store_banner_url: "",
   store_open: "true",
   support_hours: "",
-  payment_number_bkash: "",
-  payment_number_nagad: "",
-  payment_instructions:
-    "Pay by card on Stripe's secure checkout page, or from your store wallet balance. Card payments are confirmed automatically by Stripe; wallet payments settle instantly.",
+  site_url: "https://www.accountstoreone.com",
+  // Payment toggles default ON so a method goes live the moment real
+  // credentials exist (dashboard or env) — the resolvers still report a
+  // method disabled until its credentials are actually present.
+  stripe_enabled: "true",
+  stripe_publishable_key: "",
+  paypal_enabled: "true",
+  paypal_client_id: "",
   notify_new_order: "true",
+  // No imported review history by default — stats fall back to local
+  // reviews only until a baseline is recorded in settings.
+  review_baseline_count: "0",
+  review_baseline_avg: "",
+  review_baseline_positive_pct: "",
   // Storefront CMS — toggles + section order have explicit defaults so the
   // admin UI renders them; CMS *text* keys stay unset by default ("" = the
   // resolver falls back to the built-in design copy).
@@ -103,22 +136,104 @@ export async function setSettings(values: Record<string, string>): Promise<void>
   }
 }
 
-/** Public payment configuration for the checkout UI. Numbers are only
- *  disclosed to signed-in buyers (they are shown at checkout by design). */
-export async function getPaymentConfig(forSignedInUser: boolean) {
+/** ── Payment method resolvers ────────────────────────────────────────────
+ * Credentials resolve settings-first, env as fallback (the mailer's
+ * pattern). A method counts as ENABLED only when its admin toggle is on
+ * AND its required credentials actually exist — presence of credentials
+ * alone never fakes an "on", and a toggle alone never does either. */
+const clean = (v: string | undefined) => (v ?? "").trim();
+
+export interface StripeConfig {
+  secretKey: string;
+  publishableKey: string;
+  webhookSecret: string;
+  toggleOn: boolean;
+  configured: boolean;
+  enabled: boolean;
+  secretSource: "settings" | "environment" | null;
+  webhookSource: "settings" | "environment" | null;
+}
+
+function resolveStripe(s: Record<string, string>): StripeConfig {
+  const fromSettings = clean(s[SETTING_KEYS.stripeSecretKey]);
+  const secretKey = fromSettings || clean(process.env.STRIPE_SECRET_KEY);
+  const publishableKey =
+    clean(s[SETTING_KEYS.stripePublishableKey]) || clean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+  const webhookFromSettings = clean(s[SETTING_KEYS.stripeWebhookSecret]);
+  const webhookSecret = webhookFromSettings || clean(process.env.STRIPE_WEBHOOK_SECRET);
+  const toggleOn = s[SETTING_KEYS.stripeEnabled] !== "false";
+  const configured = !!secretKey;
+  return {
+    secretKey,
+    publishableKey,
+    webhookSecret,
+    toggleOn,
+    configured,
+    enabled: toggleOn && configured,
+    secretSource: fromSettings ? "settings" : secretKey ? "environment" : null,
+    webhookSource: webhookFromSettings ? "settings" : webhookSecret ? "environment" : null,
+  };
+}
+
+export async function getStripeConfig(): Promise<StripeConfig> {
+  return resolveStripe(await getAllSettings());
+}
+
+export interface PayPalConfig {
+  clientId: string;
+  clientSecret: string;
+  toggleOn: boolean;
+  configured: boolean;
+  /** Toggle on AND credentials present. NOTE: this is the ADMIN-side
+   *  readiness only — the public config still reports PayPal disabled
+   *  until a real checkout flow exists (see getPaymentConfig). */
+  enabled: boolean;
+  secretSource: "settings" | "environment" | null;
+}
+
+function resolvePaypal(s: Record<string, string>): PayPalConfig {
+  const clientId = clean(s[SETTING_KEYS.paypalClientId]) || clean(process.env.PAYPAL_CLIENT_ID);
+  const fromSettings = clean(s[SETTING_KEYS.paypalClientSecret]);
+  const clientSecret = fromSettings || clean(process.env.PAYPAL_CLIENT_SECRET);
+  const toggleOn = s[SETTING_KEYS.paypalEnabled] !== "false";
+  const configured = !!(clientId && clientSecret);
+  return {
+    clientId,
+    clientSecret,
+    toggleOn,
+    configured,
+    enabled: toggleOn && configured,
+    secretSource: fromSettings ? "settings" : clientSecret ? "environment" : null,
+  };
+}
+
+export async function getPayPalConfig(): Promise<PayPalConfig> {
+  return resolvePaypal(await getAllSettings());
+}
+
+/** Public payment configuration for the checkout UI. Only methods that
+ *  are enabled AND fully configured are reported, and only public-safe
+ *  fields are exposed (a publishable key is public by design; secret
+ *  keys never leave the server). */
+export async function getPaymentConfig() {
   const s = await getAllSettings();
-  const bkash = s[SETTING_KEYS.bkashNumber];
-  const nagad = s[SETTING_KEYS.nagadNumber];
-  const stripeEnabled = !!process.env.STRIPE_SECRET_KEY;
+  const stripe = resolveStripe(s);
+  const paypal = resolvePaypal(s);
   return {
     store_open: s[SETTING_KEYS.storeOpen] !== "false",
-    manual: {
-      enabled: !!(bkash || nagad),
-      bkashNumber: forSignedInUser ? bkash || null : null,
-      nagadNumber: forSignedInUser ? nagad || null : null,
-      instructions: s[SETTING_KEYS.paymentInstructions],
+    stripe: {
+      enabled: stripe.enabled,
+      publishable_key: stripe.enabled ? stripe.publishableKey || null : null,
     },
-    stripe: { enabled: stripeEnabled },
+    paypal: {
+      // Credentials can be stored today, but there is no PayPal checkout
+      // flow yet — reporting enabled here would advertise a method
+      // buyers cannot actually complete, so it stays false until the
+      // checkout integration lands. `configured` only reports that
+      // credentials are on file.
+      enabled: false,
+      configured: paypal.configured,
+    },
     wallet: { enabled: true },
   };
 }

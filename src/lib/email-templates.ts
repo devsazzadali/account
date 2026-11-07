@@ -1,13 +1,18 @@
 // AccountStoreOne — professional transactional email templates.
 //
-// ONE reusable branded layout for every store email (owner order
-// 2026-10-27): navy #0C2254 / orange #F4751F brand system, the store's
-// name + logo (from store_settings, read-only), a clear order-details
-// table, and a button to the buyer's order page. Every template returns
-// { subject, html, text } — a plain-text part always accompanies the
-// HTML. Emails NEVER contain raw credential secrets: delivery mail
-// points the buyer to the secure vault on their order page, which is
-// the only place credentials are shown.
+// ONE reusable branded layout for every store email: the storefront's
+// green identity (primary #1dbf73 / #17995c / #117345 on #f8fafc —
+// re-themed 2026-11-07 from the retired navy/orange system), the
+// store's name + logo (from store_settings, read-only), a clear
+// order-details table, and a button to the buyer's order page. Every
+// template returns { subject, html, text } — a plain-text part always
+// accompanies the HTML. Emails NEVER contain raw credential secrets:
+// delivery mail points the buyer to the secure vault on their order
+// page, which is the only place credentials are shown.
+//
+// Link base: every absolute link is built from the store identity's
+// siteUrl (store_settings "site_url" → env SITE_URL → the canonical
+// domain in seo.ts), so mail links follow the live deployment.
 
 import { SITE_URL } from "./seo";
 import { orderCode, orderRef } from "./order-ref";
@@ -16,6 +21,9 @@ export interface StoreIdentity {
   name: string;
   logoUrl: string;
   supportEmail: string;
+  /** Absolute base for mail links (no trailing slash). Resolved by the
+   *  mailer: store_settings "site_url" → env SITE_URL → seo SITE_URL. */
+  siteUrl?: string;
 }
 
 export interface OrderMailContext {
@@ -36,9 +44,10 @@ export interface RenderedEmail {
   text: string;
 }
 
-const NAVY = "#0C2254";
-const ORANGE = "#F4751F";
-const BG = "#F8F9FB";
+const BRAND_DARK = "#117345"; // storefront primary-700 — header, headings, links
+const BRAND = "#1dbf73"; // storefront primary-500 — CTA button
+const KICKER = "#a7f3d0"; // light green that stays readable on the dark header
+const BG = "#f8fafc"; // storefront page background
 const INK = "#1e293b";
 const MUTED = "#64748b";
 
@@ -54,18 +63,23 @@ function money(n: number): string {
   return `$${Number(n).toFixed(2)}`;
 }
 
-function orderUrl(orderId: string): string {
-  return `${SITE_URL}/order/${orderId}`;
+function siteBase(identity: StoreIdentity): string {
+  const raw = (identity.siteUrl || "").trim() || SITE_URL;
+  return raw.replace(/\/$/, "");
 }
 
-function adminUrl(): string {
-  return `${SITE_URL}/admin`;
+function orderUrl(identity: StoreIdentity, orderId: string): string {
+  return `${siteBase(identity)}/order/${orderId}`;
 }
 
-function absoluteLogo(logoUrl: string): string {
+function adminUrl(identity: StoreIdentity): string {
+  return `${siteBase(identity)}/admin`;
+}
+
+function absoluteLogo(identity: StoreIdentity, logoUrl: string): string {
   if (!logoUrl) return "";
   if (/^https?:\/\//i.test(logoUrl)) return logoUrl;
-  return `${SITE_URL}${logoUrl.startsWith("/") ? "" : "/"}${logoUrl}`;
+  return `${siteBase(identity)}${logoUrl.startsWith("/") ? "" : "/"}${logoUrl}`;
 }
 
 interface LayoutParts {
@@ -86,7 +100,7 @@ interface LayoutParts {
 }
 
 function renderLayout(identity: StoreIdentity, parts: LayoutParts): { html: string; text: string } {
-  const logo = absoluteLogo(identity.logoUrl);
+  const logo = absoluteLogo(identity, identity.logoUrl);
   const detailRows = (parts.details || [])
     .map(
       ([k, v]) =>
@@ -101,20 +115,20 @@ function renderLayout(identity: StoreIdentity, parts: LayoutParts): { html: stri
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
 <body style="margin:0;background:${BG};font-family:Arial,Helvetica,sans-serif;color:${INK}">
   <div style="max-width:580px;margin:24px auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden">
-    <div style="background:${NAVY};padding:22px 30px">
+    <div style="background:${BRAND_DARK};padding:22px 30px">
       ${logo ? `<img src="${esc(logo)}" alt="${esc(identity.name)}" style="height:34px;display:block;margin-bottom:8px"/>` : ""}
       <span style="color:#ffffff;font-size:19px;font-weight:800;letter-spacing:0.02em">${esc(identity.name)}</span>
-      <span style="display:block;color:${ORANGE};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;margin-top:3px">${esc(parts.kicker)}</span>
+      <span style="display:block;color:${KICKER};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;margin-top:3px">${esc(parts.kicker)}</span>
     </div>
     <div style="padding:28px 30px 8px">
-      <h1 style="margin:0 0 14px;font-size:21px;line-height:1.3;color:${NAVY}">${esc(parts.heading)}</h1>
+      <h1 style="margin:0 0 14px;font-size:21px;line-height:1.3;color:${BRAND_DARK}">${esc(parts.heading)}</h1>
       <div style="font-size:14px;line-height:1.65">${parts.bodyHtml}</div>
       ${detailsHtml}
       ${parts.extraHtml || ""}
       <div style="margin:26px 0 8px">
-        <a href="${parts.ctaUrl}" style="display:inline-block;background:${ORANGE};color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:12px 26px;border-radius:10px">${esc(parts.ctaLabel)}</a>
+        <a href="${parts.ctaUrl}" style="display:inline-block;background:${BRAND};color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:12px 26px;border-radius:10px">${esc(parts.ctaLabel)}</a>
       </div>
-      <p style="font-size:12px;color:${MUTED};margin:10px 0 20px">Or paste this link into your browser:<br/><a href="${parts.ctaUrl}" style="color:${NAVY}">${parts.ctaUrl}</a></p>
+      <p style="font-size:12px;color:${MUTED};margin:10px 0 20px">Or paste this link into your browser:<br/><a href="${parts.ctaUrl}" style="color:${BRAND_DARK}">${parts.ctaUrl}</a></p>
     </div>
     <div style="padding:16px 30px;background:${BG};border-top:1px solid #e2e8f0;font-size:11px;line-height:1.6;color:#94a3b8">
       ${esc(parts.footerNote)}<br/>
@@ -170,7 +184,7 @@ export function orderReceivedEmail(identity: StoreIdentity, o: OrderMailContext)
     ],
     details: orderDetails(o, [["Status", "Awaiting payment"]]),
     ctaLabel: "View your order",
-    ctaUrl: orderUrl(o.id),
+    ctaUrl: orderUrl(identity, o.id),
     footerNote: ESCROW_FOOTER,
   });
   return { subject: `Order received — ${ref}`, html, text };
@@ -196,7 +210,7 @@ export function paymentConfirmedEmail(identity: StoreIdentity, o: OrderMailConte
       ["Status", "Confirmed — in escrow"],
     ]),
     ctaLabel: "Track your order",
-    ctaUrl: orderUrl(o.id),
+    ctaUrl: orderUrl(identity, o.id),
     footerNote: ESCROW_FOOTER,
   });
   return { subject: `Payment confirmed — ${ref}`, html, text };
@@ -218,7 +232,7 @@ export function processingStartedEmail(identity: StoreIdentity, o: OrderMailCont
     ],
     details: orderDetails(o, [["Status", "Preparing"]]),
     ctaLabel: "Track your order",
-    ctaUrl: orderUrl(o.id),
+    ctaUrl: orderUrl(identity, o.id),
     footerNote: ESCROW_FOOTER,
   });
   return { subject: `Your order is being prepared — ${ref}`, html, text };
@@ -258,7 +272,7 @@ export function deliveredEmail(
     ],
     details: orderDetails(o, [["Status", opts.partial ? `Delivered ${opts.deliveredQuantity ?? 0} of ${o.quantity}` : "Delivered"]]),
     ctaLabel: opts.service ? "Review your delivery" : "Open the secure vault",
-    ctaUrl: orderUrl(o.id),
+    ctaUrl: orderUrl(identity, o.id),
     footerNote: ESCROW_FOOTER,
   });
   return { subject: `${opts.partial ? "Partial delivery" : "Delivered"} — ${ref}`, html, text };
@@ -280,7 +294,7 @@ export function completedEmail(identity: StoreIdentity, o: OrderMailContext): Re
     ],
     details: orderDetails(o, [["Status", "Completed"]]),
     ctaLabel: "View your order",
-    ctaUrl: orderUrl(o.id),
+    ctaUrl: orderUrl(identity, o.id),
     footerNote: ESCROW_FOOTER,
   });
   return { subject: `Order completed — ${ref}`, html, text };
@@ -302,7 +316,7 @@ export function orderCancelledEmail(identity: StoreIdentity, o: OrderMailContext
     ],
     details: orderDetails(o, [["Status", "Cancelled"]]),
     ctaLabel: "Continue shopping",
-    ctaUrl: SITE_URL,
+    ctaUrl: siteBase(identity),
     footerNote: ESCROW_FOOTER,
   });
   return { subject: `Order cancelled — ${ref}`, html, text };
@@ -343,7 +357,7 @@ export function refundEmail(
       ["Status", cancelled ? "Cancelled & refunded" : "Refunded"],
     ]),
     ctaLabel: "View your wallet",
-    ctaUrl: `${SITE_URL}/dashboard`,
+    ctaUrl: `${siteBase(identity)}/dashboard`,
     footerNote: ESCROW_FOOTER,
   });
   return { subject: `${heading} — ${ref}`, html, text };
@@ -368,7 +382,7 @@ export function disputeOpenedEmail(identity: StoreIdentity, o: OrderMailContext,
       ["Your report", reason.slice(0, 160)],
     ]),
     ctaLabel: "View your order",
-    ctaUrl: orderUrl(o.id),
+    ctaUrl: orderUrl(identity, o.id),
     footerNote: ESCROW_FOOTER,
   });
   return { subject: `Dispute opened — ${ref}`, html, text };
@@ -430,7 +444,7 @@ export function disputeResolvedEmail(
     bodyText: copy.text,
     details: orderDetails(o, [["Status", copy.status]]),
     ctaLabel: "View your order",
-    ctaUrl: orderUrl(o.id),
+    ctaUrl: orderUrl(identity, o.id),
     footerNote: ESCROW_FOOTER,
   });
   return { subject: `Dispute resolved — ${ref}`, html, text };
@@ -460,7 +474,7 @@ export function adminNewOrderEmail(identity: StoreIdentity, o: OrderMailContext)
       ["Customer email", o.customerEmail || "—"],
     ],
     ctaLabel: "Open the admin panel",
-    ctaUrl: adminUrl(),
+    ctaUrl: adminUrl(identity),
     footerNote: ADMIN_FOOTER,
   });
   return { subject: `New order ${ref} — ${money(o.total)} — ${o.productTitle}`, html, text };
@@ -485,7 +499,7 @@ export function adminDisputeEmail(identity: StoreIdentity, o: OrderMailContext, 
       ["Customer email", o.customerEmail || "—"],
     ]),
     ctaLabel: "Review the dispute",
-    ctaUrl: adminUrl(),
+    ctaUrl: adminUrl(identity),
     footerNote: ADMIN_FOOTER,
   });
   return { subject: `Dispute opened on order ${ref}`, html, text };
@@ -530,7 +544,7 @@ export function adminLowStockEmail(
       ["Warning threshold", `${LOW_STOCK_THRESHOLD} units`],
     ],
     ctaLabel: "Manage inventory",
-    ctaUrl: adminUrl(),
+    ctaUrl: adminUrl(identity),
     footerNote: ADMIN_FOOTER,
   });
   return { subject: heading, html, text };
@@ -549,7 +563,7 @@ export function announcementEmail(
     bodyHtml: safeHtml,
     bodyText: [bodyText],
     ctaLabel: "Visit the store",
-    ctaUrl: SITE_URL,
+    ctaUrl: siteBase(identity),
     footerNote: ESCROW_FOOTER,
   });
   return { subject: title, html, text };

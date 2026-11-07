@@ -260,7 +260,7 @@ model WalletTransaction {
   amount      Decimal  @db.Decimal(12, 2)
   type        String // deposit | purchase | refund | withdrawal | bonus
   status      String   @default("completed")
-  method      String? // bkash | nagad | wallet | stripe
+  method      String? // wallet | stripe (legacy rows may carry older manual-method labels)
   trxId       String?  @map("trx_id")
   note        String?
   referenceId String?  @map("reference_id") @db.Uuid
@@ -340,14 +340,16 @@ model Message {
   @@map("messages")
 }
 
-/// Manual payment submissions (bKash/Nagad) awaiting admin verification.
+/// LEGACY manual payment submissions awaiting admin verification (the
+/// submission endpoints are closed — 410; this table is kept so historical
+/// rows stay reviewable from Admin → Payment Verification).
 /// Used both for order payments (orderId set) and wallet top-ups (orderId null).
 model PaymentRequest {
   id           String    @id @default(uuid())
   userId       String?   @map("user_id")
   orderId      String?   @map("order_id")
   purpose      String // order | topup
-  method       String // bkash | nagad
+  method       String // legacy manual method label recorded at submission time
   amount       Decimal   @db.Decimal(12, 2)
   trxId        String    @map("trx_id")
   senderNumber String?   @map("sender_number")
@@ -362,7 +364,9 @@ model PaymentRequest {
 }
 
 /// Key/value store settings, editable from the admin Settings screen.
-/// Secrets (Stripe keys, DB URLs) are NEVER stored here — env only.
+/// Payment secrets (Stripe/PayPal) MAY be stored here: they are write-only
+/// through the settings API (never returned by any GET) and resolve
+/// settings-first with the environment as fallback. DB URLs stay env-only.
 model StoreSetting {
   key       String   @id
   value     String

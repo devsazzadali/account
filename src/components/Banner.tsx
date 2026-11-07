@@ -16,7 +16,7 @@ export function Banner({ hero }: { hero: StorefrontSettings["hero"] }) {
   return (
     <div
       className={`relative overflow-hidden w-full bg-slate-50 border-b border-slate-200 ${
-        hasCtas ? "min-h-[240px] md:min-h-[320px]" : "h-[240px] md:h-[320px]"
+        hasCtas ? "min-h-[240px] md:min-h-[320px]" : "min-h-[240px] md:min-h-[320px]"
       }`}
     >
       {hero.imageUrl && (
@@ -31,7 +31,7 @@ export function Banner({ hero }: { hero: StorefrontSettings["hero"] }) {
 
       <div
         className={`container mx-auto px-4 max-w-7xl relative z-10 flex items-center justify-center ${
-          hasCtas ? "py-10 md:py-12" : "h-full"
+          hasCtas ? "py-10 md:py-12" : "h-full pb-16 md:pb-28"
         }`}
       >
 
@@ -75,7 +75,7 @@ export function Banner({ hero }: { hero: StorefrontSettings["hero"] }) {
               {hero.primaryCta && (
                 <a
                   href={hero.primaryCta.link}
-                  className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-[#0C2254] text-white text-[12px] font-black uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-95"
+                  className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-primary-600 text-white text-[12px] font-black uppercase tracking-widest shadow-xl shadow-primary-600/20 hover:bg-primary-700 transition-all active:scale-95"
                 >
                   {hero.primaryCta.text}
                   <ArrowRight className="w-4 h-4" />

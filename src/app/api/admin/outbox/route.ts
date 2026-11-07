@@ -3,13 +3,13 @@
 // pending = queued but no provider configured (or not yet flushed),
 // sent / failed carry the provider outcome. Nothing is ever faked.
 
-import { requireAdmin, isResponse } from "@/src/lib/auth-server";
+import { requireAdminStrict, isResponse } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 import { getEmailConfig, flushEmailOutbox } from "@/src/lib/mailer";
 import { serializeRows } from "@/src/lib/serialize";
 
 export async function GET(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req) // Manager scope: email outbox is a full-admin surface (managers are order-scoped);
   if (isResponse(gate)) return gate;
   const status = new URL(req.url).searchParams.get("status") || undefined;
   const rows = await prisma.emailOutbox.findMany({
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 
 /** POST → attempt to flush pending mail now (no-op when unconfigured). */
 export async function POST(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req) // Manager scope: email outbox is a full-admin surface (managers are order-scoped);
   if (isResponse(gate)) return gate;
   await flushEmailOutbox(100);
   const cfg = await getEmailConfig();

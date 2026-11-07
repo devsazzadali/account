@@ -8,7 +8,7 @@
 //           cancel | refund | resolve_dispute | progress | add_proof |
 //           deliver_service | deliver_units | cancel_remainder
 
-import { getSessionContext, unauthorized, forbidden } from "@/src/lib/auth-server";
+import { getSessionContext, unauthorized, forbidden, isDeactivatedManager, type SessionContext } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 import { flushEmailOutbox } from "@/src/lib/mailer";
 import { serializeRow } from "@/src/lib/serialize";
@@ -45,6 +45,17 @@ async function loadOrder(id: string) {
   });
 }
 
+/**
+ * Staff standing for order work: full admins always; managers
+ * (moderators) only while active — a deactivated (suspended) manager
+ * falls back to plain-customer standing on their own orders.
+ */
+async function hasStaffStanding(ctx: SessionContext): Promise<boolean> {
+  const role = ctx.profile.role;
+  if (role !== "admin" && role !== "moderator") return false;
+  return !(await isDeactivatedManager(ctx));
+}
+
 function shape(row: Record<string, unknown>) {
   const { product, ...rest } = serializeRow(row);
   return { ...rest, order_number: orderCode(String(row.id ?? "")), products: product };
@@ -56,7 +67,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   let order = await loadOrder(id).catch(() => null);
   if (!order) return Response.json({ error: "Order not found" }, { status: 404 });
-  const isAdmin = ctx.profile.role === "admin" || ctx.profile.role === "moderator";
+  const isAdmin = await hasStaffStanding(ctx);
   if (!isAdmin && order.userId !== ctx.user.id && order.customerEmail !== ctx.user.email) {
     return forbidden("This order belongs to another customer");
   }
@@ -71,7 +82,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
   const action = String(body.action || "");
-  const isAdmin = ctx.profile.role === "admin" || ctx.profile.role === "moderator";
+  const isAdmin = await hasStaffStanding(ctx);
   const uid = ctx.user.id;
 
   try {

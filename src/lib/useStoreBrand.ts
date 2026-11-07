@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DEFAULT_STORE_NAME, type BrandInfo } from "@/src/components/BrandMark";
+import { fetchStoreStats } from "./store-stats-client";
 
 /** Store identity for client surfaces outside the server-rendered store
  *  chrome (auth pages). Starts from the built-in identity so the first
@@ -10,14 +11,12 @@ import { DEFAULT_STORE_NAME, type BrandInfo } from "@/src/components/BrandMark";
 export function useStoreBrand(): BrandInfo {
   const [brand, setBrand] = useState<BrandInfo>({ name: DEFAULT_STORE_NAME, logoUrl: null });
   useEffect(() => {
-    fetch("/api/store/stats")
-      .then((r) => r.json())
+    fetchStoreStats()
       .then((j) => {
-        if (j?.store_name || j?.store_logo_url) {
-          setBrand({
-            name: j.store_name || DEFAULT_STORE_NAME,
-            logoUrl: j.store_logo_url || null,
-          });
+        const storeName = typeof j?.store_name === "string" ? j.store_name : null;
+        const logoUrl = typeof j?.store_logo_url === "string" ? j.store_logo_url : null;
+        if (storeName || logoUrl) {
+          setBrand({ name: storeName || DEFAULT_STORE_NAME, logoUrl });
         }
       })
       .catch(() => {});

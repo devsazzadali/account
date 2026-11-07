@@ -9,7 +9,7 @@ import React, { useEffect, useState } from "react";
 import { orderCode } from "../lib/order-ref";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Printer, Loader2, Store } from "lucide-react";
+import { ArrowLeft, Printer, Loader2, Store, FileDown } from "lucide-react";
 
 export function InvoicePage() {
   const params = useParams();
@@ -17,6 +17,29 @@ export function InvoicePage() {
   const [order, setOrder] = useState<any>(null);
   const [store, setStore] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [dlError, setDlError] = useState<string | null>(null);
+
+  async function downloadPdf() {
+    if (!orderId) return;
+    setDownloading(true);
+    setDlError(null);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/invoice-pdf`, { credentials: "same-origin" });
+      if (!res.ok) throw new Error("Could not generate the invoice PDF");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoice-${orderCode(orderId)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setDlError(e.message);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   useEffect(() => {
     if (!orderId) return;
@@ -62,10 +85,16 @@ export function InvoicePage() {
           <Link href={`/order/${order.id}`} className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900">
             <ArrowLeft size={14} /> Back to order
           </Link>
-          <button onClick={() => window.print()} className="flex items-center gap-2 px-5 py-3 bg-[#0C2254] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90">
-            <Printer size={14} /> Print / Save PDF
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={downloadPdf} disabled={downloading} className="flex items-center gap-2 px-5 py-3 bg-white border border-primary-600 text-primary-700 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-primary-50 disabled:opacity-50">
+              {downloading ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />} Download invoice (PDF)
+            </button>
+            <button onClick={() => window.print()} className="flex items-center gap-2 px-5 py-3 bg-primary-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90">
+              <Printer size={14} /> Print / Save PDF
+            </button>
+          </div>
         </div>
+        {dlError && <p className="text-xs font-bold text-red-500 mb-4 print:hidden">{dlError}</p>}
 
         <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm p-10 print:shadow-none print:border-none print:rounded-none">
           {/* Header */}
@@ -74,7 +103,7 @@ export function InvoicePage() {
               {store?.store_logo_url ? (
                 <img src={store.store_logo_url} alt={storeName} className="w-14 h-14 rounded-2xl object-cover" />
               ) : (
-                <div className="w-14 h-14 rounded-2xl bg-[#0C2254] flex items-center justify-center text-white">
+                <div className="w-14 h-14 rounded-2xl bg-primary-600 flex items-center justify-center text-white">
                   <Store size={24} />
                 </div>
               )}
@@ -139,7 +168,7 @@ export function InvoicePage() {
               <div className="flex justify-between"><span className="text-slate-500 font-medium">Service fee</span><span className="font-bold text-slate-900">${fee.toFixed(2)}</span></div>
               <div className="flex justify-between pt-3 border-t border-slate-100">
                 <span className="font-black text-slate-900 uppercase tracking-wide">Total</span>
-                <span className="text-xl font-black text-[#0C2254]">${total.toFixed(2)} <span className="text-[10px] text-slate-400">USD</span></span>
+                <span className="text-xl font-black text-primary-700">${total.toFixed(2)} <span className="text-[10px] text-slate-400">USD</span></span>
               </div>
             </div>
           </div>

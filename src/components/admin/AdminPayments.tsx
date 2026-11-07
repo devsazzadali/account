@@ -1,13 +1,15 @@
 "use client";
 
-// AccountStoreOne — admin payment verification queue.
-// Manual bKash/Nagad payments (order payments + wallet top-ups) land here
-// as pending PaymentRequests. Approving settles the money server-side
+// AccountStoreOne — admin payment verification queue (LEGACY submissions).
+// Manual payment submissions were closed with the international-only
+// ruling (both submit endpoints refuse with 410), so no new rows can be
+// created; this queue remains so any historical PaymentRequest can still
+// be settled or rejected. Approving settles the money server-side
 // (order → paid + auto-delivery, or wallet credited with a ledger row);
-// rejecting returns an order to "unpaid" so the buyer can resubmit.
+// rejecting returns an order to "unpaid".
 
 import React, { useEffect, useState } from "react";
-import { CheckCircle2, XCircle, RefreshCw, Wallet, ShoppingBag, Loader2, Download } from "lucide-react";
+import { CheckCircle2, XCircle, RefreshCw, Wallet, ShoppingBag, Loader2, Download, FileText } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 interface PaymentRequestRow {
@@ -32,6 +34,38 @@ export function AdminPayments() {
   const [filter, setFilter] = useState("pending");
   const [outbox, setOutbox] = useState<{ configured: boolean; counts: Record<string, number> } | null>(null);
   const [exporting, setExporting] = useState(false);
+  // Reports (ধাপ ৫ঘ): period defaults to the current month.
+  const [repFrom, setRepFrom] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  });
+  const [repTo, setRepTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [repBusy, setRepBusy] = useState<string | null>(null);
+
+  async function downloadReport(kind: string, format: string) {
+    const key = `${kind}-${format}`;
+    setRepBusy(key);
+    try {
+      const qs = new URLSearchParams({ kind, format });
+      if (kind !== "inventory") {
+        if (repFrom) qs.set("from", repFrom);
+        if (repTo) qs.set("to", repTo);
+      }
+      const res = await fetch(`/api/admin/reports?${qs.toString()}`, { credentials: "same-origin" });
+      if (!res.ok) throw new Error("Report failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `aso-${kind}-${kind === "inventory" ? "current" : `${repFrom}_${repTo}`}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setRepBusy(null);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/admin/outbox", { credentials: "same-origin" })
@@ -95,12 +129,12 @@ export function AdminPayments() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 lg:p-10 space-y-6 max-w-[1200px] mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">Payment Verification</h2>
           <p className="text-sm text-slate-500 font-medium mt-1">
-            Buyers who pay manually (bKash/Nagad) submit a Transaction ID here. Verify the money arrived, then approve — delivery and wallet credit happen automatically.
+            Manual payment submissions are closed — buyers now pay by card (Stripe) or from their store wallet, so no new submissions can arrive. Any historical submission still pending is listed here: verify it against your own records, then settle or reject it.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -108,7 +142,7 @@ export function AdminPayments() {
             <button
               key={s}
               onClick={() => setFilter(s)}
-              className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${filter === s ? "bg-slate-900 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}
+              className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${filter === s ? "bg-primary-600 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}
             >
               {s}
             </button>
@@ -116,9 +150,56 @@ export function AdminPayments() {
           <button onClick={load} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 transition-all">
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           </button>
-          <button onClick={exportFinance} disabled={exporting} className="px-4 py-2.5 bg-[#0C2254] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2">
+          <button onClick={exportFinance} disabled={exporting} className="px-4 py-2.5 bg-primary-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2">
             <Download size={14} /> Finance CSV
           </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm p-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <FileText size={18} className="text-primary-600" /> Reports
+            </h3>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Downloadable books for a period — every figure reconciles with the dashboard (same canonical computation).
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">From</label>
+            <input type="date" value={repFrom} onChange={(e) => setRepFrom(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700" />
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">To</label>
+            <input type="date" value={repTo} onChange={(e) => setRepTo(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700" />
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3 mt-5">
+          {([
+            ["finance", "Finance & sales summary", "Revenue, refunds, fees retained, escrow, orders by status"],
+            ["orders", "Orders report", "One row per order created in the period, with the canonical price split"],
+            ["inventory", "Inventory report", "Current stock snapshot for every product (period does not apply)"],
+            ["wallet", "Wallet ledger", "Every wallet transaction in the period, signed as stored"],
+          ] as const).map(([kind, label, hint]) => (
+            <div key={kind} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[13px] font-black text-slate-800">{label}</p>
+                <p className="text-[11px] text-slate-400 font-medium truncate">{hint}</p>
+              </div>
+              <div className="flex gap-1.5 shrink-0">
+                {(["csv", "pdf"] as const).map((format) => (
+                  <button
+                    key={format}
+                    onClick={() => downloadReport(kind, format)}
+                    disabled={repBusy !== null}
+                    className="px-3 py-2 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {repBusy === `${kind}-${format}` ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                    {format}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

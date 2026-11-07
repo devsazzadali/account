@@ -130,7 +130,7 @@ export function AdminCoupons() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            <Tag className="text-[#F4751F]" size={26} /> My Coupon Codes
+            <Tag className="text-primary-600" size={26} /> My Coupon Codes
           </h2>
           <p className="text-sm text-slate-500 font-medium mt-1">
             Buyers enter a code at checkout; the discount is validated and priced by the server and recorded on the order.
@@ -142,7 +142,7 @@ export function AdminCoupons() {
               Batch delete ({selected.size})
             </button>
           )}
-          <button onClick={() => setShowForm(!showForm)} className="px-5 py-2.5 bg-[#0C2254] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2">
+          <button onClick={() => setShowForm(!showForm)} className="px-5 py-2.5 bg-primary-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2">
             {showForm ? <X size={14} /> : <Plus size={14} />} Add
           </button>
         </div>
@@ -194,7 +194,7 @@ export function AdminCoupons() {
             </Field>
           </div>
           <div className="flex justify-end">
-            <button onClick={create} disabled={form.code.trim().length < 3} className="px-6 py-3 bg-[#F4751F] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40">
+            <button onClick={create} disabled={form.code.trim().length < 3} className="px-6 py-3 bg-primary-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40">
               Create Coupon
             </button>
           </div>
@@ -230,7 +230,7 @@ export function AdminCoupons() {
                   <td className="px-5 py-3.5"><input type="checkbox" checked={selected.has(c.id)} onChange={(e) => { const s = new Set(selected); if (e.target.checked) s.add(c.id); else s.delete(c.id); setSelected(s); }} /></td>
                   <td className="px-3 py-3.5 font-black text-slate-900 tracking-wide">{c.code}</td>
                   <td className="px-3 py-3.5 font-bold text-slate-500 capitalize">{c.scope}{c.scope === "category" && c.category ? ` · ${c.category}` : ""}{c.scope === "product" && c.product_id ? ` · ${products.find((p) => p.id === c.product_id)?.title || "product"}` : ""}</td>
-                  <td className="px-3 py-3.5 font-black text-[#0C2254]">{c.type === "percent" ? `${Number(c.value)}%` : `$${Number(c.value).toFixed(2)}`}</td>
+                  <td className="px-3 py-3.5 font-black text-primary-700">{c.type === "percent" ? `${Number(c.value)}%` : `$${Number(c.value).toFixed(2)}`}</td>
                   <td className="px-3 py-3.5 font-bold text-slate-600">{c.used_count}{c.max_uses ? ` / ${c.max_uses}` : ""}</td>
                   <td className="px-3 py-3.5 font-bold text-slate-600">{c.is_public ? "Public" : "Private"}</td>
                   <td className="px-3 py-3.5 font-bold text-slate-600">
@@ -243,7 +243,7 @@ export function AdminCoupons() {
                     ) : (
                       <span className={expired(c) ? "text-red-500" : ""}>
                         {c.expires_at ? new Date(c.expires_at).toLocaleDateString() : "Never"}
-                        <button onClick={() => setExpiryEdit({ id: c.id, value: c.expires_at ? new Date(c.expires_at).toISOString().slice(0, 16) : "" })} className="ml-2 text-[#F4751F] hover:underline text-[10px] font-black uppercase"><Clock size={11} className="inline" /> Edit</button>
+                        <button onClick={() => setExpiryEdit({ id: c.id, value: c.expires_at ? new Date(c.expires_at).toISOString().slice(0, 16) : "" })} className="ml-2 text-primary-700 hover:underline text-[10px] font-black uppercase"><Clock size={11} className="inline" /> Edit</button>
                       </span>
                     )}
                   </td>

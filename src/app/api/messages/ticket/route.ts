@@ -15,7 +15,7 @@ import { getSessionContext, unauthorized } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 import {
   GENERAL_THREAD_KEY,
-  threadStatusWhere,
+  threadRowsWhere,
   threadSubjectOf,
 } from "@/src/lib/message-threads";
 
@@ -38,8 +38,13 @@ export async function POST(req: Request) {
       return Response.json({ error: "Invalid thread" }, { status: 400 });
     }
   }
+  // ধাপ ৫ক৩ — match by stable identity (session user id) with the
+  // username as legacy fallback, so close/reopen still reaches rows
+  // written under a previous username.
   await prisma.message.updateMany({
-    where: thread ? threadStatusWhere(username, thread) : { username },
+    where: thread
+      ? threadRowsWhere({ username, userId: ctx.user.id }, thread)
+      : { OR: [{ username }, { userId: ctx.user.id }] },
     data: { ticketStatus: status },
   });
   return Response.json({ ok: true, ticket_status: status });

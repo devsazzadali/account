@@ -65,10 +65,15 @@ async function main() {
   }
   const missing = await call(null, "GET", "/product/00000000-0000-0000-0000-000000000000");
   step("missing product = 404", missing.status === 404, `got ${missing.status}`);
-  const migrated = await call(null, "GET", "/product/f88d7c6b-fe26-4c1c-8e59-14152c4a749b");
-  step("migrated product page = 200", migrated.status === 200, `got ${migrated.status}`);
+  // Catalog was reset by owner order (2026-10-26): discover the first live
+  // product from the homepage instead of pinning a migrated-era ID.
+  const home = await call(null, "GET", "/");
+  const firstProductId = (home.text || "").match(/\/product\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/)?.[1];
+  step("homepage links at least one live product", !!firstProductId, firstProductId || "none found");
+  const catalogProduct = await call(null, "GET", `/product/${firstProductId}`);
+  step("catalog product page = 200", catalogProduct.status === 200, `got ${catalogProduct.status}`);
   // Covers are SVG since the deploy moved to git-pushed assets (no binaries).
-  step("migrated product uses branded cover", (migrated.text || "").includes("/covers/f88d7c6b-fe26-4c1c-8e59-14152c4a749b.svg"));
+  step("catalog product uses branded cover", (catalogProduct.text || "").includes(`/covers/${firstProductId}.svg`));
 
   // ── authz: unauthenticated ────────────────────────────────────
   const unauth = await call(null, "POST", "/api/orders", { product_id: "x", quantity: 1 });
@@ -117,6 +122,7 @@ async function main() {
   const order1 = o1.json?.order;
   step("order 1 created unpaid", o1.status === 201 && order1?.payment_status === "unpaid", `status ${o1.status}, ps=${order1?.payment_status}`);
   step("order 1 total = price + 0.50 fee", Number(order1?.total_price) === price + 0.5, `total=${order1?.total_price}`);
+  step("order 1 visible number is AS-prefixed (AS-XXXXXXXX)", /^AS-[0-9A-F]{8}$/.test(order1?.order_number || ""), `order_number=${order1?.order_number}`);
 
   const submit = await call(buyer, "POST", `/api/orders/${order1.id}`, { action: "submit_payment", method: "bkash", trxId: `TRX${uniq}`.toUpperCase(), senderNumber: "01700000001" });
   step("manual payment submitted → pending_verification", submit.status === 200 && submit.json?.order?.payment_status === "pending_verification", `ps=${submit.json?.order?.payment_status}`);
@@ -200,10 +206,14 @@ async function main() {
   step("admin edits product price", edit.status === 200 && Number(edit.json?.data?.[0]?.price) === 12.5, `status ${edit.status}`);
 
   // ── payment config honesty ────────────────────────────────────
+  // International-only store: the config carries NO manual/mobile-money
+  // block at all (the old number fields were removed with the BD
+  // payment cleanup). NOTE: this suite's manual submit-flow sections
+  // above predate the 410 closure of manual submissions and are stale.
   const cfgAnon = await call(null, "GET", "/api/payments/config");
-  step("anon payment config hides numbers", cfgAnon.json?.manual?.bkashNumber === null, JSON.stringify(cfgAnon.json?.manual));
+  step("payment config has no manual method block", !!cfgAnon.json && !("manual" in cfgAnon.json), JSON.stringify(Object.keys(cfgAnon.json || {})));
   const cfgBuyer = await call(buyer, "GET", "/api/payments/config");
-  step("signed-in buyer sees the store bkash number", cfgBuyer.json?.manual?.bkashNumber === "01700000000", cfgBuyer.json?.manual?.bkashNumber);
+  step("buyer payment config has no manual method block", !!cfgBuyer.json && !("manual" in cfgBuyer.json), JSON.stringify(Object.keys(cfgBuyer.json || {})));
   step("stripe reported not configured (no keys in test env)", cfgBuyer.json?.stripe?.enabled === false);
 
   // ══ Z2U ALIGNMENT (P0–P5) ══════════════════════════════════════
@@ -436,6 +446,96 @@ async function main() {
   step("storefront still renders while hidden (closed notice)", homeClosed.status === 200, `got ${homeClosed.status}`);
   const showRes = await call(admin, "PUT", "/api/admin/settings", { store_open: "true" });
   step("admin reopens the shop", showRes.status === 200 && showRes.json?.settings?.store_open === "true");
+
+  // ── Storefront CMS: admin edits render on the storefront ────────
+  const cmsHeadline = `E2E Hero ${uniq}`;
+  const cmsRes = await call(admin, "PUT", "/api/admin/settings", {
+    hero_headline: cmsHeadline,
+    announcement_enabled: "true",
+    announcement_text: `E2E Sale ${uniq}`,
+    section_featured_title: `E2E Featured ${uniq}`,
+    section_trending_enabled: "false",
+  });
+  step("CMS settings save via admin path", cmsRes.status === 200 && cmsRes.json?.settings?.hero_headline === cmsHeadline, `got ${cmsRes.status}`);
+  const homeCms = await call(null, "GET", "/");
+  step("storefront renders the CMS hero headline", (homeCms.text || "").includes(cmsHeadline));
+  step("storefront renders the announcement bar", (homeCms.text || "").includes(`E2E Sale ${uniq}`));
+  step("storefront renders the section title override", (homeCms.text || "").includes(`E2E Featured ${uniq}`));
+  step("disabled trending section heading is gone", !(homeCms.text || "").includes('text-blue-600">Products</span>'));
+  const badUrl = await call(admin, "PUT", "/api/admin/settings", { hero_cta_primary_link: "javascript:alert(1)" });
+  step("CMS rejects an unsafe CTA URL", badUrl.status === 400, `got ${badUrl.status}`);
+  const badOrder = await call(admin, "PUT", "/api/admin/settings", { home_section_order: "featured,featured" });
+  step("CMS rejects a malformed section order", badOrder.status === 400, `got ${badOrder.status}`);
+  const xssRes = await call(admin, "PUT", "/api/admin/settings", { hero_headline: "<script>alert(1)</script>pwned" });
+  step("CMS strips markup from text fields", xssRes.status === 200 && !(xssRes.json?.settings?.hero_headline || "").includes("<"), `stored: ${xssRes.json?.settings?.hero_headline}`);
+  const restoreRes = await call(admin, "PUT", "/api/admin/settings", {
+    hero_headline: "",
+    announcement_enabled: "false",
+    announcement_text: "",
+    section_featured_title: "",
+    section_trending_enabled: "true",
+  });
+  step("CMS settings restore to defaults", restoreRes.status === 200, `got ${restoreRes.status}`);
+  const homeRestored = await call(null, "GET", "/");
+  step("storefront back to the design headline + badge", (homeRestored.text || "").includes("Discover Premium Excellence") && !(homeRestored.text || "").includes(cmsHeadline));
+  step("trending section renders again after restore", (homeRestored.text || "").includes('text-blue-600">Products</span>'));
+
+  // ══ EMAIL NOTIFICATIONS (2026-10-27): one branded email per event ══
+  // No provider is configured in the test env: every row must stay
+  // "pending" — nothing sent, nothing failed — with exactly one row
+  // per lifecycle event, addressed to the right inbox, carrying the
+  // order's AS number in the subject.
+  const outboxFinal = await call(admin, "GET", "/api/admin/outbox?status=pending");
+  const pending = outboxFinal.json?.emails || [];
+  const rowsFor = (email, code) => pending.filter((r) => r.to_email === email && (r.subject || "").includes(code));
+  function expectSubjects(label, email, code, expected) {
+    const got = rowsFor(email, code).map((r) => r.subject);
+    const missing = expected.filter((e) => !got.some((g) => g.startsWith(e)));
+    const extra = got.filter((g) => !expected.some((e) => g.startsWith(e)));
+    step(label, !!code && missing.length === 0 && extra.length === 0, `code=${code} missing=[${missing.join(";")}] extra=[${extra.join(";")}]`);
+  }
+  const code1 = order1?.order_number, code2 = order2?.order_number, code3 = order3?.order_number;
+  const codeSvc = svcOrder?.order_number, codeP = pOrder?.order_number, codeCoupon = couponOrder?.order_number;
+  expectSubjects("order 1 emails: received + payment + delivered + completed + dispute opened/resolved", buyerEmail, code1,
+    ["Order received", "Payment confirmed", "Delivered", "Order completed", "Dispute opened", "Dispute resolved"]);
+  expectSubjects("order 2 emails: received + payment + delivered + dispute opened/resolved (refund inside outcome, no double refund mail)", buyerEmail, code2,
+    ["Order received", "Payment confirmed", "Delivered", "Dispute opened", "Dispute resolved"]);
+  expectSubjects("order 3 emails: received + cancelled (unpaid)", buyerEmail, code3, ["Order received", "Order cancelled"]);
+  expectSubjects("service order emails: received + payment + processing + delivered + completed", buyerEmail, codeSvc,
+    ["Order received", "Payment confirmed", "Your order is being prepared", "Delivered", "Order completed"]);
+  expectSubjects("partial order emails: received + payment + partial delivery + partial refund", buyerEmail, codeP,
+    ["Order received", "Payment confirmed", "Partial delivery", "Partial refund issued"]);
+  expectSubjects("coupon order emails: received + cancelled", buyerEmail, codeCoupon, ["Order received", "Order cancelled"]);
+  const adminRows1 = rowsFor(ADMIN_EMAIL, code1).map((r) => r.subject);
+  step("admin got the new-order alert for order 1", adminRows1.some((x) => x.startsWith("New order #AS-")), adminRows1.join(" | "));
+  const adminRows2 = rowsFor(ADMIN_EMAIL, code2).map((r) => r.subject);
+  step("admin got new-order + dispute alerts for order 2", adminRows2.some((x) => x.startsWith("New order #AS-")) && adminRows2.some((x) => x.startsWith("Dispute opened on order #AS-")), adminRows2.join(" | "));
+  const deliveredRow = rowsFor(buyerEmail, code1).find((r) => r.subject.startsWith("Delivered"));
+  step("delivered email is branded, links the order page, has a text part, and leaks NO credentials",
+    !!deliveredRow && deliveredRow.html.includes("#0C2254") && deliveredRow.html.includes(`/order/${order1.id}`) &&
+    !deliveredRow.html.includes(invLogins[0]) && !deliveredRow.html.includes(`pw-${uniq}-0`) && (deliveredRow.text || "").length > 80,
+    deliveredRow ? deliveredRow.subject : "row missing");
+  step("no email falsely marked sent/failed without a provider",
+    (outboxFinal.json?.counts?.sent || 0) === 0 && (outboxFinal.json?.counts?.failed || 0) === 0, JSON.stringify(outboxFinal.json?.counts));
+
+  // ── low stock: crossing 5 → 3 warns ONCE; 3 → 2 stays silent ──────
+  const lsProd = await call(admin, "POST", "/api/db/products", { title: `E2E LowStock ${uniq}`, price: 5, stock: 0, category: "E2E", use_inventory_stock: true, fulfilment_type: "instant" });
+  const lsId = lsProd.json?.data?.[0]?.id;
+  for (let i = 0; i < 5; i++) {
+    await call(admin, "POST", "/api/db/inventory", { product_id: lsId, account_login: `ls-${uniq}-${i}@vault.test`, account_password: `lpw-${i}`, status: "available" });
+  }
+  const lsOrder1 = await call(buyer, "POST", "/api/orders", { product_id: lsId, quantity: 2, customer_email: buyerEmail, payWithWallet: true });
+  step("low-stock setup: qty-2 wallet order delivered from 5 units", lsOrder1.status === 201 && Number(lsOrder1.json?.order?.delivered_quantity) === 2 && lsOrder1.json?.order?.payment_status === "paid", `status ${lsOrder1.status} dq=${lsOrder1.json?.order?.delivered_quantity}`);
+  const lowRows = async () => {
+    const ob = await call(admin, "GET", "/api/admin/outbox?status=pending");
+    return (ob.json?.emails || []).filter((r) => r.to_email === ADMIN_EMAIL && ((r.subject || "").startsWith("Low stock:") || (r.subject || "").startsWith("Out of stock:")) && (r.subject || "").includes(`E2E LowStock ${uniq}`));
+  };
+  const low1 = await lowRows();
+  step("crossing to the threshold (5 → 3) fires exactly ONE low-stock warning", low1.length === 1 && low1[0].subject.startsWith("Low stock:"), low1.map((r) => r.subject).join(" | "));
+  const lsOrder2 = await call(buyer, "POST", "/api/orders", { product_id: lsId, quantity: 1, customer_email: buyerEmail, payWithWallet: true });
+  step("low-stock setup: qty-1 wallet order paid", lsOrder2.status === 201 && lsOrder2.json?.order?.payment_status === "paid", `status ${lsOrder2.status}`);
+  const low2 = await lowRows();
+  step("no second warning inside the low zone (3 → 2)", low2.length === 1, `warnings=${low2.length}`);
 
   const failed = results.filter((r) => !r.ok);
   console.log(`\n[${label}] ${results.length - failed.length}/${results.length} steps passed`);

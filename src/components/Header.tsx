@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, User, ShoppingCart, Menu, LayoutDashboard, ShoppingBag, Store, Gavel, Ticket, Megaphone, FileText, Tag, Share2, Settings, LogOut, ChevronDown, Bell, MessageSquare, Crown, ShieldCheck, MailWarning, X, Wallet, Loader2, CheckCircle2 } from "lucide-react";
+import { Search, User, ShoppingCart, Menu, LayoutDashboard, ShoppingBag, Store, Gavel, Ticket, Megaphone, FileText, Tag, Share2, Settings, LogOut, ChevronDown, Bell, MessageSquare, Crown, ShieldCheck, MailWarning, X, Wallet, Loader2, CheckCircle2, Download } from "lucide-react";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
@@ -13,6 +13,7 @@ import { NotificationCenter } from "./NotificationCenter";
 import { useRealtimeNotifications } from "../lib/useRealtimeNotifications";
 import { lsGet, lsSet, lsRemove } from "@/src/lib/storage";
 import { BrandWordmark } from "./BrandMark";
+import { usePwaInstall } from "./PwaSetup";
 
 export function Header({
   onSearch,
@@ -32,6 +33,9 @@ export function Header({
   const menuRef = useRef<HTMLDivElement>(null);
   const [verifyState, setVerifyState] = useState<"idle" | "sending" | "sent">("idle");
   const router = useRouter();
+  // PWA install affordance (ধাপ ৫ঙ) — rendered inside the header menus
+  // only; the provider owns prompt state, dismissal and installed state.
+  const { showInstall, requestInstall } = usePwaInstall();
 
   // Profile dropdown: close on outside click / Escape (F-08 — the menu
   // used to be hover-only and could not be closed by clicking).
@@ -90,13 +94,15 @@ export function Header({
     };
   }, [user?.id, isCustomer]);
 
-  // Ctrl+K shortcut
+  // Ctrl+K shortcut; Escape closes the search modal (its button is
+  // labelled ESC, so the key must actually do it too).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setSearchOpen(true);
       }
+      if (e.key === "Escape") setSearchOpen(false);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -222,10 +228,10 @@ export function Header({
         {/* Search Bar — opens modal */}
         <button
           onClick={() => setSearchOpen(true)}
-          className="hidden md:flex flex-1 max-w-xl mx-4 items-center gap-3 bg-slate-100 border border-slate-200 rounded-full pl-5 pr-4 py-2.5 text-sm text-slate-400 hover:bg-white hover:border-primary-300 hover:shadow-sm transition-all duration-300 group"
+          className="hidden lg:flex flex-1 max-w-xl mx-4 items-center gap-3 bg-slate-100 border border-slate-200 rounded-full pl-5 pr-4 py-2.5 text-sm text-slate-400 hover:bg-white hover:border-primary-300 hover:shadow-sm transition-all duration-300 group"
         >
           <Search className="w-4 h-4 text-slate-400 group-hover:text-primary-600 transition-colors" />
-          <span className="flex-1 text-left text-sm font-medium">Search accounts, games, subscriptions...</span>
+          <span className="flex-1 text-left text-sm font-medium truncate">Search accounts, games, subscriptions...</span>
           <span className="text-[9px] font-black text-slate-300 border border-slate-200 rounded-lg px-2 py-1 bg-white">⌘ K</span>
         </button>
 
@@ -256,9 +262,9 @@ export function Header({
                         href="/dashboard?tab=wallet"
                         title="Your wallet balance — open Wallet"
                         aria-label="Open wallet"
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0C2254]/5 border border-[#0C2254]/10 text-[#0C2254] hover:bg-[#0C2254]/10 transition-colors"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-50 border border-primary-100 text-primary-700 hover:bg-primary-100 transition-colors"
                       >
-                        <Wallet size={14} className="text-[#F4751F]" />
+                        <Wallet size={14} className="text-primary-600" />
                         <span className="text-[12px] font-black">${walletBalance.toFixed(2)}</span>
                       </Link>
                     )}
@@ -343,6 +349,19 @@ export function Header({
                             )}
                         </div>
 
+                        {showInstall && (
+                            <div className="p-2 border-t border-slate-100 bg-white">
+                                <button
+                                    type="button"
+                                    onClick={() => { setMenuOpen(false); requestInstall(); }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                                >
+                                    <Download size={18} className="text-primary-600" />
+                                    Install App
+                                </button>
+                            </div>
+                        )}
+
                         <div className="p-3 border-t border-slate-100 bg-slate-50/50">
                             <button 
                                 onClick={handleLogout}
@@ -401,6 +420,16 @@ export function Header({
               {l.label}
             </Link>
           ))}
+          {showInstall && (
+            <button
+              type="button"
+              onClick={() => { setMobileOpen(false); requestInstall(); }}
+              className="py-2.5 text-sm font-semibold text-primary-700 hover:text-primary-800 border-b border-slate-50 last:border-0 flex items-center gap-2 text-left"
+            >
+              <Download size={16} />
+              Install App
+            </button>
+          )}
         </nav>
       )}
     </header>

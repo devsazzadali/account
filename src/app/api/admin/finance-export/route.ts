@@ -3,7 +3,7 @@
 // total_price split into subtotal / discount / service fee, so the
 // store's books reconcile exactly with what buyers were charged.
 
-import { requireAdmin, isResponse } from "@/src/lib/auth-server";
+import { requireAdminStrict, isResponse } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 import { SERVICE_FEE } from "@/src/lib/order-service";
 
@@ -13,7 +13,7 @@ function csvCell(v: unknown): string {
 }
 
 export async function GET(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req) // Manager scope: finance export is a full-admin surface (managers are order-scoped);
   if (isResponse(gate)) return gate;
   const orders = await prisma.order.findMany({
     where: { paymentStatus: { in: ["paid", "refunded"] } },

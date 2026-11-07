@@ -26,9 +26,15 @@ import {
 // titled tickets appear as their own conversations next to the
 // general "Customer Support" thread, and replies + ticket state act
 // on the selected thread only.
+// ধাপ ৫ক৩: the grouping owner is the STABLE identity — the row's
+// user_id when present (every current write path stamps it), falling
+// back to the username for pre-stamp rows. A customer who renames
+// keeps ONE thread here; the display/addressing name resolves to the
+// profile's CURRENT username.
 interface AdminThread {
   id: string;
   username: string;
+  userId: string | null;
   threadKey: string;
   title: string;
   msgs: any[];
@@ -47,8 +53,9 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
   };
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  // Selection = one THREAD of one user (Fix Round 4).
-  const [selection, setSelection] = useState<{ username: string; threadKey: string } | null>(null);
+  // Selection = one THREAD of one user (Fix Round 4; userId added in
+  // ধাপ ৫ক৩ so the selection survives the customer renaming).
+  const [selection, setSelection] = useState<{ username: string; userId: string | null; threadKey: string } | null>(null);
   const selectedUser = selection?.username ?? null;
   const selectedThreadKey = selection?.threadKey ?? GENERAL_THREAD_KEY;
   const pendingPreselectRef = useRef(false);
@@ -82,7 +89,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
 
     const preSelected = lsGet("selectedUserChat");
     if (preSelected) {
-      setSelection({ username: preSelected, threadKey: GENERAL_THREAD_KEY });
+      setSelection({ username: preSelected, userId: null, threadKey: GENERAL_THREAD_KEY });
       pendingPreselectRef.current = true;
       setViewMode("chat");
       lsRemove("selectedUserChat");
@@ -103,9 +110,11 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
   useEffect(() => {
     if (selection) {
       fetchUserOrders(selection.username);
-      const msgs = messages.filter(
-        (m) => m.username === selection.username && threadKeyOf(m.subject) === selection.threadKey,
-      );
+      const msgs = messages.filter((m) => {
+        if (threadKeyOf(m.subject) !== selection.threadKey) return false;
+        // Stable identity first; username match for pre-stamp rows.
+        return selection.userId ? m.user_id === selection.userId : m.username === selection.username;
+      });
       markMessagesAsRead(msgs);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,8 +150,8 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
     setAllProfiles(data || []);
   }
 
-  const startNewChat = (username: string) => {
-    setSelection({ username, threadKey: GENERAL_THREAD_KEY });
+  const startNewChat = (profile: any) => {
+    setSelection({ username: profile.username, userId: profile.id ?? null, threadKey: GENERAL_THREAD_KEY });
     setViewMode("chat");
     setShowNewChatModal(false);
   };
@@ -252,14 +261,26 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
       const map = new Map<string, AdminThread>();
       messages.forEach(msg => {
           const tKey = threadKeyOf(msg.subject);
-          const id = `${msg.username}::${tKey}`;
+          // Stable owner key: user_id when the row carries it (all
+          // current writes do), else the stamped username.
+          const ownerKey = msg.user_id ? `u:${msg.user_id}` : `n:${msg.username}`;
+          const id = `${ownerKey}::${tKey}`;
           if (!map.has(id)) {
-            map.set(id, { id, username: msg.username, threadKey: tKey, title: threadTitleOf(tKey), msgs: [] });
+            map.set(id, { id, username: msg.username, userId: msg.user_id ?? null, threadKey: tKey, title: threadTitleOf(tKey), msgs: [] });
           }
           map.get(id)!.msgs.push(msg);
       });
+      // Display/addressing name = the owner's CURRENT profile username
+      // when it can be resolved, so a renamed customer shows (and is
+      // replied to) under their new name, in the same single thread.
+      for (const t of map.values()) {
+        if (t.userId) {
+          const p = allProfiles.find((pr) => pr.id === t.userId);
+          if (p?.username) t.username = p.username;
+        }
+      }
       return map;
-  }, [messages]);
+  }, [messages, allProfiles]);
 
   const threadLastTime = (t: AdminThread) => {
     const last = t.msgs[t.msgs.length - 1];
@@ -280,30 +301,35 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
   }, [groupedThreads, searchQuery, ticketFilter]);
 
   const selectedThread = selection
-    ? groupedThreads.get(`${selection.username}::${selection.threadKey}`)
+    ? Array.from(groupedThreads.values()).find((t) =>
+        t.threadKey === selection.threadKey &&
+        (selection.userId
+          ? t.userId === selection.userId
+          : t.username === selection.username || t.msgs.some((m) => m.username === selection.username)))
     : undefined;
   const activeThread = selectedThread?.msgs || [];
   const selectedThreadStatus = selectedThread ? threadStatusOf(selectedThread) : "open";
-  const selectedProfile = allProfiles.find(p => p.username === selectedUser);
+  const selectedProfile =
+    (selection?.userId ? allProfiles.find(p => p.id === selection.userId) : undefined) ||
+    allProfiles.find(p => p.username === selectedUser);
 
   // A preselected user (customers desk → "message" action) lands on
   // their most recent thread once messages have loaded.
   useEffect(() => {
     if (!pendingPreselectRef.current || !selection) return;
-    const mine = Array.from(groupedThreads.values()).filter(t => t.username === selection.username);
+    const mine = Array.from(groupedThreads.values()).filter(
+      t => t.username === selection.username || t.msgs.some((m) => m.username === selection.username),
+    );
     if (mine.length === 0) return;
     pendingPreselectRef.current = false;
     if (!mine.some(t => t.threadKey === selection.threadKey)) {
       const latest = mine.reduce((a, b) => (threadLastTime(b) > threadLastTime(a) ? b : a));
-      setSelection({ username: selection.username, threadKey: latest.threadKey });
+      setSelection({ username: selection.username, userId: latest.userId ?? selection.userId, threadKey: latest.threadKey });
     }
   }, [groupedThreads, selection]);
 
-  const quickReplies = [
-    { label: "Greeting", text: "Hello! Thank you for contacting our support." },
-    { label: "Order", text: "I'm checking the status of your order now." },
-    { label: "Done", text: "Is there anything else I can help you with?" }
-  ];
+  // ধাপ ৫ক৩ — the `quickReplies` canned-reply array that used to sit
+  // here was dead code (defined, never rendered). Removed.
 
   return (
     <div className="flex h-[calc(100vh-64px)] bg-[#f0f2f5] overflow-hidden relative">
@@ -313,7 +339,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
         <div className="p-5 border-b border-slate-100 bg-white">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[18px] font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#E62E04] animate-pulse" />
+              <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
               Inbox
             </h2>
             <div className="flex gap-1">
@@ -332,7 +358,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[12px] focus:outline-none focus:border-[#E62E04]/30"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[12px] focus:outline-none focus:border-primary-500/40"
             />
           </div>
           {/* Ticket queue (P3) */}
@@ -346,7 +372,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
               <button
                 key={id}
                 onClick={() => setTicketFilter(id)}
-                className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${ticketFilter === id ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}
+                className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${ticketFilter === id ? "bg-primary-600 text-white" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}
               >
                 {label}
               </button>
@@ -367,13 +393,13 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
             return (
               <button
                 key={thread.id}
-                onClick={() => { setSelection({ username: thread.username, threadKey: thread.threadKey }); setViewMode("chat"); }}
+                onClick={() => { setSelection({ username: thread.username, userId: thread.userId, threadKey: thread.threadKey }); setViewMode("chat"); }}
                 className={`w-full p-4 flex items-start gap-3 border-b border-slate-50 transition-all relative ${
                   selectedThread?.id === thread.id ? "bg-red-50/50" : "hover:bg-slate-50"
                 }`}
               >
-                {selectedThread?.id === thread.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#E62E04]" />}
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-[14px] ${isUnread ? 'bg-[#E62E04] text-white' : 'bg-slate-100 text-slate-400'}`}>
+                {selectedThread?.id === thread.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-500" />}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-[14px] ${isUnread ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                   {user[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0 text-left">
@@ -399,7 +425,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
                     {status === 'awaiting_reply' ? 'Awaiting reply' : status}
                   </span>
                 </div>
-                {isUnread && <div className="w-2 h-2 bg-[#E62E04] rounded-full mt-2 animate-pulse" />}
+                {isUnread && <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 animate-pulse" />}
               </button>
             )
           })}
@@ -417,14 +443,20 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
                     <button onClick={() => setViewMode("list")} className="lg:hidden p-1 -ml-1 text-slate-400 hover:text-slate-900">
                        <ChevronLeft size={24} />
                     </button>
-                    <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-slate-200">
-                      <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=trenchkidfr" alt="avatar" className="w-full h-full object-cover" />
+                    <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-primary-200 bg-primary-600 flex items-center justify-center">
+                      <span className="text-white font-black text-sm uppercase">{(selectedUser || "?").charAt(0)}</span>
                     </div>
                     <div className="min-w-0 flex flex-col">
                       <div className="flex items-center gap-2">
                         <h3 className="text-[14px] font-bold text-slate-900 truncate uppercase">{selectedUser}</h3>
-                        <span className="text-[13px] text-[#E62E04] font-medium tracking-tight">ID:{selectedProfile?.id?.substring(0, 7) || '1493869'}</span>
-                        <span className="text-[13px] text-slate-500 font-medium">Offline</span>
+                        {/* ধাপ ৫ক৩ — real profile id only (the hardcoded
+                            '1493869' fallback fabricated an id when the
+                            profile was missing); no presence label —
+                            the desk cannot know if the customer is
+                            online, so it no longer claims "Offline". */}
+                        {selectedProfile?.id && (
+                          <span className="text-[13px] text-primary-600 font-medium tracking-tight">ID:{selectedProfile.id.substring(0, 7)}</span>
+                        )}
                       </div>
                       {selectedThreadKey !== GENERAL_THREAD_KEY && (
                         <span className="text-[11px] font-bold text-slate-500 truncate" title={threadTitleOf(selectedThreadKey)}>
@@ -447,17 +479,17 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
                         Reopen
                       </button>
                     ) : (
-                      <button onClick={() => setTicketStatus(selectedThread, 'closed')} className="px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-800">
+                      <button onClick={() => setTicketStatus(selectedThread, 'closed')} className="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-primary-700">
                         Close ticket
                       </button>
                     )}
                   </div>
               </div>
               <div className="flex gap-6">
-                  <button onClick={() => setViewMode('chat')} className={`flex items-center gap-2 text-[13px] font-bold pb-2 transition-all ${viewMode === 'chat' ? 'text-slate-900 border-b-2 border-[#E62E04]' : 'text-slate-400 hover:text-slate-600'}`}>
+                  <button onClick={() => setViewMode('chat')} className={`flex items-center gap-2 text-[13px] font-bold pb-2 transition-all ${viewMode === 'chat' ? 'text-slate-900 border-b-2 border-primary-500' : 'text-slate-400 hover:text-slate-600'}`}>
                       <Clock size={16} /> Chat History
                   </button>
-                  <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 text-[13px] font-bold pb-2 transition-all ${viewMode !== 'chat' ? 'text-slate-900 border-b-2 border-[#E62E04]' : 'text-slate-400 hover:text-slate-600'}`}>
+                  <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 text-[13px] font-bold pb-2 transition-all ${viewMode !== 'chat' ? 'text-slate-900 border-b-2 border-primary-500' : 'text-slate-400 hover:text-slate-600'}`}>
                       <List size={16} /> Order History
                   </button>
               </div>
@@ -474,16 +506,16 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
                       <div key={msg.id} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
                          <div className={`flex gap-2 max-w-[80%] ${isAdmin ? 'flex-row-reverse' : 'flex-row'}`}>
                              {!isAdmin && (
-                                 <div className="w-10 h-10 rounded-xl bg-white shrink-0 overflow-hidden shadow-sm border border-slate-200 mt-1">
-                                    <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=trenchkidfr" alt="avatar" className="w-full h-full object-cover" />
+                                 <div className="w-10 h-10 rounded-xl bg-primary-600 shrink-0 overflow-hidden shadow-sm border border-primary-200 mt-1 flex items-center justify-center">
+                                    <span className="text-white font-black text-sm uppercase">{(selectedUser || "?").charAt(0)}</span>
                                  </div>
                              )}
                              <div className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}>
                                  <div className={`px-4 py-2 rounded-lg shadow-sm relative ${isAdmin ? 'bg-[#dcf8c6] text-slate-800' : 'bg-white border border-slate-200 text-slate-800'}`}>
                                     <p className="text-[14px] leading-relaxed whitespace-pre-wrap">{isAdmin ? msg.reply : msg.message}</p>
-                                    {!isAdmin && (
-                                      <button className="text-[12px] text-slate-400 hover:text-slate-600 mt-1 block">show translation</button>
-                                    )}
+                                    {/* ধাপ ৫ক৩ (QA3 D9) — the dead "show
+                                        translation" button (no handler, no
+                                        translation feature exists) removed. */}
                                     <div className="text-[11px] font-medium mt-1 text-right text-[#b5c49b]">
                                         {timeString}
                                     </div>
@@ -570,7 +602,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
               <h5 className="text-[11px] font-black text-slate-400 mb-6 tracking-[0.2em] uppercase">User Analytics</h5>
               
               <div className="flex items-center gap-4 mb-8">
-                 <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-[#E62E04] font-black text-2xl shadow-sm">
+                 <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-primary-600 font-black text-2xl shadow-sm">
                     {selectedUser[0].toUpperCase()}
                  </div>
                  <div>
@@ -582,7 +614,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
               <div className="space-y-4 text-[12px] bg-slate-50 rounded-xl p-4 border border-slate-100 mb-8">
                  <div className="flex justify-between items-center">
                     <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Registered</span>
-                    <span className="text-slate-900 font-black">{selectedProfile?.created_at ? new Date(selectedProfile.created_at).toLocaleDateString() : "4/25/2026"}</span>
+                    <span className="text-slate-900 font-black">{selectedProfile?.created_at ? new Date(selectedProfile.created_at).toLocaleDateString() : "—"}</span>
                  </div>
                  <div className="flex justify-between items-center">
                     <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Status</span>
@@ -598,7 +630,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
                     </div>
                     <div className="space-y-3">
                         {userOrders.slice(0, 5).map(order => (
-                          <div key={order.id} onClick={() => openOrder(order.id)} className="bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-[#E62E04]/20 transition-all cursor-pointer group">
+                          <div key={order.id} onClick={() => openOrder(order.id)} className="bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-primary-200 transition-all cursor-pointer group">
                               <div className="flex justify-between items-start mb-1.5">
                                   <div className="text-[12px] font-black text-slate-800 truncate pr-2 uppercase tracking-tight">{order.products?.title || 'Asset'}</div>
                               </div>
@@ -676,7 +708,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
               </div>
               <div className="flex-1 overflow-y-auto p-4">
                 {allProfiles.filter(p => p.username && p.username.toLowerCase().includes(userSearch.toLowerCase())).map(profile => (
-                  <button key={profile.username} onClick={() => startNewChat(profile.username)} className="w-full flex items-center gap-4 p-4 hover:bg-primary-50 rounded-2xl transition-all">
+                  <button key={profile.username} onClick={() => startNewChat(profile)} className="w-full flex items-center gap-4 p-4 hover:bg-primary-50 rounded-2xl transition-all">
                     <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold uppercase">{profile.username[0]}</div>
                     <div className="text-left">
                       <div className="text-[14px] font-bold text-slate-900">{profile.username}</div>

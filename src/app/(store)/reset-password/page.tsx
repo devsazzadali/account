@@ -57,7 +57,7 @@ function ResetForm() {
       <form onSubmit={submit} className="space-y-4">
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New password (min. 8 characters)" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all" />
         <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Repeat new password" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all" />
-        <button disabled={busy} className="w-full py-4 bg-[#0C2254] text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+        <button disabled={busy} className="w-full py-4 bg-primary-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-primary-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
           {busy ? <Loader2 size={16} className="animate-spin" /> : "Update Password"}
         </button>
       </form>

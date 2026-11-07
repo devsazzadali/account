@@ -13,11 +13,11 @@ export function AnnouncementBar({
 }) {
   if (!announcement.enabled || !announcement.text) return null;
   return (
-    <div className="bg-[#0C2254] text-white text-center px-4 py-2 relative z-[60]">
+    <div className="bg-primary-800 text-white text-center px-4 py-2 relative z-[60]">
       {announcement.link ? (
         <a
           href={announcement.link}
-          className="text-[13px] font-semibold tracking-wide hover:underline underline-offset-4 decoration-[#F4751F] decoration-2"
+          className="text-[13px] font-semibold tracking-wide hover:underline underline-offset-4 decoration-primary-400 decoration-2"
         >
           {announcement.text}
         </a>

@@ -7,17 +7,17 @@
 
 import React, { useEffect, useState } from "react";
 import { Store } from "lucide-react";
+import { fetchStoreStats } from "../lib/store-stats-client";
 
 export function StoreClosedBanner() {
   const [closed, setClosed] = useState(false);
   const [name, setName] = useState("The store");
 
   useEffect(() => {
-    fetch("/api/store/stats")
-      .then((r) => r.json())
+    fetchStoreStats()
       .then((j) => {
         setClosed(j?.store_open === false);
-        if (j?.store_name) setName(j.store_name);
+        if (typeof j?.store_name === "string") setName(j.store_name);
       })
       .catch(() => {});
   }, []);
@@ -26,7 +26,7 @@ export function StoreClosedBanner() {
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 lg:px-10 mt-6">
-      <div className="bg-[#0C2254] text-white rounded-[2rem] px-8 py-6 flex items-center gap-5 shadow-xl">
+      <div className="bg-primary-800 text-white rounded-[2rem] px-8 py-6 flex items-center gap-5 shadow-xl">
         <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
           <Store size={22} />
         </div>

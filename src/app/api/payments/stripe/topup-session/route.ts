@@ -1,19 +1,23 @@
 // AccountStoreOne — Stripe Checkout session for a WALLET TOP-UP.
 // The wallet is funded by card (owner ruling 2026-11-01: international
-// store, card + wallet only). INERT unless STRIPE_SECRET_KEY exists:
-// returns 501 and the wallet UI shows top-ups as unavailable — never a
-// fake card flow. The webhook (/api/payments/stripe/webhook) credits
-// the wallet on checkout.session.completed via the session metadata
-// (purpose=topup), idempotently on the session id.
+// store, card + wallet only). INERT unless Stripe is enabled AND
+// configured (credentials from the admin dashboard Settings → Payments,
+// env as fallback): returns 501 and the wallet UI shows top-ups as
+// unavailable — never a fake card flow. The webhook
+// (/api/payments/stripe/webhook) credits the wallet on
+// checkout.session.completed via the session metadata (purpose=topup),
+// idempotently on the session id.
 
 import { getSessionContext, unauthorized } from "@/src/lib/auth-server";
+import { getStripeConfig } from "@/src/lib/settings-store";
 
 const MIN_USD = 1;
 const MAX_USD = 1000;
 
 export async function POST(req: Request) {
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) {
+  const stripeCfg = await getStripeConfig();
+  const secret = stripeCfg.secretKey;
+  if (!stripeCfg.enabled) {
     return Response.json(
       { error: "Card payments are not configured on this store yet — wallet top-ups by card are unavailable right now." },
       { status: 501 },

@@ -35,9 +35,22 @@ function toUserShape(u: any): AuthUserShape | null {
 
 let cachedSession: AuthSessionShape | null = null;
 let cacheAt = 0;
+let sessionInFlight: Promise<AuthSessionShape | null> | null = null;
 
 async function fetchSession(force = false): Promise<AuthSessionShape | null> {
   if (!force && cachedSession && Date.now() - cacheAt < 10_000) return cachedSession;
+  // Concurrent consumers (shell + page + widgets mounting together) share
+  // one in-flight get-session instead of each issuing its own request.
+  if (!force && sessionInFlight) return sessionInFlight;
+  const p = fetchSessionUncached();
+  if (!force) {
+    sessionInFlight = p;
+    p.finally(() => { if (sessionInFlight === p) sessionInFlight = null; });
+  }
+  return p;
+}
+
+async function fetchSessionUncached(): Promise<AuthSessionShape | null> {
   try {
     const res = await fetch("/api/auth/get-session", { credentials: "same-origin" });
     if (!res.ok) {

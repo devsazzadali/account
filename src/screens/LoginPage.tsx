@@ -78,7 +78,9 @@ export function LoginPage() {
                 lsSet("userRole", profile.role);
                 lsSet("username", profile.username || "User");
 
-                if (profile.role === 'admin') {
+                if (profile.role === 'admin' || profile.role === 'moderator') {
+                    // Staff land in the console; managers (moderator) are
+                    // redirected onward to the orders view inside it.
                     window.location.assign("/admin");
                 } else {
                     window.location.assign(nextPath() || "/dashboard");
@@ -166,7 +168,7 @@ export function LoginPage() {
       </div>
 
       {/* Right Side: Login Form */}
-      <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-16 bg-white relative">
+      <div className="flex-1 flex flex-col justify-center items-center px-6 pb-6 pt-24 md:p-16 bg-white relative">
         {/* Mobile Header */}
         <div className="md:hidden absolute top-8 left-8">
             <Link href="/" className="flex items-center gap-2">

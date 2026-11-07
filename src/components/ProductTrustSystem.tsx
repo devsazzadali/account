@@ -4,6 +4,7 @@ import React from "react";
 import { ShieldCheck, Star, Zap, TrendingUp, Award, BadgeCheck, AlertTriangle, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { deliveryInfo } from "../lib/fulfilment";
+import { fetchStoreStats } from "../lib/store-stats-client";
 
 // ── Store Trust Card ───────────────────────────────────────────
 // Real aggregates from /api/store/stats only. (The previous version
@@ -12,7 +13,7 @@ import { deliveryInfo } from "../lib/fulfilment";
 export function SellerTrustCard() {
   const [stats, setStats] = React.useState<any>(null);
   React.useEffect(() => {
-    fetch("/api/store/stats").then((r) => r.json()).then((j) => setStats(j.stats || null)).catch(() => {});
+    fetchStoreStats().then((j) => setStats(j?.stats || null)).catch(() => {});
   }, []);
 
   const name = stats?.store_name || "Account Store One";
@@ -23,9 +24,9 @@ export function SellerTrustCard() {
     <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <div className="relative w-14 h-14 rounded-2xl bg-[#0C2254] p-[2px] shadow-lg">
+          <div className="relative w-14 h-14 rounded-2xl bg-primary-600 p-[2px] shadow-lg">
             <div className="w-full h-full rounded-[14px] bg-white flex items-center justify-center overflow-hidden">
-              <span className="text-lg font-black text-[#0C2254]">AS</span>
+              <span className="text-lg font-black text-primary-700">AS</span>
             </div>
             <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary-600 rounded-lg border-2 border-white flex items-center justify-center">
               <BadgeCheck size={11} className="text-white" />
@@ -36,7 +37,7 @@ export function SellerTrustCard() {
               <h4 className="text-sm font-black text-slate-900">{name}</h4>
               <BadgeCheck size={15} className="text-primary-600" />
             </div>
-            <span className="inline-block bg-[#0C2254] text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">
+            <span className="inline-block bg-primary-600 text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">
               Verified Store
             </span>
           </div>
@@ -98,6 +99,27 @@ interface StockProps {
 }
 
 export function StockIntelligence({ stock, totalCapacity = 100 }: StockProps) {
+  // Zero stock is its own state: the urgency banner ("Almost Sold Out /
+  // buy now before it's gone") must never render for an item that
+  // cannot be bought at all — the page shows the OUT OF STOCK state.
+  if (stock <= 0) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={15} className="text-slate-500" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Out of Stock</span>
+          </div>
+          <span className="text-sm font-black text-slate-500">0 left</span>
+        </div>
+        <div className="h-2 bg-white/60 rounded-full overflow-hidden">
+          <div className="h-full bg-slate-300 rounded-full" style={{ width: "0%" }} />
+        </div>
+        <p className="text-[9px] font-bold text-slate-400">This item is currently unavailable — please check back later.</p>
+      </div>
+    );
+  }
+
   const pct = Math.min((stock / totalCapacity) * 100, 100);
   const isLow = stock <= 5;
   const isCritical = stock <= 2;

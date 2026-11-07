@@ -6,7 +6,7 @@
 //      or by exact title; inventory rows always append as available
 //      stock (and re-sync derived stock for derived products).
 
-import { requireAdmin, isResponse } from "@/src/lib/auth-server";
+import { requireAdminStrict, isResponse } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 import { syncDerivedStock } from "@/src/lib/order-service";
 
@@ -46,7 +46,7 @@ function csvCell(v: unknown): string {
 }
 
 export async function GET(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req) // Manager scope: product import/export is a full-admin surface (managers are order-scoped);
   if (isResponse(gate)) return gate;
   const type = new URL(req.url).searchParams.get("type") || "products";
   if (type === "inventory") {
@@ -81,7 +81,7 @@ export async function GET(req: Request) {
 interface RowError { row: number; message: string }
 
 export async function POST(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req) // Manager scope: product import/export is a full-admin surface (managers are order-scoped);
   if (isResponse(gate)) return gate;
   const body = await req.json().catch(() => ({}));
   const type = body.type === "inventory" ? "inventory" : "products";

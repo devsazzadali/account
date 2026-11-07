@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { ClientProviders } from '@/src/components/ClientProviders';
 import {
@@ -68,6 +68,23 @@ export const metadata: Metadata = {
     },
   },
   category: 'shopping',
+  // PWA (ধাপ ৫ঙ): the manifest itself comes from src/app/manifest.ts
+  // (Next serves it at /manifest.webmanifest and links it automatically).
+  // apple-touch-icon reuses the generated install icon; appleWebApp makes
+  // an iOS home-screen launch open in standalone mode like Android's.
+  icons: {
+    apple: '/icon-192.png',
+  },
+  appleWebApp: {
+    capable: true,
+    title: SITE_NAME,
+    statusBarStyle: 'default',
+  },
+};
+
+export const viewport: Viewport = {
+  // Storefront primary-700 — matches the manifest theme_color.
+  themeColor: '#117345',
 };
 
 export default function RootLayout({

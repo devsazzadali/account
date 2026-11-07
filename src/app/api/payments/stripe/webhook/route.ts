@@ -1,10 +1,14 @@
 // AccountStoreOne — Stripe webhook. Verifies the Stripe-Signature header
-// (HMAC-SHA256 over `${timestamp}.${payload}`) with STRIPE_WEBHOOK_SECRET
-// and settles orders on checkout.session.completed. Inert without env keys.
+// (HMAC-SHA256 over `${timestamp}.${payload}`) with the webhook secret
+// (dashboard Settings → Payments, env as fallback) and settles orders on
+// checkout.session.completed. Inert without credentials. Deliberately
+// NOT gated on the admin enable-toggle: sessions created while Stripe
+// was on must still settle if the toggle is later switched off.
 
 import crypto from "node:crypto";
 import { markStripePaid, creditStripeTopup } from "@/src/lib/order-service";
 import { prisma } from "@/src/lib/db";
+import { getStripeConfig } from "@/src/lib/settings-store";
 
 function verifySignature(payload: string, header: string, secret: string): boolean {
   const parts = Object.fromEntries(
@@ -26,8 +30,9 @@ function verifySignature(payload: string, header: string, secret: string): boole
 }
 
 export async function POST(req: Request) {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  const key = process.env.STRIPE_SECRET_KEY;
+  const stripeCfg = await getStripeConfig();
+  const secret = stripeCfg.webhookSecret;
+  const key = stripeCfg.secretKey;
   if (!secret || !key) return Response.json({ error: "Stripe is not configured" }, { status: 501 });
 
   const payload = await req.text();

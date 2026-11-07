@@ -5,7 +5,15 @@
 // no JWT parsing, no external auth SDK. Profiles (app-level user rows incl. role)
 // live in our own `profiles` table and are created lazily on first sight
 // of a Neon Auth user ("profile row created server-side at signup/login").
+//
+// Perf (ধাপ ৫): React's per-request `cache()` dedupes the get-session
+// round-trip and the profile lookup across every route handler and
+// layout segment that resolves the same request's session — the session
+// is still verified against Neon Auth once per HTTP request (never
+// cached across requests), and ensureProfile's writes still happen on
+// every call exactly as before.
 
+import { cache } from "react";
 import { prisma } from "./db";
 
 export interface AuthUser {
@@ -18,32 +26,61 @@ export interface AuthUser {
 
 const AUTH_BASE = process.env.NEON_AUTH_BASE_URL;
 
-export async function fetchAuthUser(cookieHeader: string | null): Promise<AuthUser | null> {
+// Bounded + retried (fix round): the admin gate crashed valid sessions
+// into "Access Forbidden" / /login when Neon Auth answered slowly — the
+// bare fetch had NO timeout and collapsed every transport error into
+// "no session". Each attempt is abort-bounded at 10s; a failed attempt
+// is retried twice (1.5s, then 3s backoff) before the session counts as
+// absent. A definitive answer from Neon Auth (non-OK status, or a 200
+// payload without a user) is NOT retried — the session really is absent
+// or expired. Success still verifies against Neon Auth once per request
+// semantically (retries only fire on transport failure/timeout), and
+// the React cache() dedupe below is unchanged.
+const SESSION_ATTEMPT_TIMEOUT_MS = 10000;
+const SESSION_RETRY_BACKOFF_MS = [1500, 3000];
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchAuthUserUncached(cookieHeader: string | null): Promise<AuthUser | null> {
   if (!AUTH_BASE || !cookieHeader) return null;
-  try {
-    const res = await fetch(`${AUTH_BASE}/get-session`, {
-      headers: { cookie: cookieHeader },
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const u = data?.user;
-    if (!u?.id) return null;
-    return {
-      id: u.id,
-      email: u.email,
-      name: u.name ?? null,
-      emailVerified: !!u.emailVerified,
-      image: u.image ?? null,
-    };
-  } catch {
-    return null;
+  for (let attempt = 0; attempt <= SESSION_RETRY_BACKOFF_MS.length; attempt++) {
+    if (attempt > 0) await sleep(SESSION_RETRY_BACKOFF_MS[attempt - 1]);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), SESSION_ATTEMPT_TIMEOUT_MS);
+    try {
+      const res = await fetch(`${AUTH_BASE}/get-session`, {
+        headers: { cookie: cookieHeader },
+        cache: "no-store",
+        signal: ctrl.signal,
+      });
+      if (!res.ok) return null; // Neon Auth answered: no valid session.
+      const data = await res.json();
+      const u = data?.user;
+      if (!u?.id) return null;
+      return {
+        id: u.id,
+        email: u.email,
+        name: u.name ?? null,
+        emailVerified: !!u.emailVerified,
+        image: u.image ?? null,
+      };
+    } catch {
+      // Transport error or our own timeout abort: retry per policy.
+      continue;
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  return null;
 }
+
+export const fetchAuthUser = cache(fetchAuthUserUncached);
+
+const findProfileById = cache((id: string) => prisma.profile.findUnique({ where: { id } }));
 
 /** Create the app profile (+ empty wallet) for a Neon Auth user if missing. */
 export async function ensureProfile(user: AuthUser) {
-  const existing = await prisma.profile.findUnique({ where: { id: user.id } });
+  const existing = await findProfileById(user.id);
   if (existing) {
     // Keep the stored email in sync with the auth record.
     if (user.email && existing.email !== user.email) {
@@ -113,7 +150,24 @@ export async function requireAdmin(req: Request): Promise<SessionContext | Respo
   const ctx = await getSessionContext(req);
   if (!ctx) return unauthorized();
   if (ctx.profile.role !== "admin" && ctx.profile.role !== "moderator") return forbidden();
+  // Manager deactivation: a suspended manager (user_risk_profiles.is_blocked,
+  // toggled by a full admin from Customers) loses staff access immediately —
+  // the suspension flag is the deactivation switch for the manager role.
+  if (ctx.profile.role === "moderator" && (await isUserBlocked(ctx.user.id))) {
+    return forbidden("This manager account is deactivated");
+  }
   return ctx;
+}
+
+/**
+ * True when the session belongs to a DEACTIVATED manager (role moderator
+ * with the suspension flag set). Staff surfaces that don't go through
+ * requireAdmin (order detail endpoint, generic DB API) use this to drop
+ * a deactivated manager back to plain-customer standing.
+ */
+export async function isDeactivatedManager(ctx: SessionContext): Promise<boolean> {
+  if (ctx.profile.role !== "moderator") return false;
+  return isUserBlocked(ctx.user.id);
 }
 
 /**

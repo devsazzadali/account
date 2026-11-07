@@ -1,7 +1,7 @@
 "use client";
 
 // AccountStoreOne — Feedback desk (Z2U alignment P3).
-// The seller-side reputation desk the client uses on Z2U: a score
+// The store reputation desk, modelled on the reference layout: a score
 // matrix (positive / neutral / negative × 7d / 30d / all), dimension
 // averages (delivery speed, service quality, item description), and the
 // review list with Reply + moderation. All numbers are computed here
@@ -115,7 +115,7 @@ export function AdminFeedback() {
     <div className="p-6 lg:p-10 space-y-8 max-w-[1200px] mx-auto">
       <div>
         <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-          <MessageSquare className="text-[#F4751F]" size={26} /> Feedback
+          <MessageSquare className="text-primary-600" size={26} /> Feedback
         </h2>
         <p className="text-sm text-slate-500 font-medium mt-1">
           Reviews are written by buyers from their completed orders — one review per order. Reply publicly, or hide a review that violates policy.
@@ -130,7 +130,8 @@ export function AdminFeedback() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 text-[11px] font-black uppercase tracking-widest text-slate-400">Feedback Score</div>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[430px]">
                 <thead>
                   <tr className="text-left text-[10px] font-black uppercase tracking-widest text-slate-400">
                     <th className="px-6 py-3">Window</th><th className="px-3 py-3">Positive</th><th className="px-3 py-3">Neutral</th><th className="px-3 py-3">Negative</th><th className="px-3 py-3">Summary</th>
@@ -148,6 +149,7 @@ export function AdminFeedback() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
             <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm p-6 space-y-5">
               <div className="text-[11px] font-black uppercase tracking-widest text-slate-400">Transaction Scores</div>
@@ -180,7 +182,7 @@ export function AdminFeedback() {
               ["negative", `Negative (${reviews.filter((r) => !r.is_hidden && bucketOf(r.rating) === "negative").length})`],
               ["hidden", `Hidden (${reviews.filter((r) => r.is_hidden).length})`],
             ] as const).map(([id, label]) => (
-              <button key={id} onClick={() => setFilter(id)} className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${filter === id ? "bg-slate-900 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+              <button key={id} onClick={() => setFilter(id)} className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${filter === id ? "bg-primary-600 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
                 {label}
               </button>
             ))}
@@ -223,8 +225,8 @@ export function AdminFeedback() {
                   </div>
                 </div>
                 {r.admin_reply ? (
-                  <div className="mt-4 bg-[#0C2254]/5 border border-[#0C2254]/10 rounded-2xl p-4">
-                    <p className="text-[10px] font-black text-[#0C2254] uppercase tracking-widest mb-1 flex items-center gap-1.5"><Reply size={11} /> Store reply{r.reply_at ? ` · ${new Date(r.reply_at).toLocaleDateString()}` : ""}</p>
+                  <div className="mt-4 bg-primary-50 border border-primary-100 rounded-2xl p-4">
+                    <p className="text-[10px] font-black text-primary-700 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Reply size={11} /> Store reply{r.reply_at ? ` · ${new Date(r.reply_at).toLocaleDateString()}` : ""}</p>
                     <p className="text-sm text-slate-700 font-medium">{r.admin_reply}</p>
                   </div>
                 ) : (
@@ -238,7 +240,7 @@ export function AdminFeedback() {
                     <button
                       disabled={busyId === r.id || !(replyDraft[r.id] || "").trim()}
                       onClick={() => patch(r.id, { admin_reply: (replyDraft[r.id] || "").trim(), reply_at: new Date().toISOString() }, "Reply published")}
-                      className="px-4 py-2.5 bg-[#0C2254] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40 flex items-center gap-1.5"
+                      className="px-4 py-2.5 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40 flex items-center gap-1.5"
                     >
                       <Reply size={13} /> Reply
                     </button>

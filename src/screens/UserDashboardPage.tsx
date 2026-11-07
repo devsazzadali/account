@@ -143,7 +143,7 @@ export function UserDashboardPage() {
             changes are paused. Your order history is unchanged. If you believe this is
             a mistake, please contact the store through the contact page.
           </p>
-          <button onClick={handleLogout} className="px-8 py-4 bg-slate-900 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all inline-flex items-center gap-2">
+          <button onClick={handleLogout} className="px-8 py-4 bg-primary-600 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all inline-flex items-center gap-2">
             <LogOut size={16} /> Sign Out
           </button>
         </div>
@@ -168,8 +168,12 @@ export function UserDashboardPage() {
               </div>
            ) : (
            <div className="flex items-center gap-4 mb-8 p-4 bg-slate-50 rounded-3xl border border-slate-100">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0C2254] to-[#1d3f7d] flex items-center justify-center text-white shadow-lg shadow-[#0C2254]/20 shrink-0 overflow-hidden">
-                 <img src={profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.username}`} className="w-full h-full object-cover rounded-2xl" alt="" />
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-primary-500/20 shrink-0 overflow-hidden">
+                 {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} className="w-full h-full object-cover rounded-2xl" alt="" />
+                 ) : (
+                    <span className="text-white font-black text-xl uppercase">{(profile?.username || "U").charAt(0)}</span>
+                 )}
               </div>
               <div className="min-w-0">
                  <h4 className="text-[16px] font-black text-slate-900 truncate">{profile?.full_name || profile?.username}</h4>
@@ -189,11 +193,11 @@ export function UserDashboardPage() {
                   onClick={() => selectTab(item.id)}
                   className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl text-[14px] font-bold transition-all group whitespace-nowrap ${
                     activeTab === item.id
-                    ? "bg-[#0C2254] text-white shadow-xl shadow-[#0C2254]/20"
+                    ? "bg-primary-600 text-white shadow-xl shadow-primary-600/25"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                   }`}
                 >
-                   <item.icon size={20} className={activeTab === item.id ? "text-[#F4751F]" : "group-hover:text-slate-900"} />
+                   <item.icon size={20} className={activeTab === item.id ? "text-primary-100" : "group-hover:text-slate-900"} />
                    {item.label}
                    {activeTab === item.id && <ChevronRight size={16} className="ml-auto text-white/50 hidden lg:block" />}
                 </button>
@@ -324,7 +328,7 @@ function DashboardHome({ profile, user, orders, walletBalance, ticketState, setA
        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 md:p-8 shadow-sm">
           <div className="flex items-center justify-between mb-6">
              <h3 className="text-xl font-black text-slate-900">Recent Orders</h3>
-             <button onClick={() => setActiveTab('orders')} className="text-[12px] font-black text-[#F4751F] uppercase tracking-widest flex items-center gap-2 hover:underline">View All <ArrowRight size={14} /></button>
+             <button onClick={() => setActiveTab('orders')} className="text-[12px] font-black text-primary-600 uppercase tracking-widest flex items-center gap-2 hover:underline">View All <ArrowRight size={14} /></button>
           </div>
           {orders.length === 0 ? (
              <div className="text-center py-6">
@@ -337,14 +341,14 @@ function DashboardHome({ profile, user, orders, walletBalance, ticketState, setA
                    unlock the credentials in its Credential Vault, confirm receipt, or open a dispute —
                    every payment is held in escrow until delivery is confirmed.
                 </p>
-                <Link href="/" className="inline-flex items-center gap-2 px-7 py-3.5 bg-[#0C2254] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:opacity-90 transition-all">
+                <Link href="/" className="inline-flex items-center gap-2 px-7 py-3.5 bg-primary-600 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:opacity-90 transition-all">
                    Browse the Store <ArrowRight size={14} />
                 </Link>
              </div>
           ) : (
           <div className="space-y-3">
              {orders.slice(0, 4).map((order: any) => (
-                <Link key={order.id} href={`/order/${order.id}`} className="flex items-center justify-between gap-4 p-4 sm:p-5 bg-slate-50 rounded-3xl border border-slate-100 hover:border-[#0C2254]/30 transition-all">
+                <Link key={order.id} href={`/order/${order.id}`} className="flex items-center justify-between gap-4 p-4 sm:p-5 bg-slate-50 rounded-3xl border border-slate-100 hover:border-primary-300 transition-all">
                    <div className="flex items-center gap-4 min-w-0">
                       <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 overflow-hidden shrink-0"><img src={order.products?.image} className="w-full h-full object-cover" alt="" /></div>
                       <div className="min-w-0">
@@ -364,20 +368,20 @@ function DashboardHome({ profile, user, orders, walletBalance, ticketState, setA
        </div>
 
        {/* Support card */}
-       <div className="bg-[#0C2254] rounded-[2.5rem] p-6 md:p-8 shadow-sm text-white flex flex-col md:flex-row md:items-center gap-6">
+       <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 md:p-8 shadow-sm flex flex-col md:flex-row md:items-center gap-6">
           <div className="flex items-start gap-4 flex-1">
-             <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
-                <LifeBuoy size={24} className="text-[#F4751F]" />
+             <div className="w-12 h-12 rounded-2xl bg-primary-50 flex items-center justify-center shrink-0">
+                <LifeBuoy size={24} className="text-primary-600" />
              </div>
              <div>
-                <h3 className="text-xl font-black mb-1">Need help?</h3>
-                <p className="text-sm text-white/70 font-medium leading-relaxed">
+                <h3 className="text-xl font-black mb-1 text-slate-900">Need help?</h3>
+                <p className="text-sm text-slate-500 font-medium leading-relaxed">
                    Our support team is available 24/7 and usually replies within about an hour.
                    Send us a message and we&rsquo;ll take care of it — your conversation lives in Messages.
                 </p>
              </div>
           </div>
-          <button onClick={() => setActiveTab('messages')} className="px-7 py-3.5 bg-[#F4751F] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:opacity-90 transition-all shrink-0">
+          <button onClick={() => setActiveTab('messages')} className="px-7 py-3.5 bg-primary-600 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:opacity-90 transition-all shrink-0">
              Message Support
           </button>
        </div>
@@ -388,11 +392,11 @@ function DashboardHome({ profile, user, orders, walletBalance, ticketState, setA
 function SummaryCard({ icon, label, value, sub, actionLabel, actionIcon, onAction, valueSmall }: any) {
   return (
     <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm flex flex-col">
-       <div className="w-11 h-11 rounded-xl bg-[#0C2254]/5 text-[#0C2254] flex items-center justify-center mb-4">{icon}</div>
+       <div className="w-11 h-11 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center mb-4">{icon}</div>
        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</div>
        <div className={`${valueSmall ? "text-[22px]" : "text-3xl"} font-black text-slate-900 leading-tight`}>{value}</div>
        <div className="text-[12px] text-slate-400 font-medium mt-1 flex-1">{sub}</div>
-       <button onClick={onAction} className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-black text-[#F4751F] uppercase tracking-widest hover:underline self-start">
+       <button onClick={onAction} className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-black text-primary-600 uppercase tracking-widest hover:underline self-start">
           {actionIcon}{actionLabel}<ArrowRight size={13} />
        </button>
     </div>
@@ -418,7 +422,7 @@ function OrderManifest({ orders }: any) {
                 unlock the credentials in its Credential Vault, confirm receipt, or open a dispute —
                 every payment is held in escrow until delivery is confirmed.
              </p>
-             <Link href="/" className="inline-flex items-center gap-2 px-8 py-4 bg-[#0C2254] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:opacity-90 transition-all">
+             <Link href="/" className="inline-flex items-center gap-2 px-8 py-4 bg-primary-600 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:opacity-90 transition-all">
                 Browse the Store <ArrowRight size={14} />
              </Link>
           </div>
@@ -426,7 +430,7 @@ function OrderManifest({ orders }: any) {
 
        <div className="space-y-4">
           {orders.map((order: any) => (
-             <div key={order.id} className="bg-white border border-slate-200 rounded-[2.5rem] p-6 shadow-sm hover:border-[#0C2254]/30 transition-all group">
+             <div key={order.id} className="bg-white border border-slate-200 rounded-[2.5rem] p-6 shadow-sm hover:border-primary-300 transition-all group">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                    <div className="flex items-center gap-6">
                       <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
@@ -446,7 +450,7 @@ function OrderManifest({ orders }: any) {
                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date(order.created_at).toLocaleDateString()}</div>
                          <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">{paymentLabel(order.payment_status)}</div>
                       </div>
-                      <Link href={`/order/${order.id}`} className="px-6 py-3 bg-[#0C2254] text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-[#F4751F] transition-all flex items-center gap-2">View Order <ArrowRight size={16} /></Link>
+                      <Link href={`/order/${order.id}`} className="px-6 py-3 bg-primary-600 text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center gap-2">View Order <ArrowRight size={16} /></Link>
                    </div>
                 </div>
              </div>
@@ -504,7 +508,7 @@ function AnnouncementsCard() {
   }, []);
   if (items.length === 0) return null;
   return (
-    <div className="bg-[#0C2254] rounded-[2.5rem] p-8 shadow-sm text-white">
+    <div className="bg-primary-800 rounded-[2.5rem] p-8 shadow-sm text-white">
       <h3 className="text-xl font-black mb-6">Store Announcements</h3>
       <div className="space-y-5">
         {items.map((a) => (

@@ -236,7 +236,7 @@ export function AdminCategories() {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search categories..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-[13px] focus:outline-none focus:border-primary-600 transition-all shadow-sm"
+            className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-[13px] focus:outline-none focus:border-primary-500 transition-all shadow-sm"
           />
         </div>
       </div>
@@ -259,7 +259,7 @@ export function AdminCategories() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredCategories.map(cat => (
-              <div key={cat.id} className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-lg hover:border-primary-100 transition-all group">
+              <div key={cat.id} className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-lg hover:border-primary-200 transition-all group">
                 <div className="flex justify-between items-start mb-3">
                   <div className="p-2 bg-primary-50 text-primary-600 rounded-lg">
                     <Tag size={16} />
@@ -279,7 +279,7 @@ export function AdminCategories() {
                   <p className="text-[12px] text-slate-500 mt-3 line-clamp-2 leading-relaxed">{cat.description}</p>
                 )}
                 <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
-                  <div className="text-[10px] font-bold text-primary-600 px-2 py-0.5 bg-primary-50 rounded-full uppercase tracking-widest">
+                  <div className="text-[10px] font-bold text-primary-700 px-2 py-0.5 bg-primary-50 rounded-full uppercase tracking-widest">
                     Active
                   </div>
                   <div className="text-[11px] font-black text-slate-500 uppercase tracking-widest">
@@ -327,7 +327,7 @@ export function AdminCategories() {
                     type="text"
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-medium focus:outline-none focus:border-primary-600 focus:bg-white transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-medium focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
                     placeholder="Ex: Game Accounts"
                   />
                 </div>
@@ -337,7 +337,7 @@ export function AdminCategories() {
                     type="text"
                     value={formData.slug}
                     onChange={e => setFormData({ ...formData, slug: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-medium focus:outline-none focus:border-primary-600 focus:bg-white transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-medium focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
                     placeholder="ex-game-accounts"
                   />
                 </div>
@@ -347,7 +347,7 @@ export function AdminCategories() {
                     rows={4}
                     value={formData.description}
                     onChange={e => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-medium focus:outline-none focus:border-primary-600 focus:bg-white transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-medium focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
                     placeholder="Short description for this collection..."
                   />
                 </div>
@@ -357,7 +357,7 @@ export function AdminCategories() {
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, attribute_schema: [...formData.attribute_schema, { key: "", label: "", type: "text", options: "" }] })}
-                      className="text-[10px] font-black text-primary-600 uppercase tracking-widest hover:underline"
+                      className="text-[10px] font-black text-primary-700 uppercase tracking-widest hover:underline"
                     >
                       + Add field
                     </button>
@@ -375,13 +375,13 @@ export function AdminCategories() {
                           value={f.key}
                           onChange={e => { const arr = [...formData.attribute_schema]; arr[i] = { ...arr[i], key: e.target.value }; setFormData({ ...formData, attribute_schema: arr }); }}
                           placeholder="key (e.g. region)"
-                          className="w-[26%] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-600"
+                          className="w-[26%] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-500"
                         />
                         <input
                           value={f.label}
                           onChange={e => { const arr = [...formData.attribute_schema]; arr[i] = { ...arr[i], label: e.target.value }; setFormData({ ...formData, attribute_schema: arr }); }}
                           placeholder="Label (e.g. Region)"
-                          className="w-[26%] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-600"
+                          className="w-[26%] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-500"
                         />
                         <select
                           value={f.type}
@@ -398,7 +398,7 @@ export function AdminCategories() {
                             value={f.options}
                             onChange={e => { const arr = [...formData.attribute_schema]; arr[i] = { ...arr[i], options: e.target.value }; setFormData({ ...formData, attribute_schema: arr }); }}
                             placeholder="Options, comma separated"
-                            className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-600"
+                            className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-500"
                           />
                         ) : <span className="flex-1" />}
                         <button
@@ -418,7 +418,7 @@ export function AdminCategories() {
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, intake_schema: [...formData.intake_schema, { key: "", label: "", type: "text", options: "", required: true }] })}
-                      className="text-[10px] font-black text-primary-600 uppercase tracking-widest hover:underline"
+                      className="text-[10px] font-black text-primary-700 uppercase tracking-widest hover:underline"
                     >
                       + Add field
                     </button>
@@ -436,13 +436,13 @@ export function AdminCategories() {
                           value={f.key}
                           onChange={e => { const arr = [...formData.intake_schema]; arr[i] = { ...arr[i], key: e.target.value }; setFormData({ ...formData, intake_schema: arr }); }}
                           placeholder="key (e.g. game_id)"
-                          className="w-[22%] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-600"
+                          className="w-[22%] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-500"
                         />
                         <input
                           value={f.label}
                           onChange={e => { const arr = [...formData.intake_schema]; arr[i] = { ...arr[i], label: e.target.value }; setFormData({ ...formData, intake_schema: arr }); }}
                           placeholder="Label (e.g. Game ID)"
-                          className="w-[22%] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-600"
+                          className="w-[22%] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-500"
                         />
                         <select
                           value={f.type}
@@ -460,7 +460,7 @@ export function AdminCategories() {
                             value={f.options}
                             onChange={e => { const arr = [...formData.intake_schema]; arr[i] = { ...arr[i], options: e.target.value }; setFormData({ ...formData, intake_schema: arr }); }}
                             placeholder="Options, comma separated"
-                            className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-600"
+                            className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-[12px] font-medium focus:outline-none focus:border-primary-500"
                           />
                         ) : <span className="flex-1" />}
                         <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 shrink-0 cursor-pointer">
@@ -468,7 +468,7 @@ export function AdminCategories() {
                             type="checkbox"
                             checked={f.required}
                             onChange={e => { const arr = [...formData.intake_schema]; arr[i] = { ...arr[i], required: e.target.checked }; setFormData({ ...formData, intake_schema: arr }); }}
-                            className="accent-[#0C2254]"
+                            className="accent-primary-600"
                           />
                           Required
                         </label>

@@ -1,16 +1,17 @@
 // AccountStoreOne — customer suspension control (Fix Round 7, item 7).
 // POST /api/admin/risk { user_id, blocked } → toggles
-// user_risk_profiles.is_blocked for one customer. Staff-gated
-// (admin + moderator — suspension is a front-line support action);
-// admin accounts themselves can never be suspended through here.
+// user_risk_profiles.is_blocked for one customer. FULL-ADMIN only:
+// user management sits outside the manager (moderator) scope — and
+// this same toggle is how an admin deactivates a manager account.
+// Admin accounts themselves can never be suspended through here.
 // Enforcement of the flag lives in order-service (order creation),
 // the generic DB API (writes), and /api/me (dashboard notice).
 
-import { requireAdmin, isResponse } from "@/src/lib/auth-server";
+import { requireAdminStrict, isResponse } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
 
 export async function POST(req: Request) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminStrict(req) // Manager scope: user management (suspend/unsuspend) is a full-admin surface (managers are order-scoped);
   if (isResponse(gate)) return gate;
 
   const body = await req.json().catch(() => ({}));

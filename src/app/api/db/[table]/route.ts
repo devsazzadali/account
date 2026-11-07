@@ -17,7 +17,7 @@ import { prisma } from "@/src/lib/db";
 import { fetchAuthUser, ensureProfile } from "@/src/lib/auth-server";
 import { serializeRow, serializeRows } from "@/src/lib/serialize";
 import { syncDerivedStock } from "@/src/lib/order-service";
-import { threadKeyOf, threadStatusWhere } from "@/src/lib/message-threads";
+import { threadKeyOf, threadRowsWhere } from "@/src/lib/message-threads";
 
 type Row = Record<string, unknown>;
 
@@ -164,17 +164,37 @@ function applyListingDuration(row: Row): void {
 interface Ctx {
   user: { id: string; email: string } | null;
   profile: Row | null;
+  /** Full admin (role "admin") — the only role with store-wide access. */
   isAdmin: boolean;
+  /**
+   * Active manager (role "moderator", not deactivated). Managers are
+   * ORDER-SCOPED staff: they read/work orders, order events and disputes
+   * here, and may PATCH orders (internal remarks) — nothing else. A
+   * suspended manager (is_blocked) drops to plain-customer standing.
+   */
+  isManager: boolean;
+  /** isAdmin || isManager — staff semantics (unscoped order reads etc.). */
+  isStaff: boolean;
 }
 
 async function getCtx(req: Request): Promise<Ctx> {
   const user = await fetchAuthUser(req.headers.get("cookie"));
-  if (!user) return { user: null, profile: null, isAdmin: false };
+  if (!user) return { user: null, profile: null, isAdmin: false, isManager: false, isStaff: false };
   const profile = (await ensureProfile(user)) as unknown as Row;
+  const isAdmin = profile.role === "admin";
+  let isManager = profile.role === "moderator";
+  if (isManager) {
+    const rp = await prisma.userRiskProfile
+      .findUnique({ where: { userId: user.id }, select: { isBlocked: true } })
+      .catch(() => null);
+    if (rp?.isBlocked) isManager = false;
+  }
   return {
     user: { id: user.id, email: user.email },
     profile,
-    isAdmin: profile.role === "admin" || profile.role === "moderator",
+    isAdmin,
+    isManager,
+    isStaff: isAdmin || isManager,
   };
 }
 
@@ -182,38 +202,55 @@ const ok = (data: unknown) => Response.json({ data, error: null });
 const fail = (message: string, status = 400) =>
   Response.json({ data: null, error: { message } }, { status });
 
-type Policy = "public" | "user" | "admin" | "deny";
+/**
+ * Access policies:
+ *  - "public" — anyone, including anonymous visitors.
+ *  - "user"   — any signed-in account (reads are ownership-scoped below).
+ *  - "staff"  — full admin OR active manager (order work only).
+ *  - "strict" — full admin ONLY. Managers are denied: everything outside
+ *               order management (products, inventory, categories,
+ *               coupons, users/risk, announcements, outbox, audit) sits
+ *               behind this policy.
+ *  - "deny"   — not available through this endpoint at all.
+ */
+type Policy = "public" | "user" | "staff" | "strict" | "deny";
 
 function policyFor(table: string, method: string, ctx: Ctx): Policy {
   const t = table;
   if (method === "GET") {
     if (["products", "categories", "reviews"].includes(t)) return "public";
-    if (["inventory", "user_risk_profiles", "audit_logs", "coupons", "email_outbox", "announcements"].includes(t)) return "admin";
-    if (t === "order_events") return "user"; // scoped to own orders below
+    if (["inventory", "user_risk_profiles", "audit_logs", "coupons", "email_outbox", "announcements"].includes(t)) return "strict";
+    if (t === "order_events") return "user"; // scoped to own orders below (staff unscoped)
     return "user";
   }
   // writes
-  if (["products", "categories"].includes(t)) return "admin";
+  if (["products", "categories"].includes(t)) return "strict";
   // Reviews are created ONLY through /api/reviews (bound to a completed
   // order); the generic endpoint handles admin moderation (PATCH/DELETE).
   if (t === "reviews" && method === "POST") return "deny";
-  if (t === "reviews") return "admin";
+  if (t === "reviews") return "strict";
   if (t === "messages" && method === "POST") return "user";
-  if (t === "messages") return "admin";
-  if (t === "inventory") return "admin";
-  if (t === "profiles" && (method === "PATCH" || method === "DELETE")) return method === "PATCH" ? "user" : "admin";
-  if (t === "orders" && method === "PATCH") return "admin";
+  if (t === "messages") return "strict";
+  if (t === "inventory") return "strict";
+  if (t === "profiles" && (method === "PATCH" || method === "DELETE")) return method === "PATCH" ? "user" : "strict";
+  // Order PATCH is the one write a manager keeps (internal remarks from
+  // the order detail screen). Money-moving order writes stay denied
+  // here for everyone — they go through /api/orders/:id actions.
+  if (t === "orders" && method === "PATCH") return "staff";
   if (t === "notifications" && method === "PATCH") return "user";
   return "deny";
 }
 
 /** Extra scoping applied to reads/writes for non-admin users. */
 function scopeFor(table: string, ctx: Ctx): Row | null {
-  // Hidden reviews are never readable by non-admins (incl. anonymous).
-  if (table === "reviews" && !ctx.isAdmin) return { isHidden: false };
+  // Hidden reviews are never readable by non-staff (incl. anonymous).
+  if (table === "reviews" && !ctx.isStaff) return { isHidden: false };
   if (!ctx.user) return null;
-  if (table === "order_events" && !ctx.isAdmin) return { order: { userId: ctx.user.id } };
+  if (table === "order_events" && !ctx.isStaff) return { order: { userId: ctx.user.id } };
   if (ctx.isAdmin) return null;
+  // Managers are unscoped ONLY on the order-work tables; every other
+  // table scopes them to their own rows, exactly like a customer.
+  if (ctx.isManager && (table === "orders" || table === "order_events" || table === "disputes")) return null;
   const uid = ctx.user.id;
   switch (table) {
     case "profiles":
@@ -221,7 +258,18 @@ function scopeFor(table: string, ctx: Ctx): Row | null {
     case "orders":
       return { OR: [{ userId: uid }, { customerEmail: ctx.user.email }] };
     case "messages":
-      return { username: (ctx.profile?.username as string) || "__none__" };
+      // ধাপ ৫ক৩ — stable identity: rows carry the owner's id (stamped
+      // server-side on every insert), so scope by id with the current
+      // username as a legacy fallback for pre-stamp rows. A username
+      // change can no longer strand (or leak) a conversation: the id
+      // branch follows the account, and the username branch can only
+      // match rows under the caller's CURRENT name.
+      return {
+        OR: [
+          { userId: uid },
+          { username: (ctx.profile?.username as string) || "__none__" },
+        ],
+      };
     case "notifications":
       return { userId: uid };
     case "wallets":
@@ -263,14 +311,17 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
   const policy = policyFor(table, method, ctx);
 
   if (policy === "deny") return fail("This operation is not available here", 403);
-  if (policy === "admin" && !ctx.isAdmin) return ctx.user ? fail("Admin access required", 403) : fail("Authentication required", 401);
+  if (policy === "strict" && !ctx.isAdmin) return ctx.user ? fail("Admin access required", 403) : fail("Authentication required", 401);
+  if (policy === "staff" && !ctx.isStaff) return ctx.user ? fail("Staff access required", 403) : fail("Authentication required", 401);
   if (policy === "user" && !ctx.user) return fail("Authentication required", 401);
 
   // Fix Round 7 (customer suspend): a suspended buyer is READ-ONLY
   // through this API — they can still see their orders and messages,
   // but every write (message sends, profile edits, anything) stops
-  // until an admin lifts the suspension. Staff roles are exempt.
-  if (method !== "GET" && ctx.user && !ctx.isAdmin) {
+  // until an admin lifts the suspension. Staff roles are exempt (a
+  // deactivated manager is not staff — see getCtx — so the suspension
+  // read-only rule applies to them too).
+  if (method !== "GET" && ctx.user && !ctx.isStaff) {
     const rp = await prisma.userRiskProfile
       .findUnique({ where: { userId: ctx.user.id }, select: { isBlocked: true } })
       .catch(() => null);
@@ -292,7 +343,7 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
       // search, product page, checkout fetch). Admins keep seeing it in
       // the console, flagged as expired. Checkout re-checks server-side
       // in createOrder as well; this scope is the display half.
-      if (table === "products" && !ctx.isAdmin) {
+      if (table === "products" && !ctx.isStaff) {
         where = {
           AND: [
             where,
@@ -303,6 +354,15 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
       const orderBy = parseOrder(sp);
       const take = sp.get("limit") ? Number(sp.get("limit")) : undefined;
       const skip = sp.get("offset") ? Number(sp.get("offset")) : undefined;
+      // Exact-count mode (select=count): return the filtered COUNT with
+      // no row payload — for screens that render only the number
+      // (AdminOverview's "Inventory available"). Same policy/scoping as
+      // any other read; the number is identical to the row count the
+      // caller would have received.
+      if ((sp.get("select") || "").trim() === "count") {
+        const count = await model.count({ where });
+        return Response.json({ data: [], count });
+      }
       const include = wantsProductEmbed(table, sp) ? { product: true } : undefined;
       const rows = await model.findMany({ where, orderBy: orderBy.length ? orderBy : undefined, take, skip, include });
       const data = shapeEmbed(serializeRows(rows as Row[]));
@@ -333,6 +393,35 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
           it.userId = ctx.user.id;
         }
       }
+      // ধাপ ৫ক৩ — store replies join the same stable identity: stamp the
+      // thread owner's id so the reply stays attached to the account
+      // even if the customer later renames. Before this, admin rows
+      // were the only unstamped rows. Resolution order: the addressed
+      // username's profile; failing that (the customer renamed after
+      // the row was addressed — the profile now holds the NEW name),
+      // the thread's own history: any earlier row under that username
+      // already carries the owner's id.
+      if (table === "messages" && ctx.isAdmin) {
+        for (const it of items) {
+          if (!it.userId && typeof it.username === "string" && it.username) {
+            const owner = await prisma.profile
+              .findUnique({ where: { username: it.username }, select: { id: true } })
+              .catch(() => null);
+            if (owner) {
+              it.userId = owner.id;
+            } else {
+              const prior = await prisma.message
+                .findFirst({
+                  where: { username: it.username, userId: { not: null } },
+                  select: { userId: true },
+                  orderBy: { createdAt: "desc" },
+                })
+                .catch(() => null);
+              if (prior?.userId) it.userId = prior.userId;
+            }
+          }
+        }
+      }
       const created: Row[] = [];
       for (const it of items) created.push(await model.create({ data: it }));
 
@@ -343,15 +432,21 @@ async function handle(req: Request, ctxParams: { params: Promise<{ table: string
       // message in one ticket must not flip another ticket's state.
       if (table === "messages") {
         const next = ctx.isAdmin ? "awaiting_reply" : "open";
-        const threadGroups = new Map<string, { username: string; key: string }>();
+        const threadGroups = new Map<string, { username: string; key: string; userId?: string | null }>();
         for (const it of items) {
           const uname = it.username as string | undefined;
           if (!uname) continue;
           const key = threadKeyOf(it.subject as string | undefined);
-          threadGroups.set(`${uname}::${key}`, { username: uname, key });
+          threadGroups.set(`${uname}::${key}`, {
+            username: uname,
+            key,
+            userId: (it.userId as string | undefined) ?? null,
+          });
         }
         for (const g of threadGroups.values()) {
-          await prisma.message.updateMany({ where: threadStatusWhere(g.username, g.key), data: { ticketStatus: next } });
+          // ধাপ ৫ক৩ — sync by stable identity too, so a renamed
+          // customer's older rows flip state together with the new ones.
+          await prisma.message.updateMany({ where: threadRowsWhere(g, g.key), data: { ticketStatus: next } });
         }
         // Real notifications (R3): a store reply must actually reach the
         // customer — create a `notifications` row for the thread owner.

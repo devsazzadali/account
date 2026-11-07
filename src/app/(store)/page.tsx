@@ -39,7 +39,7 @@ export default async function HomePage() {
   // Server-side fetch via Prisma. Degrades to empty arrays while the
   // products table is still empty (live-data migration is a later phase),
   // in which case the client screen falls back to its existing behaviour.
-  const data = await getHomeData();
+  const data = await getHomeData(500);
   // Storefront CMS — resolved per request so admin edits show immediately.
   const cms = await getStorefrontSettings();
 

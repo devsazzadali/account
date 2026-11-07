@@ -24,6 +24,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
+  const [showCreateManager, setShowCreateManager] = useState(false);
 
   useEffect(() => { fetchProfiles(); }, []);
 
@@ -68,7 +69,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
       (p.full_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.email || "").toLowerCase().includes(searchTerm.toLowerCase());
-    const matchRole = filterRole === "All" || p.role === filterRole.toLowerCase();
+    const matchRole = filterRole === "All" || p.role === (filterRole === "Manager" ? "moderator" : filterRole.toLowerCase());
     return matchSearch && matchRole;
   });
 
@@ -107,12 +108,20 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
             <h2 className="text-[24px] md:text-[28px] font-black text-slate-900 tracking-tight">Identity Nexus</h2>
             <p className="text-[12px] md:text-[14px] text-slate-500 font-medium">User permissions and tier management.</p>
           </div>
-          <button
-            onClick={fetchProfiles}
-            className="w-full md:w-auto px-6 py-2.5 bg-slate-900 text-white text-[13px] font-bold rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
-          >
-            <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Sync
-          </button>
+          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+            <button
+              onClick={() => setShowCreateManager(true)}
+              className="w-full md:w-auto px-6 py-2.5 bg-primary-600 text-white text-[13px] font-bold rounded-xl hover:bg-primary-700 transition-all flex items-center justify-center gap-2"
+            >
+              <Shield size={16} /> Create Manager
+            </button>
+            <button
+              onClick={fetchProfiles}
+              className="w-full md:w-auto px-6 py-2.5 bg-primary-600 text-white text-[13px] font-bold rounded-xl hover:bg-primary-700 transition-all flex items-center justify-center gap-2"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Sync
+            </button>
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -145,7 +154,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
               >
                 <option>All Roles</option>
                 <option>Admin</option>
-                <option>Moderator</option>
+                <option>Manager</option>
                 <option>User</option>
             </select>
           </div>
@@ -171,7 +180,11 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-4">
                         <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 shadow-sm relative">
-                          <img src={profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`} className="w-full h-full object-cover" alt="" />
+                          {profile.avatar_url ? (
+                            <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
+                          ) : (
+                            <div className="w-full h-full bg-primary-600 flex items-center justify-center"><span className="text-white font-black text-sm uppercase">{(profile.username || "?").charAt(0)}</span></div>
+                          )}
                           <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 ${profile.is_premium ? 'bg-amber-500' : 'bg-emerald-500'} border-2 border-white rounded-full`} />
                         </div>
                         <div>
@@ -195,7 +208,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button onClick={(e) => { e.stopPropagation(); lsSet("selectedUserChat", profile.username); setActiveTab?.("messages"); }} className="p-2 text-slate-400 hover:text-primary-600"><MessageSquare size={18} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); setSelectedUser(profile); setIsEditing(true); }} className="p-2 text-slate-400 hover:text-amber-600"><Edit2 size={18} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedUser(profile); setIsEditing(true); }} className="p-2 text-slate-400 hover:text-primary-600"><Edit2 size={18} /></button>
                       </div>
                     </td>
                   </tr>
@@ -212,7 +225,11 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
                <div key={profile.id} className="p-4 bg-white active:bg-slate-50 transition-colors" onClick={() => setSelectedUser(profile)}>
                   <div className="flex items-center gap-4 mb-4">
                      <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative">
-                        <img src={profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`} className="w-full h-full object-cover" alt="" />
+                        {profile.avatar_url ? (
+                          <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
+                        ) : (
+                          <div className="w-full h-full bg-primary-600 flex items-center justify-center"><span className="text-white font-black text-base uppercase">{(profile.username || "?").charAt(0)}</span></div>
+                        )}
                         {profile.is_premium && <div className="absolute top-0 right-0 p-1 bg-amber-500 text-white rounded-bl-lg shadow-sm"><Crown size={10} /></div>}
                      </div>
                      <div className="min-w-0">
@@ -242,7 +259,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setSelectedUser(null); setIsEditing(false); }} className="fixed inset-0 bg-slate-900/80 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-2xl bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-              <div className="px-6 md:px-8 py-5 md:py-7 bg-slate-900 text-white flex justify-between items-center">
+              <div className="px-6 md:px-8 py-5 md:py-7 bg-primary-600 text-white flex justify-between items-center">
                 <h3 className="text-lg md:text-xl font-black tracking-tight">{isEditing ? "Modify Node" : "Intelligence"}</h3>
                 <button onClick={() => { setSelectedUser(null); setIsEditing(false); }} className="p-2 hover:bg-white/10 rounded-xl"><X size={20} /></button>
               </div>
@@ -257,6 +274,84 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
           </div>
         )}
       </AnimatePresence>
+
+      {/* Create Manager Modal */}
+      <AnimatePresence>
+        {showCreateManager && (
+          <CreateManagerModal
+            onClose={() => setShowCreateManager(false)}
+            onCreated={() => { setShowCreateManager(false); fetchProfiles(); }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function CreateManagerModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function handleCreate() {
+    if (!name.trim() || !email.trim() || password.length < 8) {
+      toast.error("Name, a valid email and a password of 8+ characters are required.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not create the manager account");
+      toast.success(`Manager account created for ${json.user?.email || email.trim()} — they can sign in now.`);
+      onCreated();
+    } catch (e: any) {
+      toast.error("Could not create manager: " + e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-slate-900/80 backdrop-blur-md" />
+      <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden">
+        <div className="px-6 md:px-8 py-5 md:py-6 bg-primary-600 text-white flex justify-between items-center">
+          <h3 className="text-lg font-black tracking-tight flex items-center gap-2"><Shield size={18} /> Create Manager</h3>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl"><X size={20} /></button>
+        </div>
+        <div className="p-6 md:p-8 space-y-4">
+          <p className="text-[13px] text-slate-500 font-medium leading-relaxed">
+            A manager signs in with this email and password and gets the <strong className="text-slate-800">orders console only</strong> —
+            orders, delivery, escrow and disputes. Products, payments, settings and customers stay admin-only.
+            Suspend the account here in Customers to deactivate it instantly.
+          </p>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Name</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Store Manager One" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-primary-600" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="manager@example.com" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-primary-600" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Initial Password</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-primary-600" />
+          </div>
+          <div className="pt-2 flex gap-3">
+            <button onClick={onClose} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl font-black text-[11px] uppercase tracking-widest">Cancel</button>
+            <button disabled={busy} onClick={handleCreate} className="flex-[2] py-4 bg-primary-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-primary-700 shadow-lg shadow-primary-600/20 flex items-center justify-center gap-2">
+              {busy ? <Loader2 size={16} className="animate-spin" /> : "Create Manager Account"}
+            </button>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
@@ -273,7 +368,7 @@ function StatCard({ label, value, color, bg }: any) {
 function RoleBadge({ role, isPremium }: { role?: string, isPremium?: boolean }) {
   const map: Record<string, any> = {
     "admin": { cls: "bg-primary-50 text-primary-600", label: "Admin" },
-    "moderator": { cls: "bg-amber-50 text-amber-600", label: "Mod" },
+    "moderator": { cls: "bg-amber-50 text-amber-600", label: "Manager" },
     "user": { cls: "bg-slate-100 text-slate-600", label: "User" },
   };
   const normalizedRole = role ? role.toLowerCase() : "user";
@@ -293,6 +388,36 @@ function UserDetailsView({ user, suspended, onToggleSuspend, onEdit, setActiveTa
   const [orders, setOrders] = useState<any[] | null>(null);
   const [wallet, setWallet] = useState<any | null>(null);
   const [busySuspend, setBusySuspend] = useState(false);
+  // Wallet adjustment (full-admin rail): credit/debit with a mandatory
+  // reason; the API records it as an "admin_adjustment" ledger row.
+  const [adjDirection, setAdjDirection] = useState<"credit" | "debit">("credit");
+  const [adjAmount, setAdjAmount] = useState("");
+  const [adjReason, setAdjReason] = useState("");
+  const [adjBusy, setAdjBusy] = useState(false);
+
+  async function applyAdjustment() {
+    const amt = Number(adjAmount);
+    if (!amt || amt <= 0) { toast.error("Enter an amount greater than zero"); return; }
+    if (adjReason.trim().length < 3) { toast.error("A reason is required for every adjustment"); return; }
+    setAdjBusy(true);
+    try {
+      const res = await fetch("/api/admin/wallet-adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, direction: adjDirection, amount: amt, reason: adjReason.trim() }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Adjustment failed");
+      setWallet((w: any) => ({ ...(w || {}), balance: j.balance }));
+      setAdjAmount("");
+      setAdjReason("");
+      toast.success(`Wallet ${adjDirection === "credit" ? "credited" : "debited"} — new balance $${Number(j.balance).toFixed(2)}`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setAdjBusy(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -317,12 +442,19 @@ function UserDetailsView({ user, suspended, onToggleSuspend, onEdit, setActiveTa
     <div className="space-y-8">
       <div className="flex items-center gap-6">
         <div className="w-20 h-20 md:w-24 md:h-24 rounded-[2rem] bg-slate-100 border-4 border-white overflow-hidden shadow-xl shrink-0">
-           <img src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} alt="" className="w-full h-full object-cover" />
+           {user.avatar_url ? (
+             <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+           ) : (
+             <div className="w-full h-full bg-primary-600 flex items-center justify-center"><span className="text-white font-black text-2xl uppercase">{(user.username || "?").charAt(0)}</span></div>
+           )}
         </div>
         <div className="min-w-0">
           <h4 className="text-xl md:text-2xl font-black text-slate-900 mb-1 truncate">{user.full_name || "Anonymous"}</h4>
           <p className="text-[14px] text-slate-500 font-medium truncate">@{user.username}</p>
           {suspended && <span className="mt-1 inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-red-50 text-red-600">Suspended — cannot order or write</span>}
+          {user.role === "moderator" && (
+            <p className="mt-2 text-[11px] font-bold text-slate-400 leading-relaxed">Manager account — orders console only. Suspending this account deactivates its console access immediately; unsuspending restores it.</p>
+          )}
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -360,7 +492,7 @@ function UserDetailsView({ user, suspended, onToggleSuspend, onEdit, setActiveTa
       )}
 
       <div className="pt-6 flex flex-col sm:flex-row gap-4">
-        <button onClick={onEdit} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+        <button onClick={onEdit} className="flex-1 py-4 bg-primary-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center justify-center gap-2">
           <Edit2 size={16} /> Edit Profile
         </button>
         <button onClick={() => { lsSet("selectedUserChat", user.username); setActiveTab?.("messages"); onClose(); }} className="flex-1 py-4 bg-primary-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center justify-center gap-2">
@@ -376,6 +508,61 @@ function UserDetailsView({ user, suspended, onToggleSuspend, onEdit, setActiveTa
           </button>
         )}
       </div>
+
+      {user.role !== "admin" && (
+        <div className="p-5 bg-primary-50/60 rounded-2xl border border-primary-100 space-y-4">
+          <div>
+            <div className="text-[9px] font-black uppercase tracking-widest text-primary-700 mb-1">Wallet Adjustment — Admin Only</div>
+            <p className="text-[11px] font-bold text-slate-500 leading-relaxed">
+              Credit a customer who paid the store offline, or debit a correction. Every adjustment is recorded in the
+              customer&apos;s ledger as an <span className="text-slate-800">admin adjustment</span> with your reason and your
+              identity — never as a card top-up — and written to the audit log. Only the free wallet balance is touched;
+              money held in escrow is never affected.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAdjDirection("credit")}
+              className={`flex-1 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${adjDirection === "credit" ? "bg-emerald-600 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}
+            >
+              Credit
+            </button>
+            <button
+              onClick={() => setAdjDirection("debit")}
+              className={`flex-1 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${adjDirection === "debit" ? "bg-red-600 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}
+            >
+              Debit
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input
+              value={adjAmount}
+              onChange={(e) => setAdjAmount(e.target.value)}
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="Amount (USD)"
+              className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 transition-all"
+            />
+            <input
+              value={adjReason}
+              onChange={(e) => setAdjReason(e.target.value)}
+              type="text"
+              maxLength={300}
+              placeholder="Reason (required) — e.g. Bank transfer received"
+              className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 transition-all"
+            />
+          </div>
+          <button
+            onClick={applyAdjustment}
+            disabled={adjBusy}
+            className="w-full py-3.5 bg-primary-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-primary-700 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+          >
+            {adjBusy ? <Loader2 size={14} className="animate-spin" /> : null}
+            Apply {adjDirection === "credit" ? "Credit" : "Debit"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -397,7 +584,7 @@ function UserEditForm({ user, onSave, onCancel, loading }: any) {
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Premium Tier</label>
-          <button onClick={() => setFormData({...formData, is_premium: !formData.is_premium})} className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${formData.is_premium ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+          <button onClick={() => setFormData({...formData, is_premium: !formData.is_premium})} className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${formData.is_premium ? 'bg-amber-50 border-amber-500 text-primary-700' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
              <span className="font-black text-[12px] uppercase tracking-widest flex items-center gap-2"><Crown size={14} /> Premium Membership</span>
              <div className={`w-10 h-5 rounded-full p-1 ${formData.is_premium ? 'bg-amber-500' : 'bg-slate-300'}`}>
                 <div className={`w-3 h-3 bg-white rounded-full transition-all ${formData.is_premium ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -408,8 +595,8 @@ function UserEditForm({ user, onSave, onCancel, loading }: any) {
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">System Role</label>
           <div className="grid grid-cols-3 gap-2">
              {["admin", "moderator", "user"].map(role => (
-               <button key={role} onClick={() => setFormData({...formData, role})} className={`py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${formData.role === role ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-400 border-slate-100"}`}>
-                 {role}
+               <button key={role} onClick={() => setFormData({...formData, role})} className={`py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${formData.role === role ? "bg-primary-600 text-white border-primary-600" : "bg-white text-slate-400 border-slate-100"}`}>
+                 {role === "moderator" ? "Manager" : role}
                </button>
              ))}
           </div>

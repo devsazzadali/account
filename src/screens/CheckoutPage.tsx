@@ -267,8 +267,8 @@ export function CheckoutPage() {
               <div key={s.id} className="flex flex-col items-center gap-2 z-10">
                 <motion.div
                   animate={{
-                    backgroundColor: done ? "#17995c" : active ? "#0C2254" : "#f1f5f9",
-                    borderColor: done || active ? "#0C2254" : "#e2e8f0",
+                    backgroundColor: done ? "#17995c" : active ? "#17995c" : "#f1f5f9",
+                    borderColor: done || active ? "#17995c" : "#e2e8f0",
                   }}
                   className="w-10 h-10 rounded-2xl border-2 flex items-center justify-center shadow-sm"
                 >
@@ -482,7 +482,7 @@ export function CheckoutPage() {
                       }
                       setStep(2);
                     }}
-                    className="w-full py-4 bg-[#0C2254] text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:hover:scale-100"
+                    className="w-full py-4 bg-primary-600 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:hover:scale-100"
                   >
                     Continue to Payment <ChevronRight size={16} />
                   </button>
@@ -590,7 +590,7 @@ export function CheckoutPage() {
                   <button
                     disabled={processing || outOfStock}
                     onClick={handlePlaceOrder}
-                    className="w-full py-5 bg-[#0C2254] text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full py-5 bg-primary-600 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {processing ? <><Loader2 size={18} className="animate-spin" /> Processing...</> : paymentMethod === "wallet" ? <><Wallet size={18} /> Pay from Wallet</> : <><CreditCard size={18} /> Continue to Stripe</>}
                   </button>
@@ -613,7 +613,7 @@ export function CheckoutPage() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="w-24 h-24 rounded-full bg-[#0C2254] flex items-center justify-center shadow-2xl mb-6"
+                className="w-24 h-24 rounded-full bg-primary-600 flex items-center justify-center shadow-2xl mb-6"
               >
                 <CheckCircle size={48} className="text-white" />
               </motion.div>

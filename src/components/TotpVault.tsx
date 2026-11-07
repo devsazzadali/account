@@ -100,7 +100,7 @@ export function TotpVault({ secret, recoveryEmail }: Props) {
       {valid ? (
         <div>
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Current Login Code</p>
-          <div className="bg-[#0C2254] rounded-xl px-4 py-3.5">
+          <div className="bg-primary-800 rounded-xl px-4 py-3.5">
             <div className="flex items-center justify-between gap-3">
               <span className="text-3xl font-mono font-black text-white tracking-[0.3em]">
                 {code ? `${code.slice(0, 3)} ${code.slice(3)}` : "······"}
@@ -116,7 +116,7 @@ export function TotpVault({ secret, recoveryEmail }: Props) {
             </div>
             <div className="mt-3 h-1.5 bg-white/15 rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#F4751F] rounded-full transition-[width] duration-1000 ease-linear"
+                className="h-full bg-primary-500 rounded-full transition-[width] duration-1000 ease-linear"
                 style={{ width: `${(secondsLeft / 30) * 100}%` }}
               />
             </div>

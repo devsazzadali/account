@@ -23,10 +23,10 @@ export function ContentPage({
 }) {
   return (
     <div className="min-h-screen bg-[#F8F9FB] font-sans">
-      <div className="bg-[#0C2254] text-white">
+      <div className="bg-primary-800 text-white">
         <div className="max-w-3xl mx-auto px-4 py-14">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-white/50 mb-4">
-            <ShieldCheck size={13} className="text-[#F4751F]" /> Account Store One
+            <ShieldCheck size={13} className="text-primary-300" /> Account Store One
           </div>
           <h1 className="text-4xl font-display font-bold tracking-tight">{title}</h1>
           <p className="text-white/70 text-sm leading-relaxed mt-4 max-w-2xl">{intro}</p>
@@ -37,7 +37,7 @@ export function ContentPage({
         {sections.map((s) => (
           <section key={s.heading}>
             <h2 className="text-lg font-black text-slate-900 tracking-tight mb-3 flex items-center gap-3">
-              <span className="w-1.5 h-5 rounded-full bg-[#F4751F]" /> {s.heading}
+              <span className="w-1.5 h-5 rounded-full bg-primary-500" /> {s.heading}
             </h2>
             {s.body.map((para, i) => (
               <p key={i} className="text-sm text-slate-600 leading-relaxed mb-3">{para}</p>
@@ -45,11 +45,11 @@ export function ContentPage({
           </section>
         ))}
         <div className="border-t border-slate-200 pt-8 flex flex-wrap gap-x-8 gap-y-2 text-[11px] font-black uppercase tracking-widest text-slate-400">
-          <Link href="/about" className="hover:text-[#0C2254] transition-colors">About</Link>
-          <Link href="/faq" className="hover:text-[#0C2254] transition-colors">FAQ</Link>
-          <Link href="/terms" className="hover:text-[#0C2254] transition-colors">Terms</Link>
-          <Link href="/privacy" className="hover:text-[#0C2254] transition-colors">Privacy</Link>
-          <Link href="/buyer-protection" className="hover:text-[#0C2254] transition-colors">Buyer Protection</Link>
+          <Link href="/about" className="hover:text-primary-700 transition-colors">About</Link>
+          <Link href="/faq" className="hover:text-primary-700 transition-colors">FAQ</Link>
+          <Link href="/terms" className="hover:text-primary-700 transition-colors">Terms</Link>
+          <Link href="/privacy" className="hover:text-primary-700 transition-colors">Privacy</Link>
+          <Link href="/buyer-protection" className="hover:text-primary-700 transition-colors">Buyer Protection</Link>
         </div>
       </div>
     </div>

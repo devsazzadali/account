@@ -202,7 +202,7 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
   if (loading) {
     return (
         <div className="flex flex-col items-center justify-center h-96 text-center">
-            <Loader2 className="animate-spin text-[#0C2254] w-12 h-12 mb-6" />
+            <Loader2 className="animate-spin text-primary-600 w-12 h-12 mb-6" />
             <p className="text-[12px] text-slate-400 font-black uppercase tracking-[0.4em]">Loading your settings…</p>
         </div>
     );
@@ -238,11 +238,11 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-4 px-8 py-5 rounded-[2rem] text-[13px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-2 group ${
                             activeTab === tab.id 
-                            ? "bg-[#0C2254] text-white border-[#0C2254] shadow-2xl shadow-[#0C2254]/25 active:scale-95"
+                            ? "bg-primary-600 text-white border-primary-600 shadow-2xl shadow-primary-600/25 active:scale-95"
                             : "bg-white text-slate-400 border-white hover:border-slate-200 hover:text-slate-600"
                         }`}
                     >
-                        <span className={activeTab === tab.id ? "text-[#F4751F]" : "group-hover:text-slate-900"}>{tab.icon}</span>
+                        <span className={activeTab === tab.id ? "text-primary-100" : "group-hover:text-slate-900"}>{tab.icon}</span>
                         {tab.label}
                     </button>
                 ))}
@@ -265,15 +265,19 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                                 {/* Profile photo */}
                                 <div className="flex flex-col md:flex-row items-center gap-10 mb-16 relative z-10">
                                     <div className="relative group">
-                                        <div className="w-36 h-36 rounded-[3rem] bg-slate-100 border-4 border-white shadow-2xl overflow-hidden relative ring-4 ring-slate-50 transition-all group-hover:ring-[#0C2254]/20">
-                                            <img src={avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} alt="User" className="w-full h-full object-cover" />
+                                        <div className="w-36 h-36 rounded-[3rem] bg-slate-100 border-4 border-white shadow-2xl overflow-hidden relative ring-4 ring-slate-50 transition-all group-hover:ring-primary-100">
+                                            {avatarUrl ? (
+                                                <img src={avatarUrl} alt="User" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full bg-primary-600 flex items-center justify-center"><span className="text-white font-black text-5xl uppercase">{(username || "U").charAt(0)}</span></div>
+                                            )}
                                             <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
                                                 <Camera className="mb-2" size={24} />
                                                 <span className="text-[10px] font-black uppercase tracking-widest">Update</span>
                                             </div>
                                         </div>
                                         <input type="file" onChange={handleAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer z-20" accept="image/*" />
-                                        <div className="absolute -bottom-2 -right-2 w-12 h-12 rounded-[1.2rem] bg-[#0C2254] text-white flex items-center justify-center shadow-xl border-4 border-white group-hover:scale-110 transition-transform">
+                                        <div className="absolute -bottom-2 -right-2 w-12 h-12 rounded-[1.2rem] bg-primary-600 text-white flex items-center justify-center shadow-xl border-4 border-white group-hover:scale-110 transition-transform">
                                             <Sparkles size={18} />
                                         </div>
                                     </div>
@@ -281,7 +285,7 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                                         <h3 className="text-3xl font-black text-slate-900 tracking-tight italic mb-1">{fullName || username}</h3>
                                         {emailVerified ? (
                                           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.3em] flex items-center justify-center md:justify-start gap-3">
-                                             <ShieldCheck size={14} className="text-[#0C2254]" /> Email Verified • {user.email}
+                                             <ShieldCheck size={14} className="text-primary-600" /> Email Verified • {user.email}
                                           </p>
                                         ) : (
                                           <div className="flex flex-col items-center md:items-start gap-2.5">
@@ -309,7 +313,7 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                                             type="text" 
                                             value={fullName}
                                             onChange={e => setFullName(e.target.value)}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-[15px] font-bold text-slate-900 focus:border-[#0C2254] focus:bg-white transition-all shadow-inner"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-[15px] font-bold text-slate-900 focus:border-primary-500 focus:bg-white transition-all shadow-inner"
                                             placeholder="Enter your full legal name"
                                         />
                                     </div>
@@ -319,7 +323,7 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                                             type="text"
                                             value={username}
                                             onChange={e => setUsername(e.target.value)}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-[15px] font-bold text-slate-900 focus:border-[#0C2254] focus:bg-white transition-all shadow-inner"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-[15px] font-bold text-slate-900 focus:border-primary-500 focus:bg-white transition-all shadow-inner"
                                             placeholder="Your username"
                                         />
                                     </div>
@@ -330,7 +334,7 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                                             value={bio}
                                             onChange={e => setBio(e.target.value)}
                                             placeholder="A short bio that appears on your profile…"
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-[2rem] px-8 py-6 text-[15px] font-bold text-slate-900 focus:border-[#0C2254] focus:bg-white transition-all shadow-inner resize-none"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-[2rem] px-8 py-6 text-[15px] font-bold text-slate-900 focus:border-primary-500 focus:bg-white transition-all shadow-inner resize-none"
                                         ></textarea>
                                     </div>
                                 </div>
@@ -339,9 +343,9 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                                     <button
                                         onClick={handleUpdateProfile}
                                         disabled={saving}
-                                        className="px-12 py-6 bg-[#0C2254] text-white font-black text-[14px] uppercase tracking-[0.2em] rounded-[2rem] flex items-center gap-4 hover:opacity-90 transition-all shadow-2xl shadow-[#0C2254]/25 active:scale-95 disabled:opacity-50"
+                                        className="px-12 py-6 bg-primary-600 text-white font-black text-[14px] uppercase tracking-[0.2em] rounded-[2rem] flex items-center gap-4 hover:opacity-90 transition-all shadow-2xl shadow-primary-600/25 active:scale-95 disabled:opacity-50"
                                     >
-                                        {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} className="text-[#F4751F]" />}
+                                        {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} className="text-white" />}
                                         Save Changes
                                     </button>
                                 </div>
@@ -356,30 +360,30 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                                 
                                 <div className="space-y-8 relative z-10" id="security-keys-form">
                                     <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3">
-                                        <Lock size={18} className="text-[#0C2254]" /> Change Password
+                                        <Lock size={18} className="text-primary-600" /> Change Password
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Password</label>
-                                            <input id="current-password-input" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-sm focus:border-[#0C2254] transition-all shadow-inner" placeholder="••••••••" />
+                                            <input id="current-password-input" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-sm focus:border-primary-500 transition-all shadow-inner" placeholder="••••••••" />
                                         </div>
                                         <div>
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">New Password</label>
-                                            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-sm focus:border-[#0C2254] transition-all shadow-inner" placeholder="••••••••" />
+                                            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-sm focus:border-primary-500 transition-all shadow-inner" placeholder="••••••••" />
                                         </div>
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Confirm New Password</label>
-                                            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-sm focus:border-[#0C2254] transition-all shadow-inner" placeholder="••••••••" />
+                                            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-sm focus:border-primary-500 transition-all shadow-inner" placeholder="••••••••" />
                                         </div>
                                     </div>
-                                    <button onClick={handleChangePassword} disabled={saving || !newPassword} className="px-10 py-5 bg-[#0C2254] text-white font-black text-[12px] uppercase tracking-widest rounded-[1.5rem] hover:opacity-90 transition-all flex items-center gap-3 shadow-xl">
-                                        Update Password <Key size={16} className="text-[#F4751F]" />
+                                    <button onClick={handleChangePassword} disabled={saving || !newPassword} className="px-10 py-5 bg-primary-600 text-white font-black text-[12px] uppercase tracking-widest rounded-[1.5rem] hover:opacity-90 transition-all flex items-center gap-3 shadow-xl">
+                                        Update Password <Key size={16} className="text-white" />
                                     </button>
                                 </div>
 
-                                <div className="p-8 bg-slate-900 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-8 border border-white/5 relative z-10">
+                                <div className="p-8 bg-primary-700 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-8 border border-white/5 relative z-10">
                                     <div className="flex items-center gap-6">
-                                        <div className="w-16 h-16 bg-[#F4751F]/10 rounded-[1.5rem] flex items-center justify-center text-[#F4751F] border border-[#F4751F]/20">
+                                        <div className="w-16 h-16 bg-white/10 rounded-[1.5rem] flex items-center justify-center text-white border border-white/20">
                                             <ShieldCheck size={32} />
                                         </div>
                                         <div>
@@ -387,7 +391,7 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                                             <p className="text-[11px] text-white/50 font-bold uppercase tracking-widest mt-1">Keep your account safe with a strong password</p>
                                         </div>
                                     </div>
-                                    <button onClick={handleManageCore} className="px-8 py-4 bg-white text-slate-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-orange-50 transition-all shadow-lg">Change Password</button>
+                                    <button onClick={handleManageCore} className="px-8 py-4 bg-white text-slate-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-primary-50 transition-all shadow-lg">Change Password</button>
                                 </div>
                             </div>
 
@@ -416,7 +420,7 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                             </div>
                             <h3 className="text-2xl font-black text-slate-900 mb-3">Billing &amp; Payments</h3>
                             <p className="text-slate-500 max-w-sm mx-auto mb-10 font-medium leading-relaxed">Card payments are processed by Stripe — your card data never touches our servers. Your store wallet balance, top-ups and ledger live in the Wallet panel.</p>
-                            <button onClick={handleOpenWallet} className="px-10 py-5 bg-[#0C2254] text-white rounded-[2rem] font-black text-[13px] uppercase tracking-widest hover:opacity-90 transition-all shadow-2xl">Open My Wallet</button>
+                            <button onClick={handleOpenWallet} className="px-10 py-5 bg-primary-600 text-white rounded-[2rem] font-black text-[13px] uppercase tracking-widest hover:opacity-90 transition-all shadow-2xl">Open My Wallet</button>
                         </motion.div>
                     )}
 

@@ -391,7 +391,7 @@ function ImageField({
     <Field label={label} source={source}>
       <div className="flex gap-3">
         <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="https://… or upload →" className={`${inputCls} flex-1`} />
-        <label className="px-5 bg-slate-900 text-white rounded-2xl flex items-center justify-center cursor-pointer hover:bg-slate-800 transition-all shrink-0">
+        <label className="px-5 bg-primary-600 text-white rounded-2xl flex items-center justify-center cursor-pointer hover:bg-primary-700 transition-all shrink-0">
           <Upload size={16} />
           <input type="file" accept="image/*" className="hidden" onChange={(e) => onUpload(e.target.files?.[0])} />
         </label>
@@ -414,7 +414,7 @@ function SaveBar({ saving, saved, onSave }: { saving: boolean; saved: boolean; o
       <button
         onClick={onSave}
         disabled={saving}
-        className="px-8 py-3.5 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-50 flex items-center gap-2"
+        className="px-8 py-3.5 bg-primary-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all disabled:opacity-50 flex items-center gap-2"
       >
         {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <Check size={14} className="text-emerald-400" /> : <Save size={14} />}
         {saved ? "Saved" : "Save Storefront"}

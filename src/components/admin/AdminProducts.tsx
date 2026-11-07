@@ -130,7 +130,6 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
   const [sellingItemQuery, setSellingItemQuery] = useState("");
   const [sellingCategory, setSellingCategory] = useState("All");
   const [dbCategories, setDbCategories] = useState<any[]>([]);
-  const [showGamePopover, setShowGamePopover] = useState(false);
   // Listings hub (P2): stock-health tabs, search, bulk selection, CSV.
   // Fix Round 6 (video-gap #3): + the "Expire soon" lifecycle tab —
   // active listings whose expiry is in the past or within 7 days.
@@ -411,16 +410,16 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                 <AlertCircle size={14} className="text-white" />
             </div>
             <p className="text-[14px] text-[#856404] font-medium leading-relaxed">
-                Sellers are strictly prohibited from listing or offering any product or services which may violate local laws and/or regulations, more details please refer to: <span className="text-blue-500 underline cursor-pointer">Prohibition of illegal activities</span>.
+                Listing or offering any product or service that violates local laws and/or regulations is strictly prohibited.
             </p>
         </div>
 
         {/* Page Title */}
         <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
             {activeTab === 'active_offers' ? (
-                <><Package className="text-[#E62E04]" size={24} /> Active Listings Hub</>
+                <><Package className="text-primary-600" size={24} /> Active Listings Hub</>
             ) : (
-                <><PlusCircle className="text-[#E62E04]" size={24} /> Create New Offering</>
+                <><PlusCircle className="text-primary-600" size={24} /> Create New Offering</>
             )}
         </h2>
 
@@ -443,13 +442,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                             <div className="flex border border-slate-300 rounded overflow-hidden focus-within:border-slate-400 transition-colors">
                                 <input 
                                     value={sellingItemQuery}
-                                    onChange={(e) => {
-                                        setSellingItemQuery(e.target.value);
-                                        if (e.target.value.toLowerCase().includes("facebook")) setShowGamePopover(true);
-                                        else setShowGamePopover(false);
-                                    }}
-                                    onFocus={() => { if(sellingItemQuery.toLowerCase().includes("facebook")) setShowGamePopover(true) }}
-                                    onBlur={() => setTimeout(() => setShowGamePopover(false), 200)}
+                                    onChange={(e) => setSellingItemQuery(e.target.value)}
                                     placeholder="What do you want to sell?" 
                                     className="flex-1 min-w-0 px-4 py-3 text-[15px] text-slate-900 outline-none"
                                 />
@@ -463,45 +456,6 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                                     {dbCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                                 </select>
                             </div>
-
-                            {/* Game Selection Popover */}
-                            <AnimatePresence>
-                                {showGamePopover && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, y: 5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 5 }}
-                                        className="absolute top-full left-0 mt-1 w-full max-w-[500px] bg-white rounded shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-200 z-50 overflow-hidden"
-                                    >
-                                        <div className="p-5 border-b border-slate-100">
-                                            <h5 className="font-bold text-slate-900 mb-4 text-[16px]">Facebook</h5>
-                                            <div className="flex flex-wrap gap-2">
-                                                <button className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-100 rounded-full hover:bg-slate-100 transition-colors">
-                                                    <span>🛍️</span> <span className="text-[14px] text-slate-800">Top up</span>
-                                                </button>
-                                                <button className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-100 rounded-full hover:bg-slate-100 transition-colors">
-                                                    <span>⚡</span> <span className="text-[14px] text-slate-800">Platform Engagement</span>
-                                                </button>
-                                                <button className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-100 rounded-full hover:bg-slate-100 transition-colors shadow-sm ring-1 ring-slate-200">
-                                                    <span>🔮</span> <span className="text-[14px] text-slate-800">Accounts</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="p-3 bg-[#FFF5F5] text-center">
-                                            <p className="text-[#E62E04] text-[14px]">
-                                                Unable to find desired results? <span className="underline cursor-pointer">click feedback</span> to Z2U team.
-                                            </p>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                        <div className="flex items-center gap-4 py-3">
-                            <div className="flex flex-col">
-                                <span className="text-[13px] text-slate-900">Can't find it?</span>
-                                <span className="text-[14px] text-slate-900">name</span>
-                            </div>
-                            <button className="text-[14px] text-slate-900 hover:underline">Request for new</button>
                         </div>
                     </div>
                 </div>
@@ -554,7 +508,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                                 <textarea value={newProduct.description} onChange={e=>setNewProduct({...newProduct, description:e.target.value})} rows={3} className="w-full bg-white border border-slate-300 rounded px-4 py-2.5 text-sm font-medium resize-none" />
                             </FormItem>
                             <div className="flex items-center gap-3 bg-white border border-slate-200 rounded px-4 py-3">
-                                <input type="checkbox" id="np-derived" checked={newProduct.use_inventory_stock} onChange={e=>setNewProduct({...newProduct, use_inventory_stock:e.target.checked})} className="w-4 h-4 rounded border-slate-300 text-[#E62E04] focus:ring-[#E62E04]" />
+                                <input type="checkbox" id="np-derived" checked={newProduct.use_inventory_stock} onChange={e=>setNewProduct({...newProduct, use_inventory_stock:e.target.checked})} className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
                                 <label htmlFor="np-derived" className="text-sm font-bold text-slate-800">Stock derived from delivery inventory</label>
                                 <span className="text-[12px] text-slate-400 font-medium">— the sellable count always equals your unused inventory rows; no manual stock number.</span>
                             </div>
@@ -574,7 +528,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                             />
                             <div className="flex justify-end gap-4">
                                 <button onClick={()=>setShowAddForm(false)} className="px-6 py-2 text-[14px] font-bold text-slate-500 hover:text-slate-900">Cancel</button>
-                                <button onClick={handleAddProduct} className="bg-[#E62E04] text-white px-8 py-2 rounded font-bold text-[14px] shadow-lg shadow-red-500/20 hover:bg-[#c52804] transition-colors">Commit Asset</button>
+                                <button onClick={handleAddProduct} className="bg-primary-600 text-white px-8 py-2 rounded font-bold text-[14px] shadow-lg shadow-primary-600/20 hover:bg-primary-700 transition-colors">Commit Asset</button>
                             </div>
                         </motion.div>
                     )}
@@ -583,7 +537,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                 {!showAddForm && (
                     <button
                         onClick={() => setShowAddForm(true)}
-                        className="bg-slate-900 text-white px-8 py-3 rounded-lg font-bold text-[14px] flex items-center gap-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20"
+                        className="bg-primary-600 text-white px-8 py-3 rounded-lg font-bold text-[14px] flex items-center gap-2 hover:bg-primary-700 transition-all shadow-xl shadow-slate-900/20"
                     >
                         <Plus size={18} /> Initialize New Listing
                     </button>
@@ -600,7 +554,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                 <h3 className="text-xl font-bold text-slate-900">Active Listings Hub</h3>
                 <div className="flex items-center gap-3 flex-wrap">
                     <div className="relative">
-                        <input value={hubQuery} onChange={(e) => setHubQuery(e.target.value)} placeholder="Search listings..." className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:border-red-400 outline-none" />
+                        <input value={hubQuery} onChange={(e) => setHubQuery(e.target.value)} placeholder="Search listings..." className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:border-primary-500 outline-none" />
                         <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
                     </div>
                     <button onClick={() => downloadCsv("products")} disabled={csvBusy} className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2">
@@ -628,7 +582,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                   ["expiring", `Expire soon (${products.filter(isExpiringSoon).length})`],
                   ["inactive", `Inactive (${products.filter(p => p.is_active === false).length})`],
                 ] as const).map(([id, label]) => (
-                  <button key={id} onClick={() => setHubTab(id)} className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${hubTab === id ? "bg-slate-900 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                  <button key={id} onClick={() => setHubTab(id)} className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${hubTab === id ? "bg-primary-600 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
                     {label}
                   </button>
                 ))}
@@ -649,7 +603,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                     <button onClick={() => bulkSetActive(true)} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Activate</button>
                     <button onClick={() => bulkSetActive(false)} className="px-3 py-1.5 bg-slate-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Deactivate</button>
                     <button onClick={bulkExtend} className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Extend</button>
-                    <button onClick={() => setBatchOpen(!batchOpen)} className="px-3 py-1.5 bg-[#0C2254] text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Batch Update</button>
+                    <button onClick={() => setBatchOpen(!batchOpen)} className="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Batch Update</button>
                     <button onClick={bulkDelete} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Delete</button>
                   </span>
                 )}
@@ -661,22 +615,22 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Price</label>
                   <div className="flex gap-2">
-                    <select value={batchPriceMode} onChange={(e) => setBatchPriceMode(e.target.value as "set" | "pct")} className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 outline-none focus:border-red-400">
+                    <select value={batchPriceMode} onChange={(e) => setBatchPriceMode(e.target.value as "set" | "pct")} className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 outline-none focus:border-primary-500">
                       <option value="set">Set to $</option>
                       <option value="pct">Adjust %</option>
                     </select>
-                    <input type="number" step="any" value={batchPriceValue} onChange={(e) => setBatchPriceValue(e.target.value)} placeholder={batchPriceMode === "set" ? "9.99" : "-10 or 15"} className="h-10 w-28 px-3 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 outline-none focus:border-red-400" />
+                    <input type="number" step="any" value={batchPriceValue} onChange={(e) => setBatchPriceValue(e.target.value)} placeholder={batchPriceMode === "set" ? "9.99" : "-10 or 15"} className="h-10 w-28 px-3 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 outline-none focus:border-primary-500" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Status</label>
-                  <select value={batchStatus} onChange={(e) => setBatchStatus(e.target.value as "keep" | "active" | "inactive")} className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 outline-none focus:border-red-400">
+                  <select value={batchStatus} onChange={(e) => setBatchStatus(e.target.value as "keep" | "active" | "inactive")} className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 outline-none focus:border-primary-500">
                     <option value="keep">No change</option>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
-                <button onClick={applyBatchUpdate} className="h-10 px-4 bg-[#E62E04] text-white rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-red-700 transition-all">Apply to {selectedIds.size}</button>
+                <button onClick={applyBatchUpdate} className="h-10 px-4 bg-primary-600 text-white rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all">Apply to {selectedIds.size}</button>
                 <button onClick={() => setBatchOpen(false)} className="h-10 px-3 text-slate-400 text-[11px] font-black uppercase tracking-widest hover:text-slate-600">Close</button>
                 <p className="w-full text-[11px] font-medium text-slate-400">Applies to the {selectedIds.size} selected listing(s). Leave the price empty to change status only; percentage adjusts each listing's own current price.</p>
               </div>
@@ -685,7 +639,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {loading ? (
                     <div className="col-span-full py-24 text-center">
-                        <Loader2 className="animate-spin mx-auto text-[#E62E04] mb-4" size={40} />
+                        <Loader2 className="animate-spin mx-auto text-primary-600 mb-4" size={40} />
                         <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Synchronizing with Registry...</p>
                     </div>
                 ) : hubProducts.length === 0 ? (
@@ -733,34 +687,34 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                         <button onClick={() => setEditing(null)} className="text-slate-400 hover:text-slate-900"><XCircle size={20} /></button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormItem label="Title"><input value={editing.title || ""} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                        <FormItem label="Title"><input value={editing.title || ""} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
                         <FormItem label="Category">
-                            <select value={editing.category || ""} onChange={(e) => setEditing({ ...editing, category: e.target.value, specs: {} })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400">
+                            <select value={editing.category || ""} onChange={(e) => setEditing({ ...editing, category: e.target.value, specs: {} })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500">
                                 {editing.category && !dbCategories.some((c) => c.name === editing.category) && (
                                     <option value={editing.category}>{editing.category} (legacy)</option>
                                 )}
                                 {dbCategories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
                             </select>
                         </FormItem>
-                        <FormItem label="Price (USD)"><input type="number" step="0.01" value={editing.price ?? ""} onChange={(e) => setEditing({ ...editing, price: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                        <FormItem label="Price (USD)"><input type="number" step="0.01" value={editing.price ?? ""} onChange={(e) => setEditing({ ...editing, price: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
                         <FormItem label={editing.use_inventory_stock ? "Stock (derived from inventory)" : "Stock (manual count)"}>
-                            <input type="number" value={editing.stock ?? 0} disabled={!!editing.use_inventory_stock} onChange={(e) => setEditing({ ...editing, stock: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400 disabled:bg-slate-50 disabled:text-slate-400" />
+                            <input type="number" value={editing.stock ?? 0} disabled={!!editing.use_inventory_stock} onChange={(e) => setEditing({ ...editing, stock: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 disabled:bg-slate-50 disabled:text-slate-400" />
                             {editing.use_inventory_stock && <p className="text-[11px] text-slate-400 font-medium mt-1">Single source of truth: unused inventory rows minus unpaid reservations. Manage stock in the inventory list below.</p>}
                         </FormItem>
-                        <FormItem label="Badge"><input value={editing.badge || ""} onChange={(e) => setEditing({ ...editing, badge: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
-                        <FormItem label="Image URL"><input value={editing.image || ""} onChange={(e) => setEditing({ ...editing, image: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
-                        <FormItem label="Min quantity per order"><input type="number" min={1} value={editing.min_quantity ?? 1} onChange={(e) => setEditing({ ...editing, min_quantity: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
-                        <FormItem label="Delivery ETA (hours, blank = none)"><input type="number" min={1} value={editing.delivery_eta_hours ?? ""} onChange={(e) => setEditing({ ...editing, delivery_eta_hours: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                        <FormItem label="Badge"><input value={editing.badge || ""} onChange={(e) => setEditing({ ...editing, badge: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
+                        <FormItem label="Image URL"><input value={editing.image || ""} onChange={(e) => setEditing({ ...editing, image: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
+                        <FormItem label="Min quantity per order"><input type="number" min={1} value={editing.min_quantity ?? 1} onChange={(e) => setEditing({ ...editing, min_quantity: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
+                        <FormItem label="Delivery ETA (hours, blank = none)"><input type="number" min={1} value={editing.delivery_eta_hours ?? ""} onChange={(e) => setEditing({ ...editing, delivery_eta_hours: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
                         <FormItem label="Fulfilment Type">
-                            <select value={editing.fulfilment_type || "manual"} onChange={(e) => setEditing({ ...editing, fulfilment_type: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400">
+                            <select value={editing.fulfilment_type || "manual"} onChange={(e) => setEditing({ ...editing, fulfilment_type: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500">
                                 <option value="instant">Instant — auto-deliver from inventory</option>
                                 <option value="manual">Manual — type credentials per order</option>
                                 <option value="service">Service — buyer intake form + proof</option>
                             </select>
                         </FormItem>
-                        <FormItem label="Warranty (days, blank = none)"><input type="number" min={1} value={editing.warranty_days ?? ""} onChange={(e) => setEditing({ ...editing, warranty_days: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" /></FormItem>
+                        <FormItem label="Warranty (days, blank = none)"><input type="number" min={1} value={editing.warranty_days ?? ""} onChange={(e) => setEditing({ ...editing, warranty_days: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
                         <FormItem label="Listing duration (days, blank = never expires)">
-                            <input type="number" min={1} value={editing.listing_duration_days ?? ""} onChange={(e) => setEditing({ ...editing, listing_duration_days: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
+                            <input type="number" min={1} value={editing.listing_duration_days ?? ""} onChange={(e) => setEditing({ ...editing, listing_duration_days: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" />
                             {editing.listing_expires_at && (
                               <p className="text-[11px] text-slate-400 font-medium mt-1">
                                 {new Date(editing.listing_expires_at).getTime() <= Date.now()
@@ -772,15 +726,15 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                     </div>
                     <div className="flex flex-wrap gap-6">
                         <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={editing.is_active !== false} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-[#E62E04] focus:ring-[#E62E04]" />
+                            <input type="checkbox" checked={editing.is_active !== false} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
                             <span className="text-sm font-bold text-slate-800">Active on the storefront</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={!!editing.use_inventory_stock} onChange={(e) => setEditing({ ...editing, use_inventory_stock: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-[#E62E04] focus:ring-[#E62E04]" />
+                            <input type="checkbox" checked={!!editing.use_inventory_stock} onChange={(e) => setEditing({ ...editing, use_inventory_stock: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
                             <span className="text-sm font-bold text-slate-800">Stock derived from inventory</span>
                         </label>
                     </div>
-                    <FormItem label="Description"><textarea value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} rows={4} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-red-400 resize-none" /></FormItem>
+                    <FormItem label="Description"><textarea value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} rows={4} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary-500 resize-none" /></FormItem>
                     <SpecsEditor
                         schema={(dbCategories.find(c => c.name === editing.category)?.attribute_schema) || []}
                         value={editing.specs || {}}
@@ -791,7 +745,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                         onChange={(variants) => setEditing({ ...editing, variants })}
                     />
                     <div className="flex gap-3">
-                        <button onClick={handleUpdateProduct} disabled={loading} className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black text-[12px] uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-50">Save Changes</button>
+                        <button onClick={handleUpdateProduct} disabled={loading} className="px-8 py-3 bg-primary-600 text-white rounded-xl font-black text-[12px] uppercase tracking-widest hover:bg-primary-700 transition-all disabled:opacity-50">Save Changes</button>
                         <button onClick={() => handleDeleteProduct(editing)} className="px-8 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-black text-[12px] uppercase tracking-widest hover:bg-red-50 transition-all">Delete Product</button>
                     </div>
                     <InventoryManager productId={editing.id} derived={!!editing.use_inventory_stock} manualStock={editing.stock} />
@@ -837,14 +791,14 @@ function ProductCard({ product, onEdit, onDelete, selected, onToggleSelect, onSa
     }
 
     return (
-        <div className={`bg-white border rounded-xl overflow-hidden shadow-sm group transition-all duration-300 ${selected ? "border-[#E62E04] ring-2 ring-red-100" : "border-slate-200 hover:border-[#E62E04]"} ${inactive ? "opacity-70" : ""}`}>
+        <div className={`bg-white border rounded-xl overflow-hidden shadow-sm group transition-all duration-300 ${selected ? "border-primary-500 ring-2 ring-primary-100" : "border-slate-200 hover:border-primary-300"} ${inactive ? "opacity-70" : ""}`}>
             <div className="h-48 overflow-hidden relative">
                 <img src={product.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
                 <label className="absolute top-3 left-3 bg-white/95 rounded-lg p-1.5 shadow border border-slate-100 cursor-pointer" title="Select for bulk actions">
                     <input type="checkbox" checked={!!selected} onChange={onToggleSelect} className="w-4 h-4 block" />
                 </label>
                 <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={onEdit} className="bg-white p-2 rounded-lg text-slate-600 hover:text-[#E62E04] shadow-xl border border-slate-100"><Edit size={16} /></button>
+                    <button onClick={onEdit} className="bg-white p-2 rounded-lg text-slate-600 hover:text-primary-600 shadow-xl border border-slate-100"><Edit size={16} /></button>
                     <button onClick={onDelete} className="bg-white p-2 rounded-lg text-slate-600 hover:text-red-600 shadow-xl border border-slate-100"><Trash2 size={16} /></button>
                     {/* Fix Round 6 (video-gap #9): display-order controls */}
                     <button onClick={onMoveUp} title="Move up (storefront order)" className="bg-white p-2 rounded-lg text-slate-600 hover:text-slate-900 shadow-xl border border-slate-100"><ChevronUp size={16} /></button>
@@ -861,9 +815,9 @@ function ProductCard({ product, onEdit, onDelete, selected, onToggleSelect, onSa
                         <span className="px-3 py-1 bg-slate-900/90 rounded-lg text-[12px] font-black uppercase tracking-widest text-white">Inactive</span>
                     )}
                     {product.use_inventory_stock && (
-                        <span className="px-3 py-1 bg-[#0C2254]/90 rounded-lg text-[12px] font-black uppercase tracking-widest text-white">Derived stock</span>
+                        <span className="px-3 py-1 bg-primary-600 rounded-lg text-[12px] font-black uppercase tracking-widest text-white">Derived stock</span>
                     )}
-                    <span className={`px-3 py-1 rounded-lg text-[12px] font-black uppercase tracking-widest text-white ${product.fulfilment_type === "service" ? "bg-[#F4751F]/90" : product.fulfilment_type === "instant" ? "bg-emerald-600/90" : "bg-slate-500/90"}`}>
+                    <span className={`px-3 py-1 rounded-lg text-[12px] font-black uppercase tracking-widest text-white ${product.fulfilment_type === "service" ? "bg-primary-600/90" : product.fulfilment_type === "instant" ? "bg-emerald-600/90" : "bg-slate-500/90"}`}>
                         {product.fulfilment_type === "service" ? "Service" : product.fulfilment_type === "instant" ? "Instant" : "Manual"}
                     </span>
                     {product.warranty_days ? (
@@ -886,13 +840,13 @@ function ProductCard({ product, onEdit, onDelete, selected, onToggleSelect, onSa
                     <div className="flex-1">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pricing (USD)</p>
                         {priceDraft === null ? (
-                            <button onClick={() => setPriceDraft(moneyInputValue(product.price))} className="text-xl font-black text-[#E62E04] tracking-tight hover:underline" title="Click to edit price">
+                            <button onClick={() => setPriceDraft(moneyInputValue(product.price))} className="text-xl font-black text-primary-700 tracking-tight hover:underline" title="Click to edit price">
                                 {Number(product.price).toFixed(2)}
                             </button>
                         ) : (
                             <span className="flex items-center gap-1.5 mt-0.5">
-                                <input type="number" step="0.01" autoFocus value={priceDraft} onChange={(e) => setPriceDraft(e.target.value)} className="w-24 border border-slate-300 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:border-red-400" />
-                                <button onClick={savePrice} disabled={savingPrice} className="px-2 py-1 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase">Save</button>
+                                <input type="number" step="0.01" autoFocus value={priceDraft} onChange={(e) => setPriceDraft(e.target.value)} className="w-24 border border-slate-300 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:border-primary-500" />
+                                <button onClick={savePrice} disabled={savingPrice} className="px-2 py-1 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase">Save</button>
                                 <button onClick={() => setPriceDraft(null)} className="px-2 py-1 text-slate-400 text-[10px] font-black uppercase">Cancel</button>
                             </span>
                         )}
@@ -902,7 +856,7 @@ function ProductCard({ product, onEdit, onDelete, selected, onToggleSelect, onSa
                         <p className={`text-sm font-black ${(product.stock || 0) <= 3 ? "text-red-500" : "text-slate-900"}`}>{product.stock || 0} PCS</p>
                     </div>
                 </div>
-                <button onClick={onEdit} className="w-full py-2.5 bg-slate-50 border border-slate-100 text-slate-600 rounded-lg text-[13px] font-black uppercase tracking-[0.1em] group-hover:bg-slate-900 group-hover:text-white group-hover:border-slate-900 transition-all">
+                <button onClick={onEdit} className="w-full py-2.5 bg-slate-50 border border-slate-100 text-slate-600 rounded-lg text-[13px] font-black uppercase tracking-[0.1em] group-hover:bg-primary-600 group-hover:text-white group-hover:border-primary-600 transition-all">
                     Edit · Stock · Credentials
                 </button>
             </div>
@@ -953,7 +907,7 @@ function VariantsEditor({ value, onChange }: { value: { label: string; priceDelt
     <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3">
       <div className="flex items-center justify-between">
         <h5 className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Variants (Custom Programs)</h5>
-        <button type="button" onClick={() => onChange([...value, { label: "", priceDelta: "0", stock: "" }])} className="text-[11px] font-black text-[#E62E04] uppercase tracking-widest hover:underline flex items-center gap-1">
+        <button type="button" onClick={() => onChange([...value, { label: "", priceDelta: "0", stock: "" }])} className="text-[11px] font-black text-primary-700 uppercase tracking-widest hover:underline flex items-center gap-1">
           <Plus size={12} /> Add variant
         </button>
       </div>
@@ -1050,13 +1004,13 @@ function InventoryManager({ productId, derived, manualStock }: { productId: stri
           : `Stock mode: MANUAL — the sellable stock is the Stock counter above (${manualStock ?? 0}); the rows below are pre-loaded credentials for auto-delivery and do not change that counter.`}
       </p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <input value={login} onChange={(e) => setLogin(e.target.value)} placeholder="Account login / email" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
-        <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Account password" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
-        <input value={info} onChange={(e) => setInfo(e.target.value)} placeholder="Notes (optional)" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
-        <input value={twoFactor} onChange={(e) => setTwoFactor(e.target.value)} placeholder="2FA secret (optional, base32)" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
-        <input value={recovery} onChange={(e) => setRecovery(e.target.value)} placeholder="Recovery email (optional)" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-red-400" />
+        <input value={login} onChange={(e) => setLogin(e.target.value)} placeholder="Account login / email" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" />
+        <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Account password" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" />
+        <input value={info} onChange={(e) => setInfo(e.target.value)} placeholder="Notes (optional)" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" />
+        <input value={twoFactor} onChange={(e) => setTwoFactor(e.target.value)} placeholder="2FA secret (optional, base32)" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" />
+        <input value={recovery} onChange={(e) => setRecovery(e.target.value)} placeholder="Recovery email (optional)" className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" />
       </div>
-      <button onClick={addItem} disabled={busy} className="px-6 py-3 bg-[#0C2254] text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2">
+      <button onClick={addItem} disabled={busy} className="px-6 py-3 bg-primary-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2">
         <Plus size={14} /> Add Credential to Inventory
       </button>
       <div className="divide-y divide-slate-50 border border-slate-100 rounded-2xl overflow-hidden">
