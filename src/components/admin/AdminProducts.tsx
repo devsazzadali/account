@@ -399,11 +399,11 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
   return (
     <div className="min-h-full bg-[#F6F6F7]">
       {/* Header Breadcrumb */}
-      <div className="px-8 py-4 flex items-center gap-2 text-slate-500 text-sm font-medium">
+      <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-2 text-slate-500 text-sm font-medium">
           <History size={16} /> Home / Create Listing
       </div>
 
-      <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+      <div className="p-4 sm:p-6 space-y-6 max-w-[1400px] mx-auto">
         {/* Warning Banner */}
         <div className="bg-[#FFF9E6] border border-[#FDE6A6] rounded-lg p-4 flex items-start gap-4">
             <div className="bg-[#FF9800] rounded-full p-1 mt-0.5">
@@ -426,7 +426,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
         {activeTab !== 'active_offers' && (
             <>
                 {/* Section 1: Single Release/General Info */}
-                <div className="bg-white border border-slate-200 rounded-xl overflow-visible shadow-sm">
+                <div className="panel overflow-visible">
             <div className="p-6 border-b border-slate-100 flex items-center gap-3">
                 <SearchCode size={24} className="text-slate-400" />
                 <h3 className="text-xl font-bold text-slate-900">Single Release/General Info</h3>
@@ -467,7 +467,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="bg-slate-50 p-8 rounded-xl border border-slate-200 space-y-6"
+                            className="bg-slate-50 p-5 sm:p-8 rounded-[1.25rem] border border-slate-200 space-y-6"
                         >
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <FormItem label="Product Title">
@@ -551,23 +551,23 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
         {(activeTab === 'active_offers' || activeTab === 'products') && (
             <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
-                <h3 className="text-xl font-bold text-slate-900">Active Listings Hub</h3>
+                <h3 className="text-xl font-bold text-slate-900">All Active Offers</h3>
                 <div className="flex items-center gap-3 flex-wrap">
                     <div className="relative">
-                        <input value={hubQuery} onChange={(e) => setHubQuery(e.target.value)} placeholder="Search listings..." className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:border-primary-500 outline-none" />
+                        <input value={hubQuery} onChange={(e) => setHubQuery(e.target.value)} placeholder="Search listings..." className="field pl-10 pr-4 py-2 rounded-lg text-sm" />
                         <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
                     </div>
-                    <button onClick={() => downloadCsv("products")} disabled={csvBusy} className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2">
+                    <button onClick={() => downloadCsv("products")} disabled={csvBusy} className="btn-secondary px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider disabled:opacity-50 flex items-center gap-2">
                         <Download size={13} /> Offers CSV
                     </button>
-                    <button onClick={() => downloadCsv("inventory")} disabled={csvBusy} className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2">
+                    <button onClick={() => downloadCsv("inventory")} disabled={csvBusy} className="btn-secondary px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider disabled:opacity-50 flex items-center gap-2">
                         <Download size={13} /> Inventory CSV
                     </button>
-                    <label className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 cursor-pointer flex items-center gap-2">
+                    <label className="btn-secondary px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider cursor-pointer flex items-center gap-2">
                         <Upload size={13} /> Import offers
                         <input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { importCsv("products", e.target.files?.[0]); e.target.value = ""; }} />
                     </label>
-                    <label className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 cursor-pointer flex items-center gap-2">
+                    <label className="btn-secondary px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider cursor-pointer flex items-center gap-2">
                         <Upload size={13} /> Import inventory
                         <input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { importCsv("inventory", e.target.files?.[0]); e.target.value = ""; }} />
                     </label>
@@ -582,7 +582,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                   ["expiring", `Expire soon (${products.filter(isExpiringSoon).length})`],
                   ["inactive", `Inactive (${products.filter(p => p.is_active === false).length})`],
                 ] as const).map(([id, label]) => (
-                  <button key={id} onClick={() => setHubTab(id)} className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${hubTab === id ? "bg-primary-600 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                  <button key={id} onClick={() => setHubTab(id)} className={`px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all ${hubTab === id ? "bg-primary-600 text-white shadow-md shadow-primary-600/25" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
                     {label}
                   </button>
                 ))}
@@ -593,44 +593,44 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                     const allSelected = visible.length > 0 && visible.every((id: string) => selectedIds.has(id));
                     setSelectedIds(allSelected ? new Set() : new Set(visible));
                   }}
-                  className="px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all"
+                  className="px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all"
                 >
                   {hubProducts.length > 0 && hubProducts.every((p: any) => selectedIds.has(p.id)) ? "Clear selection" : `Select all (${hubProducts.length})`}
                 </button>
                 {selectedIds.size > 0 && (
                   <span className="flex items-center gap-2 ml-2">
                     <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{selectedIds.size} selected</span>
-                    <button onClick={() => bulkSetActive(true)} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Activate</button>
-                    <button onClick={() => bulkSetActive(false)} className="px-3 py-1.5 bg-slate-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Deactivate</button>
-                    <button onClick={bulkExtend} className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Extend</button>
-                    <button onClick={() => setBatchOpen(!batchOpen)} className="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Batch Update</button>
-                    <button onClick={bulkDelete} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Delete</button>
+                    <button onClick={() => bulkSetActive(true)} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider">Activate</button>
+                    <button onClick={() => bulkSetActive(false)} className="px-3 py-1.5 bg-slate-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider">Deactivate</button>
+                    <button onClick={bulkExtend} className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider">Extend</button>
+                    <button onClick={() => setBatchOpen(!batchOpen)} className="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider">Batch Update</button>
+                    <button onClick={bulkDelete} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider">Delete</button>
                   </span>
                 )}
             </div>
 
             {/* Batch update panel (video-gap #4): bulk price and/or status */}
             {selectedIds.size > 0 && batchOpen && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-end gap-4">
+              <div className="panel p-4 flex flex-wrap items-end gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Price</label>
                   <div className="flex gap-2">
-                    <select value={batchPriceMode} onChange={(e) => setBatchPriceMode(e.target.value as "set" | "pct")} className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 outline-none focus:border-primary-500">
+                    <select value={batchPriceMode} onChange={(e) => setBatchPriceMode(e.target.value as "set" | "pct")} className="field h-10 px-3 rounded-lg text-[12px] font-semibold">
                       <option value="set">Set to $</option>
                       <option value="pct">Adjust %</option>
                     </select>
-                    <input type="number" step="any" value={batchPriceValue} onChange={(e) => setBatchPriceValue(e.target.value)} placeholder={batchPriceMode === "set" ? "9.99" : "-10 or 15"} className="h-10 w-28 px-3 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 outline-none focus:border-primary-500" />
+                    <input type="number" step="any" value={batchPriceValue} onChange={(e) => setBatchPriceValue(e.target.value)} placeholder={batchPriceMode === "set" ? "9.99" : "-10 or 15"} className="field h-10 w-28 px-3 rounded-lg text-[12px] font-semibold" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Status</label>
-                  <select value={batchStatus} onChange={(e) => setBatchStatus(e.target.value as "keep" | "active" | "inactive")} className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 outline-none focus:border-primary-500">
+                  <select value={batchStatus} onChange={(e) => setBatchStatus(e.target.value as "keep" | "active" | "inactive")} className="field h-10 px-3 rounded-lg text-[12px] font-semibold">
                     <option value="keep">No change</option>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
-                <button onClick={applyBatchUpdate} className="h-10 px-4 bg-primary-600 text-white rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all">Apply to {selectedIds.size}</button>
+                <button onClick={applyBatchUpdate} className="btn-primary h-10 px-4 rounded-lg text-[11px] font-bold uppercase tracking-wider">Apply to {selectedIds.size}</button>
                 <button onClick={() => setBatchOpen(false)} className="h-10 px-3 text-slate-400 text-[11px] font-black uppercase tracking-widest hover:text-slate-600">Close</button>
                 <p className="w-full text-[11px] font-medium text-slate-400">Applies to the {selectedIds.size} selected listing(s). Leave the price empty to change status only; percentage adjusts each listing's own current price.</p>
               </div>
@@ -640,12 +640,12 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                 {loading ? (
                     <div className="col-span-full py-24 text-center">
                         <Loader2 className="animate-spin mx-auto text-primary-600 mb-4" size={40} />
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Synchronizing with Registry...</p>
+                        <p className="text-slate-500 font-medium text-sm">Loading listings…</p>
                     </div>
                 ) : hubProducts.length === 0 ? (
-                    <div className="col-span-full py-32 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+                    <div className="col-span-full py-32 text-center bg-white rounded-[1.5rem] border border-dashed border-slate-300">
                         <Package className="mx-auto text-slate-200 mb-4" size={64} />
-                        <h4 className="text-xl font-black text-slate-900 uppercase italic">No Listings Here</h4>
+                        <h4 className="text-xl font-bold text-slate-900 tracking-tight">No Listings Here</h4>
                         <p className="text-slate-400 mt-2 mb-8 font-medium">Nothing matches this stock-health view.</p>
                     </div>
                 ) : hubProducts.map(product => (
@@ -681,40 +681,40 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
             </div>
 
             {editing && (
-                <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-6">
+                <div className="panel p-5 sm:p-8 space-y-6">
                     <div className="flex items-center justify-between">
-                        <h4 className="text-lg font-black text-slate-900">Edit product — {editing.title}</h4>
+                        <h4 className="text-lg font-bold text-slate-900 tracking-tight">Edit product — {editing.title}</h4>
                         <button onClick={() => setEditing(null)} className="text-slate-400 hover:text-slate-900"><XCircle size={20} /></button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormItem label="Title"><input value={editing.title || ""} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
+                        <FormItem label="Title"><input value={editing.title || ""} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="field w-full rounded-xl px-4 py-3 text-sm font-semibold" /></FormItem>
                         <FormItem label="Category">
-                            <select value={editing.category || ""} onChange={(e) => setEditing({ ...editing, category: e.target.value, specs: {} })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500">
+                            <select value={editing.category || ""} onChange={(e) => setEditing({ ...editing, category: e.target.value, specs: {} })} className="field w-full rounded-xl px-4 py-3 text-sm font-semibold">
                                 {editing.category && !dbCategories.some((c) => c.name === editing.category) && (
                                     <option value={editing.category}>{editing.category} (legacy)</option>
                                 )}
                                 {dbCategories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
                             </select>
                         </FormItem>
-                        <FormItem label="Price (USD)"><input type="number" step="0.01" value={editing.price ?? ""} onChange={(e) => setEditing({ ...editing, price: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
+                        <FormItem label="Price (USD)"><input type="number" step="0.01" value={editing.price ?? ""} onChange={(e) => setEditing({ ...editing, price: e.target.value })} className="field w-full rounded-xl px-4 py-3 text-sm font-semibold" /></FormItem>
                         <FormItem label={editing.use_inventory_stock ? "Stock (derived from inventory)" : "Stock (manual count)"}>
-                            <input type="number" value={editing.stock ?? 0} disabled={!!editing.use_inventory_stock} onChange={(e) => setEditing({ ...editing, stock: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500 disabled:bg-slate-50 disabled:text-slate-400" />
+                            <input type="number" value={editing.stock ?? 0} disabled={!!editing.use_inventory_stock} onChange={(e) => setEditing({ ...editing, stock: e.target.value })} className="field w-full rounded-xl px-4 py-3 text-sm font-semibold" />
                             {editing.use_inventory_stock && <p className="text-[11px] text-slate-400 font-medium mt-1">Single source of truth: unused inventory rows minus unpaid reservations. Manage stock in the inventory list below.</p>}
                         </FormItem>
-                        <FormItem label="Badge"><input value={editing.badge || ""} onChange={(e) => setEditing({ ...editing, badge: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
-                        <FormItem label="Image URL"><input value={editing.image || ""} onChange={(e) => setEditing({ ...editing, image: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
-                        <FormItem label="Min quantity per order"><input type="number" min={1} value={editing.min_quantity ?? 1} onChange={(e) => setEditing({ ...editing, min_quantity: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
-                        <FormItem label="Delivery ETA (hours, blank = none)"><input type="number" min={1} value={editing.delivery_eta_hours ?? ""} onChange={(e) => setEditing({ ...editing, delivery_eta_hours: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
+                        <FormItem label="Badge"><input value={editing.badge || ""} onChange={(e) => setEditing({ ...editing, badge: e.target.value })} className="field w-full rounded-xl px-4 py-3 text-sm font-semibold" /></FormItem>
+                        <FormItem label="Image URL"><input value={editing.image || ""} onChange={(e) => setEditing({ ...editing, image: e.target.value })} className="field w-full rounded-xl px-4 py-3 text-sm font-semibold" /></FormItem>
+                        <FormItem label="Min quantity per order"><input type="number" min={1} value={editing.min_quantity ?? 1} onChange={(e) => setEditing({ ...editing, min_quantity: e.target.value })} className="field w-full rounded-xl px-4 py-3 text-sm font-semibold" /></FormItem>
+                        <FormItem label="Delivery ETA (hours, blank = none)"><input type="number" min={1} value={editing.delivery_eta_hours ?? ""} onChange={(e) => setEditing({ ...editing, delivery_eta_hours: e.target.value })} className="field w-full rounded-xl px-4 py-3 text-sm font-semibold" /></FormItem>
                         <FormItem label="Fulfilment Type">
-                            <select value={editing.fulfilment_type || "manual"} onChange={(e) => setEditing({ ...editing, fulfilment_type: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500">
+                            <select value={editing.fulfilment_type || "manual"} onChange={(e) => setEditing({ ...editing, fulfilment_type: e.target.value })} className="field w-full rounded-xl px-4 py-3 text-sm font-semibold">
                                 <option value="instant">Instant — auto-deliver from inventory</option>
                                 <option value="manual">Manual — type credentials per order</option>
                                 <option value="service">Service — buyer intake form + proof</option>
                             </select>
                         </FormItem>
-                        <FormItem label="Warranty (days, blank = none)"><input type="number" min={1} value={editing.warranty_days ?? ""} onChange={(e) => setEditing({ ...editing, warranty_days: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" /></FormItem>
+                        <FormItem label="Warranty (days, blank = none)"><input type="number" min={1} value={editing.warranty_days ?? ""} onChange={(e) => setEditing({ ...editing, warranty_days: e.target.value })} className="field w-full rounded-xl px-4 py-3 text-sm font-semibold" /></FormItem>
                         <FormItem label="Listing duration (days, blank = never expires)">
-                            <input type="number" min={1} value={editing.listing_duration_days ?? ""} onChange={(e) => setEditing({ ...editing, listing_duration_days: e.target.value })} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary-500" />
+                            <input type="number" min={1} value={editing.listing_duration_days ?? ""} onChange={(e) => setEditing({ ...editing, listing_duration_days: e.target.value })} className="field w-full rounded-xl px-4 py-3 text-sm font-semibold" />
                             {editing.listing_expires_at && (
                               <p className="text-[11px] text-slate-400 font-medium mt-1">
                                 {new Date(editing.listing_expires_at).getTime() <= Date.now()
@@ -734,7 +734,7 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                             <span className="text-sm font-bold text-slate-800">Stock derived from inventory</span>
                         </label>
                     </div>
-                    <FormItem label="Description"><textarea value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} rows={4} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary-500 resize-none" /></FormItem>
+                    <FormItem label="Description"><textarea value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} rows={4} className="field w-full rounded-xl px-4 py-3 text-sm resize-none" /></FormItem>
                     <SpecsEditor
                         schema={(dbCategories.find(c => c.name === editing.category)?.attribute_schema) || []}
                         value={editing.specs || {}}
@@ -745,8 +745,8 @@ export function AdminProducts({ activeTab }: { activeTab?: string }) {
                         onChange={(variants) => setEditing({ ...editing, variants })}
                     />
                     <div className="flex gap-3">
-                        <button onClick={handleUpdateProduct} disabled={loading} className="px-8 py-3 bg-primary-600 text-white rounded-xl font-black text-[12px] uppercase tracking-widest hover:bg-primary-700 transition-all disabled:opacity-50">Save Changes</button>
-                        <button onClick={() => handleDeleteProduct(editing)} className="px-8 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-black text-[12px] uppercase tracking-widest hover:bg-red-50 transition-all">Delete Product</button>
+                        <button onClick={handleUpdateProduct} disabled={loading} className="btn-primary px-7 py-3 rounded-xl font-bold text-[12px] uppercase tracking-wider">Save Changes</button>
+                        <button onClick={() => handleDeleteProduct(editing)} className="px-7 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-[12px] uppercase tracking-wider hover:bg-red-50 hover:border-red-300 transition-colors">Delete Product</button>
                     </div>
                     <InventoryManager productId={editing.id} derived={!!editing.use_inventory_stock} manualStock={editing.stock} />
                 </div>

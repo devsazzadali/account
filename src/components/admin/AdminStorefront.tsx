@@ -162,7 +162,7 @@ export function AdminStorefront() {
 
   if (!settings) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-16 flex items-center justify-center">
+      <div className="panel p-16 flex items-center justify-center">
         <Loader2 className="animate-spin text-slate-300" size={32} />
       </div>
     );
@@ -334,7 +334,7 @@ const inputCls = "w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 space-y-6">
+    <div className="panel p-8 space-y-6">
       <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">{title}</h3>
       {children}
     </div>
@@ -414,7 +414,7 @@ function SaveBar({ saving, saved, onSave }: { saving: boolean; saved: boolean; o
       <button
         onClick={onSave}
         disabled={saving}
-        className="px-8 py-3.5 bg-primary-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all disabled:opacity-50 flex items-center gap-2"
+        className="px-8 py-3.5 bg-primary-600 text-white rounded-2xl text-[11px] font-bold uppercase tracking-wider hover:bg-primary-700 transition-all disabled:opacity-50 flex items-center gap-2"
       >
         {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <Check size={14} className="text-emerald-400" /> : <Save size={14} />}
         {saved ? "Saved" : "Save Storefront"}

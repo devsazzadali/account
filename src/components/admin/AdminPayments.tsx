@@ -142,7 +142,7 @@ export function AdminPayments() {
             <button
               key={s}
               onClick={() => setFilter(s)}
-              className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${filter === s ? "bg-primary-600 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}
+              className={`px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all ${filter === s ? "bg-primary-600 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}
             >
               {s}
             </button>
@@ -150,16 +150,16 @@ export function AdminPayments() {
           <button onClick={load} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 transition-all">
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           </button>
-          <button onClick={exportFinance} disabled={exporting} className="px-4 py-2.5 bg-primary-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2">
+          <button onClick={exportFinance} disabled={exporting} className="btn-primary px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider flex items-center gap-2">
             <Download size={14} /> Finance CSV
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm p-6">
+      <div className="panel p-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <FileText size={18} className="text-primary-600" /> Reports
             </h3>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -167,10 +167,10 @@ export function AdminPayments() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">From</label>
-            <input type="date" value={repFrom} onChange={(e) => setRepFrom(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700" />
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">To</label>
-            <input type="date" value={repTo} onChange={(e) => setRepTo(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700" />
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">From</label>
+            <input type="date" value={repFrom} onChange={(e) => setRepFrom(e.target.value)} className="field px-3 py-2 rounded-xl text-xs font-semibold" />
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">To</label>
+            <input type="date" value={repTo} onChange={(e) => setRepTo(e.target.value)} className="field px-3 py-2 rounded-xl text-xs font-semibold" />
           </div>
         </div>
         <div className="grid sm:grid-cols-2 gap-3 mt-5">
@@ -191,7 +191,7 @@ export function AdminPayments() {
                     key={format}
                     onClick={() => downloadReport(kind, format)}
                     disabled={repBusy !== null}
-                    className="px-3 py-2 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                    className="px-3 py-2 bg-primary-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1.5"
                   >
                     {repBusy === `${kind}-${format}` ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
                     {format}
@@ -216,7 +216,7 @@ export function AdminPayments() {
         </div>
       )}
 
-      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+      <div className="panel overflow-hidden">
         {loading ? (
           <div className="py-20 flex items-center justify-center"><Loader2 className="animate-spin text-slate-300" size={32} /></div>
         ) : rows.length === 0 ? (
@@ -234,8 +234,8 @@ export function AdminPayments() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-black text-slate-900">${Number(r.amount).toFixed(2)}</span>
-                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">{r.method}</span>
-                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">{r.purpose === "topup" ? "Wallet top-up" : "Order payment"}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">{r.method}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">{r.purpose === "topup" ? "Wallet top-up" : "Order payment"}</span>
                   </div>
                   <p className="text-xs text-slate-500 font-medium mt-1 truncate">
                     {r.purpose === "topup" ? `Top-up for ${r.username || r.user_email || "a customer"}` : `${r.order_title || "Order"} — ${r.user_email || r.username || ""}`}
@@ -251,21 +251,21 @@ export function AdminPayments() {
                     <button
                       disabled={busyId === r.id}
                       onClick={() => review(r.id, true)}
-                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-1.5"
+                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5"
                     >
                       {busyId === r.id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />} Verify & Settle
                     </button>
                     <button
                       disabled={busyId === r.id}
                       onClick={() => review(r.id, false)}
-                      className="px-4 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-1.5"
+                      className="px-4 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5"
                     >
                       <XCircle size={13} /> Reject
                     </button>
                   </div>
                 )}
                 {r.status !== "pending" && (
-                  <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg ${r.status === "approved" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>{r.status}</span>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg ${r.status === "approved" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>{r.status}</span>
                 )}
               </div>
             ))}

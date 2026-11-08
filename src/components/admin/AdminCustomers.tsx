@@ -134,7 +134,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
       </div>
 
       <div className="p-4 md:p-8">
-        <div className="bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2.5rem] shadow-sm overflow-hidden">
+        <div className="panel overflow-hidden">
           {/* Filter Bar */}
           <div className="px-4 md:px-6 py-4 md:py-6 border-b border-slate-100 flex flex-col md:flex-row gap-3 bg-slate-50/30">
             <div className="flex-1 relative">
@@ -199,7 +199,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
                     <td className="px-8 py-5">
                       <RoleBadge role={profile.role} isPremium={profile.is_premium} />
                       {riskMap[profile.id] && (
-                        <span className="mt-1 inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-red-50 text-red-600">Suspended</span>
+                        <span className="mt-1 inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-red-50 text-red-600">Suspended</span>
                       )}
                     </td>
                     <td className="px-8 py-5">
@@ -258,7 +258,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
         {selectedUser && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setSelectedUser(null); setIsEditing(false); }} className="fixed inset-0 bg-slate-900/80 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-2xl bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-2xl panel shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
               <div className="px-6 md:px-8 py-5 md:py-7 bg-primary-600 text-white flex justify-between items-center">
                 <h3 className="text-lg md:text-xl font-black tracking-tight">{isEditing ? "Modify Node" : "Intelligence"}</h3>
                 <button onClick={() => { setSelectedUser(null); setIsEditing(false); }} className="p-2 hover:bg-white/10 rounded-xl"><X size={20} /></button>
@@ -321,7 +321,7 @@ function CreateManagerModal({ onClose, onCreated }: { onClose: () => void; onCre
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-slate-900/80 backdrop-blur-md" />
-      <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden">
+      <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-lg panel shadow-2xl overflow-hidden">
         <div className="px-6 md:px-8 py-5 md:py-6 bg-primary-600 text-white flex justify-between items-center">
           <h3 className="text-lg font-black tracking-tight flex items-center gap-2"><Shield size={18} /> Create Manager</h3>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl"><X size={20} /></button>
@@ -333,15 +333,15 @@ function CreateManagerModal({ onClose, onCreated }: { onClose: () => void; onCre
             Suspend the account here in Customers to deactivate it instantly.
           </p>
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Name</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Full Name</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Store Manager One" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-primary-600" />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Email</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="manager@example.com" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-primary-600" />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Initial Password</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Initial Password</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-primary-600" />
           </div>
           <div className="pt-2 flex gap-3">
@@ -359,7 +359,7 @@ function CreateManagerModal({ onClose, onCreated }: { onClose: () => void; onCre
 function StatCard({ label, value, color, bg }: any) {
   return (
     <div className={`${bg} rounded-2xl md:rounded-[2rem] p-4 md:p-6 border border-white shadow-sm`}>
-      <div className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 md:mb-3">{label}</div>
+      <div className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 md:mb-3">{label}</div>
       <div className={`text-2xl md:text-4xl font-black ${color}`}>{value}</div>
     </div>
   );
@@ -375,7 +375,7 @@ function RoleBadge({ role, isPremium }: { role?: string, isPremium?: boolean }) 
   const config = map[normalizedRole as keyof typeof map] || map["user"];
   return (
     <div className="flex flex-col items-start gap-1">
-       <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${config.cls}`}>
+       <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${config.cls}`}>
         {config.label}
        </span>
     </div>
@@ -451,7 +451,7 @@ function UserDetailsView({ user, suspended, onToggleSuspend, onEdit, setActiveTa
         <div className="min-w-0">
           <h4 className="text-xl md:text-2xl font-black text-slate-900 mb-1 truncate">{user.full_name || "Anonymous"}</h4>
           <p className="text-[14px] text-slate-500 font-medium truncate">@{user.username}</p>
-          {suspended && <span className="mt-1 inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-red-50 text-red-600">Suspended — cannot order or write</span>}
+          {suspended && <span className="mt-1 inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-red-50 text-red-600">Suspended — cannot order or write</span>}
           {user.role === "moderator" && (
             <p className="mt-2 text-[11px] font-bold text-slate-400 leading-relaxed">Manager account — orders console only. Suspending this account deactivates its console access immediately; unsuspending restores it.</p>
           )}
@@ -459,26 +459,26 @@ function UserDetailsView({ user, suspended, onToggleSuspend, onEdit, setActiveTa
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-           <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Email Node</div>
+           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email Node</div>
            <div className="text-[13px] font-bold text-slate-900 truncate">{user.email}</div>
         </div>
         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-           <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Membership</div>
+           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Membership</div>
            <div className="text-[13px] font-bold text-slate-900">{user.is_premium ? "Premium Tier" : "Basic Node"}</div>
         </div>
         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-           <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Orders · Lifetime Spend</div>
+           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Orders · Lifetime Spend</div>
            <div className="text-[13px] font-bold text-slate-900">{orders === null ? "Loading…" : `${orders.length} orders · $${spend.toFixed(2)} paid`}</div>
         </div>
         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-           <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Wallet Balance</div>
+           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Wallet Balance</div>
            <div className="text-[13px] font-bold text-slate-900">{wallet === null ? "—" : `$${num(wallet.balance).toFixed(2)}`}</div>
         </div>
       </div>
 
       {orders !== null && orders.length > 0 && (
         <div>
-          <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Recent Orders</div>
+          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-2 ml-1">Recent Orders</div>
           <div className="divide-y divide-slate-50 border border-slate-100 rounded-2xl overflow-hidden">
             {orders.slice(0, 5).map((o) => (
               <div key={o.id} className="flex items-center justify-between px-4 py-3 bg-white">
@@ -512,7 +512,7 @@ function UserDetailsView({ user, suspended, onToggleSuspend, onEdit, setActiveTa
       {user.role !== "admin" && (
         <div className="p-5 bg-primary-50/60 rounded-2xl border border-primary-100 space-y-4">
           <div>
-            <div className="text-[9px] font-black uppercase tracking-widest text-primary-700 mb-1">Wallet Adjustment — Admin Only</div>
+            <div className="text-[9px] font-bold uppercase tracking-wider text-primary-700 mb-1">Wallet Adjustment — Admin Only</div>
             <p className="text-[11px] font-bold text-slate-500 leading-relaxed">
               Credit a customer who paid the store offline, or debit a correction. Every adjustment is recorded in the
               customer&apos;s ledger as an <span className="text-slate-800">admin adjustment</span> with your reason and your
@@ -579,11 +579,11 @@ function UserEditForm({ user, onSave, onCancel, loading }: any) {
     <div className="space-y-6">
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Name</label>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Full Name</label>
           <input value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-primary-600" />
         </div>
         <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Premium Tier</label>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Premium Tier</label>
           <button onClick={() => setFormData({...formData, is_premium: !formData.is_premium})} className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${formData.is_premium ? 'bg-amber-50 border-amber-500 text-primary-700' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
              <span className="font-black text-[12px] uppercase tracking-widest flex items-center gap-2"><Crown size={14} /> Premium Membership</span>
              <div className={`w-10 h-5 rounded-full p-1 ${formData.is_premium ? 'bg-amber-500' : 'bg-slate-300'}`}>
@@ -592,10 +592,10 @@ function UserEditForm({ user, onSave, onCancel, loading }: any) {
           </button>
         </div>
         <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">System Role</label>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">System Role</label>
           <div className="grid grid-cols-3 gap-2">
              {["admin", "moderator", "user"].map(role => (
-               <button key={role} onClick={() => setFormData({...formData, role})} className={`py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${formData.role === role ? "bg-primary-600 text-white border-primary-600" : "bg-white text-slate-400 border-slate-100"}`}>
+               <button key={role} onClick={() => setFormData({...formData, role})} className={`py-3 rounded-xl border-2 text-[10px] font-bold uppercase tracking-wider transition-all ${formData.role === role ? "bg-primary-600 text-white border-primary-600" : "bg-white text-slate-400 border-slate-100"}`}>
                  {role === "moderator" ? "Manager" : role}
                </button>
              ))}

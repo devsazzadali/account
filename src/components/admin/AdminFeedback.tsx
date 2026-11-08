@@ -114,7 +114,7 @@ export function AdminFeedback() {
   return (
     <div className="p-6 lg:p-10 space-y-8 max-w-[1200px] mx-auto">
       <div>
-        <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
           <MessageSquare className="text-primary-600" size={26} /> Feedback
         </h2>
         <p className="text-sm text-slate-500 font-medium mt-1">
@@ -128,12 +128,12 @@ export function AdminFeedback() {
         <>
           {/* Score matrix */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 text-[11px] font-black uppercase tracking-widest text-slate-400">Feedback Score</div>
+            <div className="lg:col-span-3 panel overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Feedback Score</div>
               <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[430px]">
                 <thead>
-                  <tr className="text-left text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <tr className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                     <th className="px-6 py-3">Window</th><th className="px-3 py-3">Positive</th><th className="px-3 py-3">Neutral</th><th className="px-3 py-3">Negative</th><th className="px-3 py-3">Summary</th>
                   </tr>
                 </thead>
@@ -141,9 +141,9 @@ export function AdminFeedback() {
                   {([["Last 7 days", matrix["7d"]], ["Last 30 days", matrix["30d"]], ["All time", matrix.all]] as const).map(([label, w]) => (
                     <tr key={label}>
                       <td className="px-6 py-3.5 font-bold text-slate-700">{label}</td>
-                      <td className="px-3 py-3.5 font-black text-emerald-600">{w.positive}</td>
-                      <td className="px-3 py-3.5 font-black text-slate-500">{w.neutral}</td>
-                      <td className="px-3 py-3.5 font-black text-red-500">{w.negative}</td>
+                      <td className="px-3 py-3.5 font-bold text-emerald-600">{w.positive}</td>
+                      <td className="px-3 py-3.5 font-bold text-slate-500">{w.neutral}</td>
+                      <td className="px-3 py-3.5 font-bold text-red-500">{w.negative}</td>
                       <td className="px-3 py-3.5 font-bold text-slate-500">{positivePct(w)}</td>
                     </tr>
                   ))}
@@ -151,8 +151,8 @@ export function AdminFeedback() {
               </table>
               </div>
             </div>
-            <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm p-6 space-y-5">
-              <div className="text-[11px] font-black uppercase tracking-widest text-slate-400">Transaction Scores</div>
+            <div className="lg:col-span-2 panel p-6 space-y-5">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Transaction Scores</div>
               {dimensions.map((d) => (
                 <div key={d.key} className="flex items-center justify-between">
                   <span className="text-sm font-bold text-slate-600">{d.label}</span>
@@ -163,7 +163,7 @@ export function AdminFeedback() {
                       <span className="flex">{[1, 2, 3, 4, 5].map((i) => (
                         <Star key={i} size={13} className={i <= Math.round(d.avg as number) ? "text-amber-400 fill-amber-400" : "text-slate-200"} />
                       ))}</span>
-                      <span className="text-sm font-black text-slate-900">{d.avg.toFixed(1)}</span>
+                      <span className="text-sm font-bold text-slate-900">{d.avg.toFixed(1)}</span>
                       <span className="text-[10px] font-bold text-slate-400">({d.count})</span>
                     </span>
                   )}
@@ -182,7 +182,7 @@ export function AdminFeedback() {
               ["negative", `Negative (${reviews.filter((r) => !r.is_hidden && bucketOf(r.rating) === "negative").length})`],
               ["hidden", `Hidden (${reviews.filter((r) => r.is_hidden).length})`],
             ] as const).map(([id, label]) => (
-              <button key={id} onClick={() => setFilter(id)} className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${filter === id ? "bg-primary-600 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+              <button key={id} onClick={() => setFilter(id)} className={`px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all ${filter === id ? "bg-primary-600 text-white shadow-md shadow-primary-600/25" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
                 {label}
               </button>
             ))}
@@ -191,16 +191,16 @@ export function AdminFeedback() {
           {/* Review list */}
           <div className="space-y-4">
             {visible.length === 0 ? (
-              <div className="bg-white rounded-[2rem] border border-dashed border-slate-200 py-20 text-center text-slate-400 text-sm font-bold">No reviews in this view yet.</div>
+              <div className="bg-white rounded-[1.5rem] border border-dashed border-slate-300 py-20 text-center text-slate-500 text-sm font-medium">No reviews in this view yet.</div>
             ) : visible.map((r) => (
-              <div key={r.id} className={`bg-white rounded-[2rem] border shadow-sm p-6 ${r.is_hidden ? "border-red-100 opacity-70" : "border-slate-200"}`}>
+              <div key={r.id} className={`panel p-6 ${r.is_hidden ? "opacity-70" : ""}`}>
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="flex">{[1, 2, 3, 4, 5].map((i) => (
                         <Star key={i} size={14} className={i <= r.rating ? "text-amber-400 fill-amber-400" : "text-slate-200"} />
                       ))}</span>
-                      <span className="text-sm font-black text-slate-900">{r.username || "Customer"}</span>
+                      <span className="text-sm font-bold text-slate-900">{r.username || "Customer"}</span>
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(r.created_at).toLocaleDateString()}</span>
                       {r.is_hidden && <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-red-50 text-red-500 border border-red-100">Hidden</span>}
                     </div>

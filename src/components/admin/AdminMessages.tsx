@@ -372,7 +372,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
               <button
                 key={id}
                 onClick={() => setTicketFilter(id)}
-                className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${ticketFilter === id ? "bg-primary-600 text-white" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}
+                className={`px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${ticketFilter === id ? "bg-primary-600 text-white" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}
               >
                 {label}
               </button>
@@ -417,7 +417,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
                   <div className="text-[11px] text-slate-500 truncate leading-tight">
                     {lastMsg.message === '[ADMIN_INITIATED]' ? `You: ${lastMsg.reply}` : lastMsg.message}
                   </div>
-                  <span className={`inline-block mt-1.5 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                  <span className={`inline-block mt-1.5 text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
                     status === 'closed' ? 'bg-slate-100 text-slate-400' :
                     status === 'awaiting_reply' ? 'bg-blue-50 text-blue-600' :
                     'bg-amber-50 text-amber-600'
@@ -467,7 +467,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
                   </div>
                   {/* Ticket state controls (P3) — per thread (Fix Round 4) */}
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg ${
+                    <span className={`text-[9px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg ${
                       selectedThreadStatus === 'closed' ? 'bg-slate-100 text-slate-400' :
                       selectedThreadStatus === 'awaiting_reply' ? 'bg-blue-50 text-blue-600' :
                       'bg-amber-50 text-amber-600'
@@ -475,11 +475,11 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
                       Ticket: {selectedThreadStatus === 'awaiting_reply' ? 'Awaiting reply' : selectedThreadStatus}
                     </span>
                     {selectedThreadStatus === 'closed' ? (
-                      <button onClick={() => setTicketStatus(selectedThread, 'open')} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50">
+                      <button onClick={() => setTicketStatus(selectedThread, 'open')} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[9px] font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50">
                         Reopen
                       </button>
                     ) : (
-                      <button onClick={() => setTicketStatus(selectedThread, 'closed')} className="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-primary-700">
+                      <button onClick={() => setTicketStatus(selectedThread, 'closed')} className="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-primary-700">
                         Close ticket
                       </button>
                     )}
@@ -538,7 +538,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
                                      <div>Time: {new Date(order.created_at).toLocaleString('en-CA')}</div>
                                  </div>
                                  <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-                                     <span className={`text-[11px] px-2.5 py-1 rounded font-black uppercase tracking-widest ${order.status === 'Delivered' || order.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                                     <span className={`text-[11px] px-2.5 py-1 rounded font-bold uppercase tracking-wider ${order.status === 'Delivered' || order.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
                                          {order.status}
                                      </span>
                                      <button className="text-[11px] font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest flex items-center gap-1 transition-all">Details <ExternalLink size={12} /></button>
@@ -607,7 +607,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
                  </div>
                  <div>
                     <div className="text-[16px] font-black text-slate-900 uppercase tracking-tight">{selectedUser}</div>
-                    <div className="text-[10px] text-emerald-500 font-black uppercase tracking-widest mt-0.5">Verified Buyer</div>
+                    <div className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider mt-0.5">Verified Buyer</div>
                  </div>
               </div>
               
@@ -659,7 +659,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
         {showBroadcastModal && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowBroadcastModal(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative w-full max-w-lg panel shadow-2xl overflow-hidden flex flex-col">
               <div className="px-8 py-6 bg-primary-600 text-white flex justify-between items-center">
                 <div className="flex items-center gap-3">
                    <Zap size={24} />
@@ -701,7 +701,7 @@ export function AdminMessages({ setActiveTab }: { setActiveTab?: (tab: string) =
         {showNewChatModal && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowNewChatModal(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative w-full max-w-md panel shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
               <div className="p-6 border-b border-slate-100">
                 <h3 className="text-lg font-black text-slate-900 mb-4">Initialize Ticket</h3>
                 <input type="text" placeholder="Search username..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" />

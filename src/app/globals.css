@@ -128,3 +128,81 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
 }
+
+/* Dashboard design utilities (preview): class-scoped only — these apply
+   solely where the admin/buyer dashboard components use them. */
+/* Shared premium surfaces (ERP glass-panel recipe, ASO green ink). */
+.panel {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 1.5rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.08);
+}
+
+.panel-hover {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
+}
+.panel-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(29, 191, 115, 0.4);
+  box-shadow: 0 12px 30px -12px rgba(15, 23, 42, 0.16);
+}
+
+/* Shared buttons. Padding/radius stay with the call site's utilities;
+   these own the fill, ring, lift and disabled behaviour. */
+.btn-primary {
+  background: linear-gradient(135deg, #17995c 0%, #1dbf73 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 20px -8px rgba(23, 153, 92, 0.55);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s, filter 0.2s, opacity 0.2s;
+}
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px -8px rgba(23, 153, 92, 0.6);
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: #1e293b;
+  transition: border-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: rgba(29, 191, 115, 0.5);
+  color: #117345;
+  box-shadow: 0 6px 18px -10px rgba(15, 23, 42, 0.25);
+}
+.btn-secondary:active:not(:disabled) {
+  transform: scale(0.99);
+}
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Shared text field: white fill, hairline border, inset depth. Focus
+   ring comes from the global :where() rule above. */
+.field {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.field::placeholder {
+  color: #94a3b8;
+}
+
+.field:focus {
+  border-color: rgba(29, 191, 115, 0.55);
+  box-shadow: 0 0 0 4px rgba(29, 191, 115, 0.10);
+  outline: none;
+}

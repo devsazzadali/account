@@ -121,82 +121,132 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
 
   return (
     <div className="bg-[#F8FAFC] min-h-screen font-sans pb-20">
-      {/* Hero Header Section */}
-      <div className="bg-white text-slate-900 pt-8 px-8 pb-20 lg:pt-12 lg:px-12 lg:pb-28 border-b border-slate-200/60 relative overflow-hidden">
-        {/* Glow Effects */}
-        <div className="absolute top-0 right-0 w-[600px] h-full bg-primary-500/10 blur-[120px] -mr-40" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-teal-500/10 blur-[100px] -ml-20 -mb-20" />
-
-        <div className="max-w-[1400px] mx-auto flex flex-col lg:flex-row items-center justify-between gap-12 relative z-10">
-          <div className="flex flex-col lg:flex-row items-center gap-8">
-            {/* Profile Image Container */}
-            <div className="w-20 h-20 rounded-[1.8rem] border-4 border-primary-100 p-1.5 shadow-xl bg-primary-50">
-              <div className="w-full h-full rounded-[1.5rem] overflow-hidden bg-primary-600 flex items-center justify-center border border-primary-100">
-                <span className="text-white font-black text-3xl uppercase">{(username || "A").charAt(0)}</span>
-              </div>
-            </div>
-
-            <div className="text-center lg:text-left">
-              <div className="flex flex-col lg:flex-row items-center gap-4 mb-4">
-                <h1 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase italic text-slate-900">{username}</h1>
-                <div className="px-4 py-1.5 bg-primary-600 text-white text-[9px] font-black uppercase tracking-[0.25em] rounded-xl shadow-xl shadow-primary-600/25">
-                  System Administrator
+      {/* Account banner — mirrors the reference desk's overview band:
+          identity left, headline revenue + action center, bordered
+          performance box right. Single-vendor: this is the owner's own
+          store, so the figures are the store's own totals. */}
+      <div className="px-4 sm:px-6 lg:px-10 pt-6 lg:pt-8">
+        <div className="max-w-[1400px] mx-auto rounded-[1.5rem] bg-gradient-to-br from-primary-800 via-primary-700 to-primary-600 text-white relative overflow-hidden shadow-[0_24px_48px_-24px_rgba(17,115,69,0.55)]">
+          <div className="absolute top-0 right-0 w-[420px] h-full bg-white/[0.07] blur-[100px] -mr-32 pointer-events-none" />
+          <div className="relative z-10 flex flex-col xl:flex-row items-stretch xl:items-center gap-8 p-6 sm:p-8 lg:p-10">
+            {/* Identity */}
+            <div className="flex items-center gap-5 min-w-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/10 border border-white/25 p-1.5 shrink-0">
+                <div className="w-full h-full rounded-xl bg-white/15 flex items-center justify-center">
+                  <span className="text-white font-bold text-2xl sm:text-3xl">{(username || "A").charAt(0).toUpperCase()}</span>
                 </div>
               </div>
-
-              <div className="flex flex-wrap justify-center lg:justify-start items-center gap-8">
-                <div className="flex flex-col">
-                  <span className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-1.5">Review Average</span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-3 mb-2">
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">{username}</h1>
+                  <span className="px-3 py-1 bg-white/15 border border-white/20 text-white text-[10px] font-semibold uppercase tracking-[0.18em] rounded-full">
+                    System Administrator
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                   <div className="flex items-center gap-1.5">
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <Star key={i} size={14} className={stats.reviewAverage !== null && i <= Math.round(stats.reviewAverage) ? "text-amber-400 fill-amber-400" : "text-slate-200"} />
+                      <Star key={i} size={14} className={stats.reviewAverage !== null && i <= Math.round(stats.reviewAverage) ? "text-amber-300 fill-amber-300" : "text-white/30"} />
                     ))}
-                    <span className="ml-2 text-[12px] font-black text-slate-900 uppercase tracking-tighter">
+                    <span className="ml-1.5 text-xs font-medium text-white/85">
                       {stats.reviewAverage === null ? "No reviews yet" : `${stats.reviewAverage} / 5 · ${stats.reviewCount} review${stats.reviewCount === 1 ? "" : "s"}`}
                     </span>
                   </div>
-                </div>
-
-                <div className="w-[1px] h-8 bg-slate-200 hidden lg:block" />
-
-                <div className="flex flex-col">
-                  <span className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-1.5">Store Status</span>
-                  <div className="flex items-center gap-2.5">
-                    <span className={`w-2.5 h-2.5 rounded-full ${stats.storeOpen ? "bg-emerald-400" : "bg-red-400"}`} />
-                    <span className="text-[14px] font-black text-slate-900 uppercase italic tracking-widest">{stats.storeOpen ? "Open for orders" : "Hidden (closed)"}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${stats.storeOpen ? "bg-emerald-300" : "bg-red-300"}`} />
+                    <span className="text-xs font-medium text-white/85">{stats.storeOpen ? "Store open for orders" : "Store hidden (closed)"}</span>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex flex-col items-center lg:items-end gap-1">
-            <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em]">Total Paid Revenue</span>
-            <div className="text-5xl lg:text-6xl font-black tracking-tighter text-slate-900 flex items-start">
-              <span className="text-xl mt-2 mr-1 text-primary-600">$</span>
-              {loading ? "---" : stats.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {/* Revenue + actions */}
+            <div className="flex flex-col items-start xl:items-center gap-1 xl:flex-1">
+              <span className="text-white/70 text-[10px] font-semibold uppercase tracking-[0.28em]">Total Paid Revenue</span>
+              <div className="text-4xl sm:text-5xl font-bold tracking-tight flex items-start">
+                <span className="text-lg mt-1.5 mr-1 text-white/70">$</span>
+                {loading ? "---" : stats.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="flex flex-wrap gap-3 mt-4">
+                <button
+                  onClick={() => setActiveTab("orders")}
+                  className="px-6 py-2.5 bg-white text-primary-800 text-[11px] font-bold uppercase tracking-[0.16em] rounded-full shadow-lg shadow-black/10 hover:bg-primary-50 hover:-translate-y-px transition-all flex items-center gap-2 whitespace-nowrap"
+                >
+                  View Orders <ArrowUpRight size={15} />
+                </button>
+                <button
+                  onClick={() => setActiveTab("settings")}
+                  className="px-6 py-2.5 bg-white/10 border border-white/30 text-white text-[11px] font-bold uppercase tracking-[0.16em] rounded-full hover:bg-white/20 transition-all flex items-center gap-2 whitespace-nowrap"
+                >
+                  Settings <Settings size={15} />
+                </button>
+              </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
-              <button 
-                onClick={() => setActiveTab("orders")}
-                className="px-8 py-3.5 bg-primary-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-xl shadow-2xl shadow-primary-600/30 hover:bg-primary-700 transition-all flex items-center gap-3 active:scale-95"
-              >
-                Order Ledger <ArrowUpRight size={16} />
-              </button>
-              <button 
-                onClick={() => setActiveTab("settings")}
-                className="px-8 py-3.5 bg-white border border-slate-200 text-slate-700 text-[11px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-primary-50 hover:text-primary-700 hover:border-primary-200 transition-all flex items-center gap-3 active:scale-95"
-              >
-                Config <Settings size={16} />
-              </button>
+            {/* Performance box */}
+            <div className="border border-white/25 bg-white/[0.06] rounded-2xl px-6 py-5 xl:w-[300px] shrink-0">
+              <div className="text-xl font-bold leading-snug">
+                {stats.successRate}% success rate
+              </div>
+              <div className="text-xs text-white/75 mt-1">
+                out of {stats.transactions} orders · {stats.paidCount} paid
+              </div>
+              <div className="h-px bg-white/15 my-4" />
+              <div className="text-sm font-semibold">
+                {stats.awaitingAction} sold order{stats.awaitingAction === 1 ? "" : "s"} in processing
+              </div>
+              <div className="text-xs text-white/75 mt-0.5">Verify payment, deliver or resolve a dispute</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="max-w-[1400px] mx-auto px-8 lg:px-10 -mt-12 relative z-20">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 mt-8 relative z-20">
+        {/* Module launcher — the reference desk's overview card grid:
+            one card per work area, plain link lists inside. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-10">
+          <ModuleCard
+            icon={<ShoppingBag size={18} />}
+            title="Orders & Sales"
+            links={[
+              { label: "Sold Orders", tab: "orders" },
+              { label: "Payment Verification", tab: "payments" },
+              { label: "Customers", tab: "customers" },
+            ]}
+            setActiveTab={setActiveTab}
+          />
+          <ModuleCard
+            icon={<Package size={18} />}
+            title="Listings"
+            links={[
+              { label: "Create New Offers", tab: "products" },
+              { label: "Active Offers", tab: "active_offers" },
+              { label: "Categories", tab: "categories" },
+            ]}
+            setActiveTab={setActiveTab}
+          />
+          <ModuleCard
+            icon={<Settings size={18} />}
+            title="Store Management"
+            links={[
+              { label: "Store Information", tab: "store_info" },
+              { label: "Storefront", tab: "storefront" },
+              { label: "General Config", tab: "settings" },
+            ]}
+            setActiveTab={setActiveTab}
+          />
+          <ModuleCard
+            icon={<Star size={18} />}
+            title="Support & Growth"
+            links={[
+              { label: "Messages", tab: "messages" },
+              { label: "Feedback", tab: "feedback" },
+              { label: "Coupons", tab: "coupons" },
+            ]}
+            setActiveTab={setActiveTab}
+          />
+        </div>
         {/* Top Metrics Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           <MetricCard
@@ -246,17 +296,17 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Transaction Feed */}
-          <div className="lg:col-span-8 bg-white rounded-[2rem] border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden">
+          <div className="lg:col-span-8 panel overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
                   <Activity size={18} />
                 </div>
-                <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-widest italic">Live Activity Ledger</h3>
+                <h3 className="text-[15px] font-semibold text-slate-900 tracking-tight">Recent Orders</h3>
               </div>
               <button 
                 onClick={() => setActiveTab("orders")}
-                className="text-[9px] font-black text-slate-400 hover:text-primary-600 uppercase tracking-[0.2em] flex items-center gap-2 transition-colors"
+                className="text-[11px] font-semibold text-slate-500 hover:text-primary-700 flex items-center gap-1.5 transition-colors"
               >
                 Audit All <ChevronRight size={12} />
               </button>
@@ -264,9 +314,9 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
 
             <div className="divide-y divide-slate-50">
               {loading ? (
-                <div className="p-24 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px] italic">Syncing with registry...</div>
+                <div className="p-16 sm:p-24 text-center text-slate-500 font-medium text-sm">Loading orders…</div>
               ) : recentOrders.length === 0 ? (
-                <div className="p-24 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px] italic">No active telemetry detected</div>
+                <div className="p-16 sm:p-24 text-center text-slate-500 font-medium text-sm">No orders yet</div>
               ) : (
                 recentOrders.map((order) => (
                   <TransactionItem 
@@ -285,12 +335,12 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
           {/* Needs attention — every count below is a live query result,
               not a status decoration. */}
           <div className="lg:col-span-4 space-y-8">
-            <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.02)] p-8">
+            <div className="panel p-6 sm:p-8">
               <div className="w-full flex items-center gap-3 mb-8">
                 <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
                   <ShieldCheck size={18} />
                 </div>
-                <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-widest italic">Needs Attention</h3>
+                <h3 className="text-[15px] font-semibold text-slate-900 tracking-tight">Needs Attention</h3>
               </div>
 
               <div className="space-y-4">
@@ -302,20 +352,20 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
 
               <button
                 onClick={() => setActiveTab("store_info")}
-                className="mt-8 w-full py-3.5 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary-700 transition-all"
+                className="btn-primary mt-8 w-full py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.16em]"
               >
                 View Store Information
               </button>
             </div>
 
             {!stats.storeOpen && (
-              <div className="bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm flex items-center gap-4 group">
+              <div className="panel p-6 flex items-center gap-4 group">
                 <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
                   <AlertCircle size={24} />
                 </div>
                 <div>
-                  <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] mb-0.5">Store is hidden</h4>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">No new orders until you reopen it in Settings</p>
+                  <h4 className="text-sm font-semibold text-slate-900 mb-0.5">Store is hidden</h4>
+                  <p className="text-xs font-medium text-slate-500">No new orders until you reopen it in Settings</p>
                 </div>
               </div>
             )}
@@ -328,7 +378,7 @@ export function AdminOverview({ setActiveTab }: AdminOverviewProps) {
 
 function MetricCard({ icon, iconBg, label, value, badge, badgeColor, subText }: any) {
   return (
-    <div className="bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_50px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-500 group">
+    <div className="panel panel-hover p-6 group">
       <div className="flex items-start justify-between mb-6">
         <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
           {icon}
@@ -338,9 +388,9 @@ function MetricCard({ icon, iconBg, label, value, badge, badgeColor, subText }: 
         </div>
       </div>
       <div>
-        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">{label}</div>
-        <div className="text-3xl font-black text-slate-900 tracking-tighter mb-3">{value}</div>
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-2 italic">
+        <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.16em] mb-1.5">{label}</div>
+        <div className="text-[28px] leading-8 font-bold text-slate-900 tracking-tight mb-2">{value}</div>
+        <div className="text-[11px] font-medium text-slate-500 flex items-center gap-2">
             <div className="w-1 h-1 rounded-full bg-slate-200" />
             {subText}
         </div>
@@ -351,24 +401,24 @@ function MetricCard({ icon, iconBg, label, value, badge, badgeColor, subText }: 
 
 function TransactionItem({ title, buyer, price, status, time }: any) {
   return (
-    <div className="px-8 py-4 flex items-center justify-between hover:bg-slate-50/50 transition-all group">
+    <div className="px-5 sm:px-8 py-4 flex items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors group">
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 group-hover:border-primary-200 group-hover:text-primary-600 transition-all">
           <ShoppingBag size={18} />
         </div>
         <div>
-          <h4 className="text-[13px] font-black text-slate-900 uppercase tracking-tight mb-0.5 group-hover:text-primary-700 transition-colors">{title}</h4>
-          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          <h4 className="text-sm font-semibold text-slate-900 tracking-tight mb-0.5 group-hover:text-primary-700 transition-colors">{title}</h4>
+          <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500">
             <User size={10} /> {buyer}
           </div>
         </div>
       </div>
       <div className="flex items-center gap-8 text-right">
         <div>
-          <div className="text-[13px] font-black text-slate-900 mb-0.5">{price}</div>
-          <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{time}</div>
+          <div className="text-sm font-bold text-slate-900 mb-0.5">{price}</div>
+          <div className="text-[10px] font-medium text-slate-400">{time}</div>
         </div>
-        <div className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+        <div className={`px-3 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-wide border ${
           status?.toLowerCase() === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
           status?.toLowerCase() === 'canceled' ? 'bg-red-50 text-red-600 border-red-100' :
           'bg-amber-50 text-amber-600 border-amber-100'
@@ -387,10 +437,10 @@ function StatusMetric({ icon, label, value, badge, badgeColor }: any) {
         <div className="text-slate-400 group-hover:text-primary-600 transition-colors">
           {icon}
         </div>
-        <span className="text-[11px] font-black text-slate-500 uppercase tracking-tight">{label}</span>
+        <span className="text-[13px] font-medium text-slate-600">{label}</span>
       </div>
       <div className="flex items-center gap-2.5">
-        <span className="text-[12px] font-black text-slate-900 tracking-tight">{value}</span>
+        <span className="text-sm font-bold text-slate-900 tracking-tight">{value}</span>
         <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${badgeColor}`}>
           {badge}
         </span>
@@ -399,3 +449,28 @@ function StatusMetric({ icon, label, value, badge, badgeColor }: any) {
   );
 }
 
+
+function ModuleCard({ icon, title, links, setActiveTab }: any) {
+  return (
+    <div className="panel panel-hover p-5">
+      <div className="flex items-center gap-3 pb-3 mb-2 border-b border-slate-100">
+        <div className="w-9 h-9 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center">
+          {icon}
+        </div>
+        <h3 className="text-sm font-semibold text-slate-900 tracking-tight">{title}</h3>
+      </div>
+      <div className="flex flex-col">
+        {links.map((l: any) => (
+          <button
+            key={l.tab}
+            onClick={() => setActiveTab(l.tab)}
+            className="flex items-center justify-between py-2 text-[13px] font-medium text-slate-600 hover:text-primary-700 transition-colors text-left group"
+          >
+            {l.label}
+            <ChevronRight size={14} className="text-slate-300 group-hover:text-primary-500 group-hover:translate-x-0.5 transition-all" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

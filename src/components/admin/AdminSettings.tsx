@@ -138,7 +138,7 @@ export function AdminSettings() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start">
-      <div className="w-full lg:w-52 shrink-0 bg-white rounded-3xl border border-slate-100 shadow-sm p-3 space-y-1">
+      <div className="w-full lg:w-52 shrink-0 panel p-3 space-y-1">
         {TABS.map((tab) => (
           <button
             key={tab}
@@ -157,7 +157,7 @@ export function AdminSettings() {
 
       <div className="flex-1 min-w-0 w-full lg:w-auto space-y-6">
         {!settings ? (
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-16 flex items-center justify-center">
+          <div className="panel p-16 flex items-center justify-center">
             <Loader2 className="animate-spin text-slate-300" size={32} />
           </div>
         ) : activeTab === "General" ? (
@@ -185,7 +185,7 @@ export function AdminSettings() {
                   <div className="w-14 h-14 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600 text-[10px] font-black uppercase">No logo</div>
                 )}
                 <input value={settings.store_logo_url || ""} onChange={(e) => set("store_logo_url", e.target.value)} placeholder="https://… or upload →" className={`${inputCls} flex-1`} />
-                <label className="px-4 py-3 bg-primary-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-primary-700 transition-all whitespace-nowrap">
+                <label className="px-4 py-3 bg-primary-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wider cursor-pointer hover:bg-primary-700 transition-all whitespace-nowrap">
                   Upload
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadImage("store_logo_url", e.target.files?.[0])} />
                 </label>
@@ -198,7 +198,7 @@ export function AdminSettings() {
                 )}
                 <div className="flex items-center gap-3">
                   <input value={settings.store_banner_url || ""} onChange={(e) => set("store_banner_url", e.target.value)} placeholder="https://… or upload →" className={`${inputCls} flex-1`} />
-                  <label className="px-4 py-3 bg-primary-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-primary-700 transition-all whitespace-nowrap">
+                  <label className="px-4 py-3 bg-primary-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wider cursor-pointer hover:bg-primary-700 transition-all whitespace-nowrap">
                     Upload
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadImage("store_banner_url", e.target.files?.[0])} />
                   </label>
@@ -358,7 +358,7 @@ const inputCls = "w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 space-y-6">
+    <div className="panel p-8 space-y-6">
       <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">{title}</h3>
       {children}
     </div>
@@ -383,7 +383,7 @@ function SaveBar({ saving, saved, onSave }: { saving: boolean; saved: boolean; o
       <button
         onClick={onSave}
         disabled={saving}
-        className="px-8 py-3.5 bg-primary-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all disabled:opacity-50 flex items-center gap-2"
+        className="px-8 py-3.5 bg-primary-600 text-white rounded-2xl text-[11px] font-bold uppercase tracking-wider hover:bg-primary-700 transition-all disabled:opacity-50 flex items-center gap-2"
       >
         {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <Check size={14} className="text-emerald-400" /> : <Save size={14} />}
         {saved ? "Saved" : "Save Settings"}
@@ -454,7 +454,7 @@ function SecretField({ label, input, onInput, savedSource, placeholder, clearArm
           <button
             type="button"
             onClick={onClear}
-            className="px-4 py-3 bg-white border border-red-200 text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all whitespace-nowrap"
+            className="px-4 py-3 bg-white border border-red-200 text-red-600 rounded-2xl text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 transition-all whitespace-nowrap"
           >
             Remove
           </button>

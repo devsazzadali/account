@@ -149,7 +149,7 @@ export function AdminCoupons() {
       </div>
 
       {showForm && (
-        <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm p-6 space-y-4">
+        <div className="panel p-6 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Field label="Code"><input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="SAVE10" className={inputCls} /></Field>
             <Field label="Type">
@@ -194,14 +194,14 @@ export function AdminCoupons() {
             </Field>
           </div>
           <div className="flex justify-end">
-            <button onClick={create} disabled={form.code.trim().length < 3} className="px-6 py-3 bg-primary-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-40">
+            <button onClick={create} disabled={form.code.trim().length < 3} className="btn-primary px-6 py-3 rounded-xl text-[11px] font-bold uppercase tracking-wider">
               Create Coupon
             </button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+      <div className="panel overflow-hidden">
         {loading ? (
           <div className="py-20 flex items-center justify-center"><Loader2 className="animate-spin text-slate-300" size={32} /></div>
         ) : coupons.length === 0 ? (
@@ -210,9 +210,9 @@ export function AdminCoupons() {
             <p className="text-sm font-bold text-slate-400">No coupon codes yet — add your first one above.</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm min-w-[840px]">
             <thead>
-              <tr className="text-left text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
+              <tr className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-50/70 border-b border-slate-100">
                 <th className="px-5 py-3.5 w-8"><input type="checkbox" checked={selected.size === coupons.length && coupons.length > 0} onChange={(e) => setSelected(e.target.checked ? new Set(coupons.map((c) => c.id)) : new Set())} /></th>
                 <th className="px-3 py-3.5">Code</th>
                 <th className="px-3 py-3.5">Scope</th>
@@ -228,9 +228,9 @@ export function AdminCoupons() {
               {coupons.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50/60">
                   <td className="px-5 py-3.5"><input type="checkbox" checked={selected.has(c.id)} onChange={(e) => { const s = new Set(selected); if (e.target.checked) s.add(c.id); else s.delete(c.id); setSelected(s); }} /></td>
-                  <td className="px-3 py-3.5 font-black text-slate-900 tracking-wide">{c.code}</td>
+                  <td className="px-3 py-3.5 font-bold text-slate-900 tracking-wide whitespace-nowrap">{c.code}</td>
                   <td className="px-3 py-3.5 font-bold text-slate-500 capitalize">{c.scope}{c.scope === "category" && c.category ? ` · ${c.category}` : ""}{c.scope === "product" && c.product_id ? ` · ${products.find((p) => p.id === c.product_id)?.title || "product"}` : ""}</td>
-                  <td className="px-3 py-3.5 font-black text-primary-700">{c.type === "percent" ? `${Number(c.value)}%` : `$${Number(c.value).toFixed(2)}`}</td>
+                  <td className="px-3 py-3.5 font-bold text-primary-700">{c.type === "percent" ? `${Number(c.value)}%` : `$${Number(c.value).toFixed(2)}`}</td>
                   <td className="px-3 py-3.5 font-bold text-slate-600">{c.used_count}{c.max_uses ? ` / ${c.max_uses}` : ""}</td>
                   <td className="px-3 py-3.5 font-bold text-slate-600">{c.is_public ? "Public" : "Private"}</td>
                   <td className="px-3 py-3.5 font-bold text-slate-600">
@@ -248,7 +248,7 @@ export function AdminCoupons() {
                     )}
                   </td>
                   <td className="px-3 py-3.5">
-                    <button onClick={() => patch(c.id, { is_active: !c.is_active }, c.is_active ? "Coupon deactivated" : "Coupon activated")} className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${c.is_active ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-100 text-slate-400 border-slate-200"}`}>
+                    <button onClick={() => patch(c.id, { is_active: !c.is_active }, c.is_active ? "Coupon deactivated" : "Coupon activated")} className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${c.is_active ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-100 text-slate-400 border-slate-200"}`}>
                       {c.is_active ? "Active" : "Off"}
                     </button>
                   </td>
@@ -258,19 +258,19 @@ export function AdminCoupons() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>
   );
 }
 
-const inputCls = "w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-slate-400";
+const inputCls = "field w-full rounded-xl px-4 py-2.5 text-sm font-semibold";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
+      <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{label}</label>
       {children}
     </div>
   );

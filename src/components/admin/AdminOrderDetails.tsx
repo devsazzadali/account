@@ -92,8 +92,8 @@ function OrderTimeline({ order }: { order: any }) {
 function MetadataItem({ label, value }: any) {
   return (
     <div className="space-y-1">
-      <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{label}</div>
-      <div className="text-[15px] font-black text-slate-900 uppercase tracking-tight">{value}</div>
+      <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.18em]">{label}</div>
+      <div className="text-[15px] font-semibold text-slate-900 tracking-tight break-words">{value}</div>
     </div>
   );
 }
@@ -101,8 +101,8 @@ function MetadataItem({ label, value }: any) {
 function LedgerItem({ label, value }: any) {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{label}</span>
-      <span className="text-[13px] font-black text-slate-900">{value}</span>
+      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{label}</span>
+      <span className="text-[13px] font-bold text-slate-900 text-right">{value}</span>
     </div>
   );
 }
@@ -327,31 +327,31 @@ export function AdminOrderDetails({ order, onBack, setActiveTab }: OrderDetailsP
     <div className="min-h-screen w-full bg-[#F8FAFC] pb-24 overflow-y-auto">
       {/* Breadcrumb Header */}
       <div className="px-4 md:px-10 py-6 flex items-center justify-between bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm backdrop-blur-md bg-white/90">
-        <div className="flex items-center gap-3 text-slate-400 text-[11px] font-black uppercase tracking-[0.3em]">
+        <div className="flex items-center gap-3 text-slate-500 text-[11px] font-semibold uppercase tracking-[0.18em]">
           <History size={14} className="text-primary-600" /> 
-          <span>Sold Protocol</span>
+          <span>Sold Orders</span>
           <ChevronRight size={14} /> 
-          <span className="text-slate-900 italic">Registry Entry</span>
+          <span className="text-slate-900">Order Detail</span>
         </div>
         <button 
           onClick={onBack} 
-          className="flex items-center gap-2 px-6 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-primary-600 hover:text-white transition-all active:scale-95"
+          className="btn-secondary flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider"
         >
-          Return to Ledger
+          Back to Orders
         </button>
       </div>
 
       <div className="max-w-[1300px] mx-auto p-4 md:p-10 space-y-6 md:space-y-10">
         <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-black text-slate-900 uppercase italic tracking-tighter">Registry Details</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Order Details</h2>
             <div className="flex items-center gap-4">
                 <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
-                <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest italic">Entry Secured</span>
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Entry Secured</span>
             </div>
         </div>
 
         {/* Modernized Stepper */}
-        <div className="bg-white rounded-[2.5rem] p-5 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-200/60 overflow-hidden relative">
+        <div className="panel p-5 md:p-10 overflow-hidden relative">
           <div className="relative flex justify-between items-center max-w-5xl mx-auto px-4">
             <div className="absolute top-[22px] left-0 right-0 h-[4px] bg-slate-100 rounded-full" />
             <div 
@@ -373,7 +373,7 @@ export function AdminOrderDetails({ order, onBack, setActiveTab }: OrderDetailsP
                   )}
                 </div>
                 <span className={`mt-5 text-[10px] font-black uppercase tracking-[0.2em] text-center max-w-[100px] leading-tight transition-colors ${
-                  idx + 1 <= currentStep ? "text-slate-900 italic" : "text-slate-400"
+                  idx + 1 <= currentStep ? "text-slate-900" : "text-slate-400"
                 }`}>
                   {step.label}
                 </span>
@@ -383,10 +383,10 @@ export function AdminOrderDetails({ order, onBack, setActiveTab }: OrderDetailsP
         </div>
 
         {/* Registry Summary Card */}
-        <div className="bg-white rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-200/60 overflow-hidden">
+        <div className="panel overflow-hidden">
           <div className="p-4 md:p-8 border-b border-slate-100 flex flex-wrap items-center justify-between gap-6 bg-slate-50/30">
             <div className="flex items-center gap-6">
-                <div className="flex items-center gap-3 text-[16px] font-black text-slate-900 uppercase italic">
+                <div className="flex items-center gap-3 text-base font-bold text-slate-900 tracking-tight">
                     <Package size={22} className="text-primary-600" />
                     ID {orderIdShort}
                 </div>
@@ -396,9 +396,9 @@ export function AdminOrderDetails({ order, onBack, setActiveTab }: OrderDetailsP
                   </div>
                 )}
             </div>
-            <div className="flex flex-wrap items-center gap-3 md:gap-8 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                <span className="flex items-center gap-2">Timestamp <span className="text-slate-900 italic">{orderDate}</span></span>
-                <span className={`px-4 py-2 rounded-xl border ${
+            <div className="flex flex-wrap items-center gap-3 md:gap-8 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                <span className="flex items-center gap-2">Timestamp <span className="text-slate-900">{orderDate}</span></span>
+                <span className={`px-4 py-2 rounded-full border ${
                    status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                    status === 'Canceled' ? 'bg-red-50 text-red-600 border-red-100' :
                    'bg-amber-50 text-amber-600 border-amber-100'
@@ -407,24 +407,24 @@ export function AdminOrderDetails({ order, onBack, setActiveTab }: OrderDetailsP
           </div>
 
           <div className="p-4 md:p-10">
-            <div className="flex flex-wrap items-center justify-between bg-slate-50/50 p-4 md:p-10 rounded-[2rem] border border-slate-200/60 shadow-inner">
+            <div className="flex flex-wrap items-center justify-between bg-slate-50/70 p-4 md:p-8 rounded-[1.25rem] border border-slate-900/[0.06]">
                 <div className="flex flex-wrap items-center gap-4 md:gap-8">
-                    <div className="w-20 h-20 rounded-[1.8rem] overflow-hidden bg-primary-600 border-4 border-white shadow-xl flex items-center justify-center shrink-0">
-                        <span className="text-white font-black text-3xl uppercase">{(order.username || "B").charAt(0)}</span>
+                    <div className="w-20 h-20 rounded-2xl overflow-hidden bg-primary-600 border-4 border-white shadow-lg flex items-center justify-center shrink-0">
+                        <span className="text-white font-bold text-3xl">{(order.username || "B").charAt(0).toUpperCase()}</span>
                     </div>
                     <div>
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-1">Registry Buyer</div>
-                        <h4 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">{order.username || 'Anonymous'}</h4>
+                        <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.22em] mb-1">Buyer</div>
+                        <h4 className="text-2xl font-bold text-slate-900 tracking-tight">{order.username || 'Anonymous'}</h4>
                     </div>
                     <div className="flex flex-wrap gap-3 md:ml-10">
-                        <button onClick={handleChatNow} className="flex items-center gap-3 px-6 py-3 bg-primary-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-primary-600/25 hover:bg-primary-700 transition-all active:scale-95">
-                            <MessageCircle size={16} /> Open Channel
+                        <button onClick={handleChatNow} className="btn-primary flex items-center gap-2.5 px-5 py-3 rounded-xl text-[11px] font-bold uppercase tracking-wider">
+                            <MessageCircle size={16} /> Message Buyer
                         </button>
-                        <a href={`mailto:${order.customer_email || ''}`} className="flex items-center gap-3 px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95">
-                            <Mail size={16} /> SMTP Link
+                        <a href={`mailto:${order.customer_email || ''}`} className="btn-secondary flex items-center gap-2.5 px-5 py-3 rounded-xl text-[11px] font-bold uppercase tracking-wider">
+                            <Mail size={16} /> Email Buyer
                         </a>
-                        <button onClick={() => setShowCancelModal(true)} className="flex items-center gap-3 px-6 py-3 bg-white border border-red-200 text-red-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-red-50 transition-all active:scale-95">
-                            <XCircle size={16} /> Terminate
+                        <button onClick={() => setShowCancelModal(true)} className="flex items-center gap-2.5 px-5 py-3 bg-white border border-red-200 text-red-600 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-red-50 hover:border-red-300 transition-colors">
+                            <XCircle size={16} /> Cancel Order
                         </button>
                     </div>
                 </div>
@@ -432,24 +432,24 @@ export function AdminOrderDetails({ order, onBack, setActiveTab }: OrderDetailsP
 
             <div className="mt-8 md:mt-12 grid grid-cols-12 gap-6 lg:gap-10">
                 <div className="col-span-12 lg:col-span-8 space-y-6">
-                    <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-widest italic mb-6 flex items-center gap-3">
+                    <h3 className="text-[15px] font-semibold text-slate-900 tracking-tight mb-6 flex items-center gap-3">
                         <div className="w-2 h-2 rounded-full bg-primary-500/50" />
-                        Registry Metadata
+                        Order Information
                     </h3>
                     
                     <div className="grid grid-cols-2 gap-4 md:gap-8">
                         <div className="space-y-6">
-                            <MetadataItem label="Protocol Asset" value={product?.game || product?.category || "N/A"} />
-                            <MetadataItem label="Entry Title" value={product?.title || "N/A"} />
+                            <MetadataItem label="Category" value={product?.game || product?.category || "N/A"} />
+                            <MetadataItem label="Product" value={product?.title || "N/A"} />
                         </div>
                         <div className="space-y-6">
-                            <MetadataItem label="Registry User" value={order?.username || "Anonymous"} />
+                            <MetadataItem label="Buyer" value={order?.username || "Anonymous"} />
                             <MetadataItem label="Buyer Email" value={order?.customer_email || "N/A"} />
                         </div>
                     </div>
 
                     <div className="pt-10">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Operational Actions</div>
+                        <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.22em] mb-6">Operational Actions</div>
                         <div className="flex gap-4 flex-wrap">
                             {d?.payment_status === "pending_verification" && (
                                 <p className="text-[12px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4">
@@ -470,16 +470,16 @@ export function AdminOrderDetails({ order, onBack, setActiveTab }: OrderDetailsP
                                 <button
                                     onClick={() => orderAction("complete")}
                                     disabled={loading}
-                                    className="px-10 py-4 bg-emerald-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-emerald-900/40 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50"
+                                    className="px-8 py-3.5 bg-emerald-600 text-white rounded-xl text-[11px] font-bold uppercase tracking-[0.18em] shadow-lg shadow-emerald-600/25 hover:bg-emerald-700 hover:-translate-y-px transition-all disabled:opacity-50"
                                 >
                                     COMPLETE ORDER — RELEASE ESCROW
                                 </button>
                             )}
                             {status === "Disputed" && (
                                 <>
-                                    <button onClick={() => orderAction("resolve_dispute", { resolution: "refunded" })} disabled={loading} className="px-8 py-4 bg-violet-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-violet-700 transition-all disabled:opacity-50">REFUND TO WALLET</button>
-                                    <button onClick={() => orderAction("resolve_dispute", { resolution: "replaced" })} disabled={loading} className="px-8 py-4 bg-primary-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-primary-700 transition-all disabled:opacity-50">REPLACE FROM STOCK</button>
-                                    <button onClick={() => orderAction("resolve_dispute", { resolution: "rejected" })} disabled={loading} className="px-8 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-slate-50 transition-all disabled:opacity-50">REJECT DISPUTE</button>
+                                    <button onClick={() => orderAction("resolve_dispute", { resolution: "refunded" })} disabled={loading} className="px-6 py-3.5 bg-violet-600 text-white rounded-xl text-[11px] font-bold uppercase tracking-[0.14em] hover:bg-violet-700 transition-colors disabled:opacity-50">REFUND TO WALLET</button>
+                                    <button onClick={() => orderAction("resolve_dispute", { resolution: "replaced" })} disabled={loading} className="btn-primary px-6 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-[0.14em]">REPLACE FROM STOCK</button>
+                                    <button onClick={() => orderAction("resolve_dispute", { resolution: "rejected" })} disabled={loading} className="btn-secondary px-6 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-[0.14em]">REJECT DISPUTE</button>
                                 </>
                             )}
                         </div>
@@ -490,8 +490,8 @@ export function AdminOrderDetails({ order, onBack, setActiveTab }: OrderDetailsP
                 </div>
 
                 {/* Registry Info Sidebar */}
-                <div className="col-span-12 lg:col-span-4 bg-slate-50/50 p-5 md:p-8 rounded-[2rem] border border-slate-200/60">
-                    <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest italic mb-8">Financial Ledger</h3>
+                <div className="col-span-12 lg:col-span-4 bg-slate-50/70 p-5 md:p-8 rounded-[1.5rem] border border-slate-900/[0.06] h-fit">
+                    <h3 className="text-[15px] font-semibold text-slate-900 tracking-tight mb-6">Financial Ledger</h3>
                     <div className="space-y-6">
                         <LedgerItem label="Order Total (one canonical field)" value={`$${Number(order?.total_price || 0).toFixed(2)}`} />
                         <LedgerItem label="Quantity" value={`${order?.quantity || 1} unit(s)`} />
@@ -507,8 +507,8 @@ export function AdminOrderDetails({ order, onBack, setActiveTab }: OrderDetailsP
                         )}
                         <div className="pt-6 mt-6 border-t border-slate-200">
                              <div className="flex justify-between items-center">
-                                  <span className="text-[11px] font-black text-slate-900 uppercase">Buyer Paid</span>
-                                  <span className="text-2xl font-black text-primary-700 tracking-tighter">${Number(order?.total_price || 0).toFixed(2)}</span>
+                                  <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wide">Buyer Paid</span>
+                                  <span className="text-2xl font-bold text-primary-700 tracking-tight">${Number(order?.total_price || 0).toFixed(2)}</span>
                              </div>
                         </div>
                     </div>
@@ -517,7 +517,7 @@ export function AdminOrderDetails({ order, onBack, setActiveTab }: OrderDetailsP
 
             {/* Service intake — buyer-provided details (fulfilment types) */}
             {intakeEntries.length > 0 && (
-            <div className="mt-12 bg-primary-50 p-8 rounded-[2rem] border-2 border-primary-200">
+            <div className="mt-10 bg-primary-50 p-6 sm:p-8 rounded-[1.5rem] border border-primary-200">
                 <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest italic mb-2 flex items-center gap-2">
                     <Package size={14} className="text-primary-700" /> Service Intake — Details Provided by the Buyer
                 </h3>

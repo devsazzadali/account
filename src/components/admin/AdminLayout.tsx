@@ -119,13 +119,13 @@ function OrderToast({ title, amount, onView, onDismiss }: { title: string; amoun
       <div className="px-5 pb-5 flex gap-3">
         <button
           onClick={onView}
-          className="flex-1 py-2.5 bg-primary-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+          className="btn-primary flex-1 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider"
         >
           View Order
         </button>
         <button
           onClick={onDismiss}
-          className="px-4 py-2.5 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+          className="btn-secondary px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider"
         >
           Dismiss
         </button>
@@ -166,13 +166,13 @@ function DisputeToast({ orderCode, reason, onView, onDismiss }: { orderCode: str
       <div className="px-5 pb-5 flex gap-3">
         <button
           onClick={onView}
-          className="flex-1 py-2.5 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+          className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-red-700 transition-colors"
         >
           View Order
         </button>
         <button
           onClick={onDismiss}
-          className="px-4 py-2.5 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+          className="btn-secondary px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider"
         >
           Dismiss
         </button>
@@ -192,6 +192,23 @@ export function AdminLayout({ children, activeTab, setActiveTab, role }: AdminLa
   // desktop collapse behaviour only applies at lg and up — on mobile
   // the drawer always shows full labels.
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Profile dropdown (video pattern): clicking the topbar avatar opens a
+  // menu below it — identity header, desk shortcuts, sign-out footer.
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) setProfileMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setProfileMenuOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [profileMenuOpen]);
   const [isLg, setIsLg] = useState(() =>
     typeof window === "undefined" ? true : window.matchMedia("(min-width: 1024px)").matches
   );
@@ -339,10 +356,10 @@ export function AdminLayout({ children, activeTab, setActiveTab, role }: AdminLa
 
       {/* ── Sidebar - Admin Dashboard Theme ── */}
       <aside
-        className={`bg-white border-r border-slate-200 flex flex-col z-[600] lg:z-[500] fixed inset-y-0 left-0 lg:static shrink-0 transition-all duration-300 shadow-xl shadow-slate-200/50 w-[260px] ${collapsed ? 'lg:w-[72px]' : 'lg:w-[260px]'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        className={`bg-white border-r border-slate-900/[0.08] flex flex-col z-[600] lg:z-[500] fixed inset-y-0 left-0 lg:static shrink-0 transition-all duration-300 shadow-2xl lg:shadow-none w-[260px] ${collapsed ? 'lg:w-[72px]' : 'lg:w-[260px]'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
       >
         {/* Sidebar Header - Admin Dashboard */}
-        <div className={`h-24 flex items-center bg-[#f8fafc] text-slate-900 shrink-0 relative overflow-hidden transition-all duration-300 border-b border-slate-200 ${collapsed ? 'px-4 justify-center' : 'px-5 lg:px-8'}`}>
+        <div className={`h-16 flex items-center bg-white text-slate-900 shrink-0 relative overflow-hidden transition-all duration-300 border-b border-slate-900/[0.08] ${collapsed ? 'px-4 justify-center' : 'px-5 lg:px-8'}`}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/10 blur-[40px] -mr-16 -mt-16" />
             <div className="flex items-center gap-4 relative z-10 overflow-hidden">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-teal-500 flex items-center justify-center shadow-lg shadow-primary-500/20 shrink-0">
@@ -350,8 +367,8 @@ export function AdminLayout({ children, activeTab, setActiveTab, role }: AdminLa
                 </div>
                 {!collapsed && (
                     <div className="flex flex-col">
-                        <span className="font-black tracking-[-0.05em] text-[13px] lg:text-[14px] uppercase italic leading-none text-slate-900 whitespace-nowrap">Admin Dashboard</span>
-                        <span className="text-[9px] font-black text-primary-600 uppercase tracking-[0.3em] mt-1 italic whitespace-nowrap">Store Control</span>
+                        <span className="font-bold tracking-tight text-[15px] leading-none text-slate-900 whitespace-nowrap">Admin Dashboard</span>
+                        <span className="text-[9px] font-semibold text-primary-600 uppercase tracking-[0.22em] mt-1 whitespace-nowrap">Store Control</span>
                     </div>
                 )}
             </div>
@@ -366,13 +383,13 @@ export function AdminLayout({ children, activeTab, setActiveTab, role }: AdminLa
 
         {/* User Quick Info */}
         {!collapsed && (
-            <div className="p-6 border-b border-slate-100 flex items-center gap-4 bg-slate-50/30">
-                <div className="w-12 h-12 rounded-[1.25rem] border-2 border-white shadow-sm overflow-hidden bg-primary-600 shrink-0 flex items-center justify-center">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3.5 bg-slate-50/40">
+                <div className="w-11 h-11 rounded-xl border-2 border-white shadow-sm overflow-hidden bg-primary-600 shrink-0 flex items-center justify-center">
                     <span className="text-white font-black text-lg uppercase">{(username || "A").charAt(0)}</span>
                 </div>
                 <div className="min-w-0">
-                    <div className="text-[13px] font-black text-slate-900 truncate uppercase tracking-tight">{username}</div>
-                    <div className="text-[9px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1.5 mt-1">
+                    <div className="text-sm font-bold text-slate-900 truncate tracking-tight">{username}</div>
+                    <div className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5 mt-0.5">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
                         {isManager ? "Store Manager" : "Verified Admin"}
                     </div>
@@ -496,11 +513,11 @@ export function AdminLayout({ children, activeTab, setActiveTab, role }: AdminLa
           <a 
             href="/" 
             target="_blank"
-            className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all group`}
+            className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-slate-600 hover:bg-primary-50 hover:text-primary-700 transition-colors group text-[13px] font-medium`}
           >
-            <div className="shrink-0 group-hover:scale-110 transition-transform"><Store size={20} /></div>
+            <div className="shrink-0 text-slate-400 group-hover:text-primary-600 transition-colors"><Store size={20} /></div>
             {!collapsed && (
-                <span className="font-black text-[13px] uppercase tracking-wide whitespace-nowrap">Visit Store</span>
+                <span className="text-[13px] font-medium whitespace-nowrap">Visit Store</span>
             )}
             {!collapsed && <ExternalLink size={14} className="ml-auto opacity-40" />}
           </a>
@@ -510,12 +527,12 @@ export function AdminLayout({ children, activeTab, setActiveTab, role }: AdminLa
         <div className="p-3 border-t border-slate-100 space-y-1 bg-slate-50/30">
             <button
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="hidden lg:flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition-all group"
+                className="hidden lg:flex items-center gap-3 w-full px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors group text-[13px] font-medium"
             >
                 <div className="w-5 h-5 flex items-center justify-center shrink-0">
                     {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
                 </div>
-                {!collapsed && <span className="text-[12px] font-black uppercase tracking-widest group-hover:text-slate-900 transition-colors">Collapse menu</span>}
+                {!collapsed && <span className="text-[13px] font-medium group-hover:text-slate-900 transition-colors">Collapse menu</span>}
             </button>
             <button 
                 onClick={handleLogout}
@@ -524,7 +541,7 @@ export function AdminLayout({ children, activeTab, setActiveTab, role }: AdminLa
                 <div className="w-5 h-5 flex items-center justify-center shrink-0">
                     <LogOut size={18} />
                 </div>
-                {!collapsed && <span className="text-[12px] font-black uppercase tracking-widest">Terminate Session</span>}
+                {!collapsed && <span className="text-[13px] font-medium">Terminate Session</span>}
             </button>
         </div>
       </aside>
@@ -532,7 +549,7 @@ export function AdminLayout({ children, activeTab, setActiveTab, role }: AdminLa
       {/* ── Main Workspace ── */}
       <div className="flex-1 min-w-0 flex flex-col relative z-10 overflow-hidden">
         {/* Topbar */}
-        <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 flex justify-between items-center shrink-0 shadow-sm z-40">
+        <header className="h-16 bg-white border-b border-slate-900/[0.08] px-4 sm:px-6 lg:px-8 flex justify-between items-center shrink-0 shadow-[0_1px_3px_rgba(15,23,42,0.04)] z-40">
           <div className="flex items-center gap-3 sm:gap-6 flex-1 min-w-0">
               <button
                   onClick={() => setMobileOpen(true)}
@@ -564,7 +581,7 @@ export function AdminLayout({ children, activeTab, setActiveTab, role }: AdminLa
                       try { window.dispatchEvent(new Event("orderScanRequested")); } catch {}
                       goToTab("orders");
                     }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-2.5 text-[13px] font-bold text-slate-900 focus:outline-none focus:border-primary-300 focus:bg-white focus:ring-4 focus:ring-primary-50 transition-all"
+                    className="field w-full rounded-xl pl-12 pr-4 py-2.5 text-[13px] font-medium"
                   />
                   <Search className="absolute left-4 top-3 text-slate-400 group-focus-within:text-primary-600 transition-colors" size={18} />
                   <div className="absolute right-3 top-2.5 hidden md:flex items-center gap-1 opacity-20 group-focus-within:opacity-40 transition-opacity">
@@ -619,9 +636,99 @@ export function AdminLayout({ children, activeTab, setActiveTab, role }: AdminLa
               </button>
               )}
 
-              {/* User Avatar */}
-              <div className="w-9 h-9 rounded-full border border-slate-200 bg-primary-600 overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary-200 transition-all ml-2 flex items-center justify-center" onClick={() => goToTab(isManager ? "orders" : "settings")}>
-                  <span className="text-white font-black text-sm uppercase">{(username || "A").charAt(0)}</span>
+              {/* User Avatar + profile dropdown (video pattern: click the
+                  profile and a menu opens below it — from there you reach
+                  the desk sections and settings) */}
+              <div className="relative ml-2" ref={profileMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setProfileMenuOpen((v) => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={profileMenuOpen}
+                  className="flex items-center gap-1.5 focus:outline-none"
+                >
+                  <span className={`w-9 h-9 rounded-full border border-slate-200 bg-primary-600 overflow-hidden flex items-center justify-center transition-all ${profileMenuOpen ? "ring-2 ring-primary-300" : "hover:ring-2 hover:ring-primary-200"}`}>
+                    <span className="text-white font-black text-sm uppercase">{(username || "A").charAt(0)}</span>
+                  </span>
+                  <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${profileMenuOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                <AnimatePresence>
+                  {profileMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                      transition={{ duration: 0.18, ease: "easeOut" }}
+                      className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden z-50 origin-top-right"
+                      role="menu"
+                    >
+                      {/* Identity header */}
+                      <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-full bg-primary-600 flex items-center justify-center shrink-0">
+                            <span className="text-white font-black uppercase">{(username || "A").charAt(0)}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-slate-900 truncate">{username}</div>
+                            <div className="text-[10px] text-primary-600 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              {isManager ? "Store Manager" : "System Administrator"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Desk shortcuts — managers keep their orders-only scope */}
+                      <div className="p-2 space-y-1">
+                        {(isManager
+                          ? [{ id: "orders", label: "Sold Orders", icon: ShoppingCart }]
+                          : [
+                              { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+                              { id: "orders", label: "Sold Orders", icon: ShoppingCart },
+                              { id: "products", label: "Create New Offers", icon: Plus },
+                              { id: "active_offers", label: "Active Offers", icon: Package },
+                              { id: "store_info", label: "Store Information", icon: Store },
+                              { id: "settings", label: "General Config", icon: Settings },
+                            ]
+                        ).map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            role="menuitem"
+                            onClick={() => { setProfileMenuOpen(false); goToTab(item.id); }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-primary-50 hover:text-primary-700 transition-colors text-left"
+                          >
+                            <item.icon size={18} className="text-slate-400 shrink-0" />
+                            {item.label}
+                          </button>
+                        ))}
+                        <a
+                          href="/"
+                          target="_blank"
+                          role="menuitem"
+                          onClick={() => setProfileMenuOpen(false)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                        >
+                          <ExternalLink size={18} className="text-slate-400 shrink-0" />
+                          Visit Store
+                        </a>
+                      </div>
+
+                      {/* Sign-out footer (full-width bar, as in the video) */}
+                      <div className="p-3 border-t border-slate-100 bg-slate-50/50">
+                        <button
+                          type="button"
+                          onClick={() => { setProfileMenuOpen(false); handleLogout(); }}
+                          className="w-full bg-slate-900 hover:bg-red-600 text-white text-[11px] font-black uppercase tracking-widest py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-300"
+                        >
+                          <LogOut size={14} />
+                          Sign Out
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
           </div>
         </header>
@@ -683,30 +790,24 @@ function MenuItem({ id, label, icon, activeTab, setActiveTab, badge, collapsed }
     return (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-3.5 w-full px-4 py-2.5 rounded-xl transition-all duration-300 relative group ${
-                isActive 
-                ? "text-slate-900" 
-                : "text-slate-400 hover:bg-slate-50/80 hover:text-slate-600"
+            className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-colors duration-200 relative group text-[13px] ${
+                isActive
+                ? "bg-primary-50 text-primary-700 font-semibold"
+                : "text-slate-600 font-medium hover:bg-slate-50 hover:text-slate-900"
             }`}
         >
-            <div className={`shrink-0 p-1.5 rounded-lg transition-all duration-300 ${isActive ? 'bg-primary-50 text-primary-600 shadow-sm' : 'group-hover:scale-105'}`}>
+            <div className={`shrink-0 transition-colors ${isActive ? 'text-primary-600' : 'text-slate-400 group-hover:text-slate-500'}`}>
                 {icon}
             </div>
             {!collapsed && (
-                <span className={`font-black text-[10px] uppercase tracking-[0.15em] whitespace-nowrap transition-all ${isActive ? 'translate-x-1' : ''}`}>
+                <span className="whitespace-nowrap">
                     {label}
                 </span>
             )}
             {badge && !collapsed && (
-                <span className="ml-auto px-2 py-0.5 bg-primary-600 text-white text-[9px] font-black rounded-lg shadow-lg shadow-primary-600/30">
+                <span className="ml-auto px-2 py-0.5 bg-primary-600 text-white text-[10px] font-bold rounded-full">
                     {badge}
                 </span>
-            )}
-            {isActive && (
-                <motion.div 
-                    layoutId="activePill"
-                    className={`absolute bg-primary-500 rounded-full shadow-[0_0_10px_rgba(29,191,115,0.4)] ${collapsed ? 'right-1 w-1 h-10' : 'right-0 w-1.5 h-8 rounded-l-full'}`}
-                />
             )}
         </button>
     );
@@ -718,24 +819,24 @@ function CollapsibleMenu({ label, icon, collapsed, activeTab, setActiveTab, item
         <div className="space-y-1">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all group`}
+                className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors group text-[13px] font-medium`}
             >
-                <div className="shrink-0 group-hover:scale-110 transition-transform">{icon}</div>
+                <div className="shrink-0 text-slate-400 group-hover:text-slate-500 transition-colors">{icon}</div>
                 {!collapsed && (
                     <>
-                        <span className="font-black text-[13px] uppercase tracking-wide whitespace-nowrap flex-1 text-left">{label}</span>
+                        <span className="whitespace-nowrap flex-1 text-left">{label}</span>
                         <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
                     </>
                 )}
             </button>
             {!collapsed && isOpen && (
-                <div className="pl-12 pr-4 space-y-1 py-1">
+                <div className="pl-9 pr-2 space-y-0.5 py-1">
                     {items.map((item: any) => (
                         <button 
                             key={item.id}
                             onClick={() => setActiveTab(item.id)}
-                            className={`w-full text-left py-2 text-[12px] font-bold transition-all tracking-wide uppercase ${
-                                activeTab === item.id ? 'text-primary-600' : 'text-slate-400 hover:text-slate-600'
+                            className={`w-full text-left px-3 py-1.5 rounded-md text-[13px] transition-colors ${
+                                activeTab === item.id ? 'bg-primary-50 text-primary-700 font-semibold' : 'text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-800'
                             }`}
                         >
                             {item.label}

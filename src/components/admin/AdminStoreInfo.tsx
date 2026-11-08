@@ -68,7 +68,7 @@ export function AdminStoreInfo({ setActiveTab }: { setActiveTab?: (tab: string) 
   return (
     <div className="p-6 lg:p-10 space-y-8 max-w-[1200px] mx-auto">
       <div>
-        <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
           <Store className="text-primary-600" size={26} /> Store Information
         </h2>
         <p className="text-sm text-slate-500 font-medium mt-1">
@@ -77,14 +77,14 @@ export function AdminStoreInfo({ setActiveTab }: { setActiveTab?: (tab: string) 
       </div>
 
       {/* Identity card */}
-      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+      <div className="panel overflow-hidden">
         {identity?.banner_url && (
           <div className="h-36 w-full overflow-hidden border-b border-slate-100">
             <img src={identity.banner_url} alt="Store banner" className="w-full h-full object-cover" />
           </div>
         )}
         <div className="p-8 flex flex-col md:flex-row gap-8">
-          <div className="w-24 h-24 rounded-[1.8rem] bg-primary-600 flex items-center justify-center shrink-0 overflow-hidden border-4 border-white shadow-lg">
+          <div className="w-24 h-24 rounded-3xl bg-primary-600 flex items-center justify-center shrink-0 overflow-hidden border-4 border-white shadow-lg">
             {identity?.logo_url ? (
               <img src={identity.logo_url} alt="Store logo" className="w-full h-full object-cover" />
             ) : (
@@ -93,8 +93,8 @@ export function AdminStoreInfo({ setActiveTab }: { setActiveTab?: (tab: string) 
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h3 className="text-2xl font-black text-slate-900">{identity?.name || "Account Store One"}</h3>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${identity?.open ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-red-50 text-red-500 border-red-100"}`}>
+              <h3 className="text-2xl font-bold text-slate-900 tracking-tight">{identity?.name || "Account Store One"}</h3>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${identity?.open ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-red-50 text-red-500 border-red-100"}`}>
                 {identity?.open ? <><Eye size={12} /> Store Open</> : <><EyeOff size={12} /> Store Hidden</>}
               </span>
             </div>
@@ -108,7 +108,7 @@ export function AdminStoreInfo({ setActiveTab }: { setActiveTab?: (tab: string) 
               )}
             </div>
             {setActiveTab && (
-              <button onClick={() => setActiveTab("settings")} className="mt-5 px-5 py-2.5 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all">
+              <button onClick={() => setActiveTab("settings")} className="btn-primary mt-5 px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider">
                 Edit in Settings
               </button>
             )}
@@ -117,8 +117,8 @@ export function AdminStoreInfo({ setActiveTab }: { setActiveTab?: (tab: string) 
       </div>
 
       {/* Operations scoreboard */}
-      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm p-8">
-        <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-widest mb-6">Store Operation Information</h3>
+      <div className="panel p-8">
+        <h3 className="text-[15px] font-semibold text-slate-900 tracking-tight mb-6">Store Operation Information</h3>
         {!store ? (
           <p className="text-sm text-slate-400 font-medium">Statistics unavailable right now.</p>
         ) : (

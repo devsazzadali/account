@@ -249,7 +249,7 @@ export function AdminCategories() {
             <span className="text-[13px] font-medium tracking-wide">Syncing data modules...</span>
           </div>
         ) : filteredCategories.length === 0 ? (
-          <div className="text-center py-20 border-2 border-dashed border-slate-100 rounded-3xl">
+          <div className="text-center py-20 border-2 border-dashed border-slate-200 rounded-[1.5rem]">
             <div className="p-4 bg-slate-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
               <Tag size={24} className="text-slate-300" />
             </div>
@@ -514,7 +514,7 @@ export function AdminCategories() {
               initial={{ opacity: 0, scale: 0.95 }} 
               animate={{ opacity: 1, scale: 1 }} 
               exit={{ opacity: 0, scale: 0.95 }} 
-              className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl p-8 text-center"
+              className="relative w-full max-w-sm panel shadow-2xl p-8 text-center"
             >
               <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-red-500">
                 <AlertCircle size={32} />
