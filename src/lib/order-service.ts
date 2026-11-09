@@ -35,7 +35,12 @@ import {
 } from "./mailer";
 import { LOW_STOCK_THRESHOLD } from "./email-templates";
 import { orderCode } from "./order-ref";
+import { getServiceFeeUsd } from "./settings-store";
 
+/** Fallback service fee (USD) — the historical charge. The LIVE fee is
+ *  the admin-configurable `service_fee_usd` setting (getServiceFeeUsd);
+ *  each order stores the fee it was charged in orders.service_fee and
+ *  refunds/reports/invoices read THAT, never the live setting. */
 export const SERVICE_FEE = 0.5;
 const ESCROW_HOLD_MS = 48 * 60 * 60 * 1000;
 
@@ -542,7 +547,8 @@ export async function createOrder(input: {
       couponCode = priced.coupon.code;
       await tx.coupon.update({ where: { id: priced.coupon.id }, data: { usedCount: { increment: 1 } } });
     }
-    const total = subtotal.sub(discount).add(SERVICE_FEE);
+    const serviceFee = dec(await getServiceFeeUsd());
+    const total = subtotal.sub(discount).add(serviceFee);
     const order = await tx.order.create({
       data: {
         productId: product.id,
@@ -551,6 +557,7 @@ export async function createOrder(input: {
         customerEmail: input.customerEmail || input.email,
         quantity: qty,
         totalPrice: total,
+        serviceFee,
         variantLabel: variant?.label || null,
         intakeData: intake ?? undefined,
         couponCode,
@@ -918,9 +925,9 @@ export async function confirmPartialReceipt(orderId: string, userId: string) {
 /** Cancel the UNDELIVERED remainder of a partially delivered order and
  *  refund it pro-rata to the buyer's wallet. The delivered part stays
  *  sold; the order completes (escrow released on the delivered part).
- *  Refund = (total − $0.50 service fee) × remaining ÷ quantity — the fee
- *  was earned by processing the order; coupons are NOT released (the
- *  delivered part consumed the redemption). */
+ *  Refund = (total − the order's recorded service fee) × remaining ÷
+ *  quantity — the fee was earned by processing the order; coupons are
+ *  NOT released (the delivered part consumed the redemption). */
 export async function cancelRemainder(orderId: string, actor: { userId: string; isAdmin: boolean }) {
   return withTx(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
@@ -934,7 +941,7 @@ export async function cancelRemainder(orderId: string, actor: { userId: string; 
     if (order.deliveredQuantity >= order.quantity) throw new ServiceError("This order is fully delivered — nothing left to cancel", 409);
 
     const remaining = order.quantity - order.deliveredQuantity;
-    const refund = dec(order.totalPrice).sub(SERVICE_FEE).mul(remaining).div(order.quantity).toDecimalPlaces(2);
+    const refund = dec(order.totalPrice).sub(dec(order.serviceFee ?? SERVICE_FEE)).mul(remaining).div(order.quantity).toDecimalPlaces(2);
     if (refund.gt(0) && order.userId) {
       await creditWallet(tx, order.userId, refund, "refund", {
         note: `Partial refund — ${remaining} undelivered unit(s) of order ${orderCode(order.id)} cancelled`,

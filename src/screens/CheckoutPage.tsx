@@ -44,6 +44,7 @@ interface IntakeField {
 interface PaymentConfig {
   stripe: { enabled: boolean };
   store_open?: boolean;
+  service_fee?: number;
 }
 
 const STEPS = [
@@ -116,7 +117,10 @@ export function CheckoutPage() {
     })();
   }, [productId]);
 
-  const serviceFee = 0.50;
+  // Admin-configurable service charge (Settings → Payments), served by
+  // /api/payments/config; 0.50 is only the pre-load/default fallback —
+  // the server recomputes from the setting when the order is created.
+  const serviceFee = Number(payConfig?.service_fee ?? 0.5);
   // Variant + min-quantity rules (P2) mirror the server's pricing.
   const activeVariant = (product?.variants || []).find((v) => v.label === variantLabel) || null;
   const unitPrice = (product?.price || 0) + (activeVariant ? Number(activeVariant.priceDelta) || 0 : 0);
@@ -235,16 +239,18 @@ export function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      <div className="fixed top-0 left-1/4 w-[600px] h-[400px] bg-primary-500/5 blur-[150px] rounded-full pointer-events-none" />
-      <div className="fixed bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/5 blur-[100px] rounded-full pointer-events-none" />
+      <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden>
+        <div className="absolute top-0 left-1/4 w-[600px] h-[400px] bg-primary-500/5 blur-[150px] rounded-full" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/5 blur-[100px] rounded-full" />
+      </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-10 relative z-10">
-        <div className="flex items-center gap-4 mb-10">
+      <div className="max-w-5xl mx-auto px-4 py-6 sm:py-10 relative z-10">
+        <div className="flex items-center gap-4 mb-8 sm:mb-10">
           <button onClick={() => router.back()} className="p-3 bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 shadow-sm transition-all">
             <ArrowLeft size={20} className="text-slate-600" />
           </button>
           <div>
-            <h1 className="text-3xl font-display font-bold text-slate-900 tracking-tight">Secure Checkout</h1>
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 tracking-tight">Secure Checkout</h1>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 flex items-center gap-2">
               <Lock size={10} className="text-primary-600" /> Escrow Buyer Protection Active
             </p>
@@ -252,7 +258,7 @@ export function CheckoutPage() {
         </div>
 
         {/* Step Indicator */}
-        <div className="flex items-center justify-between mb-10 relative">
+        <div className="flex items-center justify-between mb-8 sm:mb-10 relative">
           <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-200 mx-10" />
           <motion.div
             className="absolute top-5 left-0 h-0.5 bg-primary-500 mx-10"
@@ -302,11 +308,11 @@ export function CheckoutPage() {
               className="grid grid-cols-1 lg:grid-cols-12 gap-8"
             >
               <div className="lg:col-span-7 space-y-6">
-                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
+                <div className="bg-white rounded-[1.75rem] sm:rounded-[2.5rem] border border-slate-200 p-5 sm:p-8 shadow-sm">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                     <Package size={14} className="text-primary-600" /> Order Review
                   </h3>
-                  <div className="flex gap-5">
+                  <div className="flex gap-4 sm:gap-5">
                     <img src={product.image} className="w-20 h-20 rounded-2xl object-cover border border-slate-100 shrink-0 shadow-sm" alt={product.title} />
                     <div>
                       <h4 className="text-sm font-bold text-slate-900 leading-relaxed mb-2">{product.title}</h4>
@@ -326,7 +332,7 @@ export function CheckoutPage() {
                 </div>
 
                 {isService && (
-                  <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
+                  <div className="bg-white rounded-[1.75rem] sm:rounded-[2.5rem] border border-slate-200 p-5 sm:p-8 shadow-sm">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                       <Package size={14} className="text-primary-600" /> Service Details
                     </h3>
@@ -348,7 +354,7 @@ export function CheckoutPage() {
                               <select
                                 value={intake[f.key] || ""}
                                 onChange={(e) => setIntake((s) => ({ ...s, [f.key]: e.target.value }))}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary-500"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-medium focus:outline-none focus:border-primary-500"
                               >
                                 <option value="">Select…</option>
                                 {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -357,7 +363,7 @@ export function CheckoutPage() {
                               <select
                                 value={intake[f.key] || ""}
                                 onChange={(e) => setIntake((s) => ({ ...s, [f.key]: e.target.value }))}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary-500"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-medium focus:outline-none focus:border-primary-500"
                               >
                                 <option value="">Select…</option>
                                 <option value="Yes">Yes</option>
@@ -368,14 +374,14 @@ export function CheckoutPage() {
                                 value={intake[f.key] || ""}
                                 onChange={(e) => setIntake((s) => ({ ...s, [f.key]: e.target.value }))}
                                 rows={3}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary-500"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-medium focus:outline-none focus:border-primary-500"
                               />
                             ) : (
                               <input
                                 type={f.type === "number" ? "number" : "text"}
                                 value={intake[f.key] || ""}
                                 onChange={(e) => setIntake((s) => ({ ...s, [f.key]: e.target.value }))}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary-500"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-medium focus:outline-none focus:border-primary-500"
                               />
                             )}
                           </div>
@@ -385,7 +391,7 @@ export function CheckoutPage() {
                   </div>
                 )}
 
-                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
+                <div className="bg-white rounded-[1.75rem] sm:rounded-[2.5rem] border border-slate-200 p-5 sm:p-8 shadow-sm">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2">
                     <CheckCheck size={14} className="text-emerald-600" /> What You Get
                   </h3>
@@ -413,7 +419,7 @@ export function CheckoutPage() {
               </div>
 
               <div className="lg:col-span-5">
-                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-lg sticky top-24 space-y-6">
+                <div className="bg-white rounded-[1.75rem] sm:rounded-[2.5rem] border border-slate-200 p-5 sm:p-8 shadow-lg lg:sticky lg:top-24 space-y-6">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Price Breakdown</h3>
                   {storeClosed && (
                     <div className="bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-[12px] font-bold text-red-600">
@@ -431,10 +437,12 @@ export function CheckoutPage() {
                         <span className="font-bold text-emerald-600">-${discount.toFixed(2)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Service Fee</span>
-                      <span className="font-bold text-slate-900">${serviceFee.toFixed(2)}</span>
-                    </div>
+                    {serviceFee > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">Service Fee</span>
+                        <span className="font-bold text-slate-900">${serviceFee.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-500">Buyer Protection</span>
                       <span className="font-bold text-emerald-600">FREE</span>
@@ -460,9 +468,9 @@ export function CheckoutPage() {
                           value={couponInput}
                           onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                           placeholder="Coupon code"
-                          className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold uppercase placeholder:normal-case placeholder:font-medium focus:outline-none focus:border-slate-400"
+                          className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold uppercase placeholder:normal-case placeholder:font-medium focus:outline-none focus:border-slate-400"
                         />
-                        <button onClick={applyCoupon} disabled={couponBusy || !couponInput.trim()} className="px-5 py-3 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-40">
+                        <button onClick={applyCoupon} disabled={couponBusy || !couponInput.trim()} className="px-5 py-3.5 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-40">
                           {couponBusy ? "…" : "Apply"}
                         </button>
                       </div>
@@ -504,13 +512,13 @@ export function CheckoutPage() {
               className="grid grid-cols-1 lg:grid-cols-12 gap-8"
             >
               <div className="lg:col-span-7 space-y-6">
-                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
+                <div className="bg-white rounded-[1.75rem] sm:rounded-[2.5rem] border border-slate-200 p-5 sm:p-8 shadow-sm">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                     <Mail size={14} className="text-primary-600" /> Delivery Email
                   </h3>
                   <input
                     type="email"
-                    placeholder="Enter your email for delivery"
+                    placeholder="Enter your email for delivery" autoComplete="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all"
@@ -520,7 +528,7 @@ export function CheckoutPage() {
                   </p>
                 </div>
 
-                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
+                <div className="bg-white rounded-[1.75rem] sm:rounded-[2.5rem] border border-slate-200 p-5 sm:p-8 shadow-sm">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                     <CreditCard size={14} className="text-blue-600" /> Payment Method
                   </h3>
@@ -567,7 +575,7 @@ export function CheckoutPage() {
               </div>
 
               <div className="lg:col-span-5">
-                <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-lg sticky top-24 space-y-6">
+                <div className="bg-white rounded-[1.75rem] sm:rounded-[2.5rem] border border-slate-200 p-5 sm:p-8 shadow-lg lg:sticky lg:top-24 space-y-6">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Order Total</h3>
                   <div className="flex justify-between items-end">
                     <span className="text-sm font-black text-slate-900">Total</span>
@@ -594,7 +602,7 @@ export function CheckoutPage() {
                   >
                     {processing ? <><Loader2 size={18} className="animate-spin" /> Processing...</> : paymentMethod === "wallet" ? <><Wallet size={18} /> Pay from Wallet</> : <><CreditCard size={18} /> Continue to Stripe</>}
                   </button>
-                  <button onClick={() => setStep(1)} className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-colors">
+                  <button onClick={() => setStep(1)} className="w-full py-3.5 min-h-[44px] text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-colors">
                     ← Back to Review
                   </button>
                   <p className="text-[9px] text-slate-400 text-center leading-relaxed">

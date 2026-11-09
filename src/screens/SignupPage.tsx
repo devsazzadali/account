@@ -194,7 +194,7 @@ export function SignupPage() {
                                     <Mail className="h-5 w-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
                                 </div>
                                 <input
-                                    type="email"
+                                    type="email" autoComplete="email"
                                     required
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all shadow-sm"
                                     placeholder="you@domain.com"
@@ -213,7 +213,7 @@ export function SignupPage() {
                                     <Lock className="h-5 w-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
                                 </div>
                                 <input
-                                    type="password"
+                                    type="password" autoComplete="new-password"
                                     required
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all shadow-sm"
                                     placeholder="••••••••"
@@ -229,7 +229,7 @@ export function SignupPage() {
                                     <Shield className="h-5 w-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
                                 </div>
                                 <input
-                                    type="password"
+                                    type="password" autoComplete="new-password"
                                     required
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 transition-all shadow-sm"
                                     placeholder="••••••••"
@@ -242,7 +242,7 @@ export function SignupPage() {
                 </div>
 
                 <div className="flex items-start gap-3 ml-1">
-                    <input type="checkbox" id="terms" required className="w-4 h-4 mt-0.5 rounded border-slate-200 bg-slate-50 text-primary-600 focus:ring-primary-500/20" />
+                    <input type="checkbox" id="terms" required className="w-5 h-5 mt-0.5 rounded border-slate-200 bg-slate-50 text-primary-600 focus:ring-primary-500/20" />
                     <label htmlFor="terms" className="text-xs text-slate-500 cursor-pointer select-none leading-relaxed">
                         I agree to the <a href="/terms" className="text-primary-600 hover:text-primary-500 transition-colors underline">Terms of Service</a> and <a href="/privacy" className="text-primary-600 hover:text-primary-500 transition-colors underline">Privacy Policy</a>.
                     </label>
@@ -276,7 +276,7 @@ export function SignupPage() {
                     <button
                         type="button"
                         onClick={() => handleSocialLogin('google')}
-                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-red-50 hover:text-red-600"
+                        className="w-full flex items-center justify-center gap-2 py-3.5 min-h-[44px] rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-red-50 hover:text-red-600"
                     >
                         <Globe className="w-4 h-4" />
                         <span className="text-[10px] font-bold uppercase tracking-widest">Continue with Google</span>
@@ -286,7 +286,7 @@ export function SignupPage() {
 
             <div className="mt-12 text-center text-sm">
                 <span className="text-slate-500">Already have an account? </span>
-                <Link href="/login" className="text-primary-600 font-bold hover:text-primary-500 transition-colors underline underline-offset-4">Sign in</Link>
+                <Link href="/login" className="inline-block py-2 text-primary-600 font-bold hover:text-primary-500 transition-colors underline underline-offset-4">Sign in</Link>
             </div>
         </motion.div>
         

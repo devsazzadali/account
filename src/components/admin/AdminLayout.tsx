@@ -344,7 +344,7 @@ export function AdminLayout({ children, activeTab, setActiveTab, role }: AdminLa
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex font-sans selection:bg-primary-100 selection:text-primary-900">
+    <div className="h-screen overflow-hidden bg-[#f8fafc] text-slate-900 flex font-sans selection:bg-primary-100 selection:text-primary-900">
       
       {/* Mobile drawer backdrop */}
       {mobileOpen && (

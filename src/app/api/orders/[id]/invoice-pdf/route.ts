@@ -3,8 +3,10 @@
 // order. Ownership mirrors GET /api/orders/:id exactly: session
 // required (401), unknown order 404, another customer's order 403,
 // staff standing allowed. Figures use the canonical split from
-// order-service (subtotal = total + discount − $0.50 service fee) —
-// the same numbers the invoice page and finance export show.
+// order-service (subtotal = total + discount − the order's recorded
+// service fee) — the same numbers the invoice page and finance export
+// show. The fee comes from orders.service_fee (charged at creation),
+// never from the live setting, so old invoices never change.
 
 import { getSessionContext, unauthorized, forbidden, isDeactivatedManager } from "@/src/lib/auth-server";
 import { prisma } from "@/src/lib/db";
@@ -34,7 +36,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const brand = (await getStorefrontSettings()).brand;
   const total = Number(order.totalPrice);
   const discount = Number(order.discountAmount || 0);
-  const subtotal = total + discount - SERVICE_FEE;
+  const fee = Number(order.serviceFee ?? SERVICE_FEE);
+  const subtotal = total + discount - fee;
   const unit = order.quantity > 0 ? subtotal / order.quantity : subtotal;
   const code = orderCode(order.id);
   const logo = await fetchLogo(brand.logoUrl);
@@ -75,7 +78,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         rows: [
           ["Subtotal", `$${money(subtotal)}`],
           ...(discount > 0 ? [[`Coupon ${order.couponCode || ""} discount`, `-$${money(discount)}`]] : []),
-          ["Service fee", `$${money(SERVICE_FEE)}`],
+          ...(fee > 0 ? [["Service fee", `$${money(fee)}`]] : []),
         ],
         totalsRow: ["Total (USD)", `$${money(total)}`],
       },

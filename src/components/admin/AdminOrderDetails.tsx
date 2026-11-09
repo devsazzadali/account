@@ -497,6 +497,7 @@ export function AdminOrderDetails({ order, onBack, setActiveTab }: OrderDetailsP
                         <LedgerItem label="Quantity" value={`${order?.quantity || 1} unit(s)`} />
                         {d?.variant_label && <LedgerItem label="Variant" value={d.variant_label} />}
                         {d?.coupon_code && <LedgerItem label={`Coupon ${d.coupon_code}`} value={`-$${Number(d.discount_amount || 0).toFixed(2)}`} />}
+                        {order?.service_fee != null && <LedgerItem label="Service fee (as charged)" value={`$${Number(order.service_fee).toFixed(2)}`} />}
                         <LedgerItem label="Payment" value={`${d?.payment_status || "unpaid"}${d?.payment_method ? ` · ${d.payment_method}` : ""}`} />
                         <LedgerItem label="Escrow" value={d?.escrow_state || "pending_payment"} />
                         {product?.delivery_eta_hours != null && (

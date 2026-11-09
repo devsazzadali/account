@@ -13,9 +13,10 @@
 //     returned to buyers, incl. partial-remainder refunds, whose orders
 //     stay "paid". Full refunds credit the FULL total (service fee
 //     included), so a fully refunded order retains no fee.
-//   - Service fees retained = $0.50 × orders paid in the period whose
-//     payment was not fully refunded since (partial refunds keep the
-//     fee: cancelRemainder's formula excludes it on purpose).
+//   - Service fees retained = the recorded orders.service_fee summed
+//     over orders paid in the period whose payment was not fully
+//     refunded since (partial refunds keep the fee: cancelRemainder's
+//     formula excludes it on purpose).
 //   - Escrow held is a CURRENT snapshot (money received, not yet
 //     released or refunded): paymentStatus "paid" with escrowState in
 //     in_escrow / processing / delivered / disputed.
@@ -97,7 +98,7 @@ export async function financeSummary(period: ReportPeriod): Promise<FinanceSumma
   const [paidRows, refundAgg, escrowAgg, createdRows] = await Promise.all([
     prisma.order.findMany({
       where: { paidAt: { gte: from, lt: to } },
-      select: { status: true, paymentStatus: true, totalPrice: true },
+      select: { status: true, paymentStatus: true, totalPrice: true, serviceFee: true },
     }),
     prisma.walletTransaction.aggregate({
       _sum: { amount: true },
@@ -137,7 +138,13 @@ export async function financeSummary(period: ReportPeriod): Promise<FinanceSumma
     refundedSinceCount,
     refundsCount: refundAgg._count,
     refundsTotal: round2(Number(refundAgg._sum.amount || 0)),
-    feesRetained: round2((paidRows.length - refundedSinceCount) * SERVICE_FEE),
+    // Retained fees = the RECORDED fee of each period-paid order that
+    // was not (fully) refunded — orders keep the fee they were charged.
+    feesRetained: round2(
+      paidRows
+        .filter((o) => o.paymentStatus !== "refunded")
+        .reduce((sum, o) => sum + Number(o.serviceFee ?? SERVICE_FEE), 0),
+    ),
     escrowHeld: round2(Number(escrowAgg._sum.totalPrice || 0)),
     escrowHeldCount: escrowAgg._count,
     ordersCreated: createdRows.length,
@@ -174,8 +181,10 @@ export async function ordersReport(period: ReportPeriod): Promise<OrderReportRow
     const total = Number(o.totalPrice);
     const discount = Number(o.discountAmount || 0);
     // Canonical split (same as finance-export + the buyer invoice):
-    // subtotal = total + discount − fee; unit = subtotal ÷ qty.
-    const subtotal = total + discount - SERVICE_FEE;
+    // subtotal = total + discount − the order's recorded fee;
+    // unit = subtotal ÷ qty.
+    const fee = Number(o.serviceFee ?? SERVICE_FEE);
+    const subtotal = total + discount - fee;
     return {
       code: orderCode(o.id),
       date: o.createdAt.toISOString(),
@@ -185,7 +194,7 @@ export async function ordersReport(period: ReportPeriod): Promise<OrderReportRow
       qty: o.quantity,
       unit: o.quantity > 0 ? round2(subtotal / o.quantity) : round2(subtotal),
       discount,
-      fee: SERVICE_FEE,
+      fee,
       total,
       paymentStatus: o.paymentStatus,
       status: o.status,

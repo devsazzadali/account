@@ -105,7 +105,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
       <div className="px-4 md:px-8 py-6 md:py-8 bg-white border-b border-slate-200">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h2 className="text-[24px] md:text-[28px] font-black text-slate-900 tracking-tight">Identity Nexus</h2>
+            <h2 className="text-[24px] md:text-[28px] font-black text-slate-900 tracking-tight">Customers</h2>
             <p className="text-[12px] md:text-[14px] text-slate-500 font-medium">User permissions and tier management.</p>
           </div>
           <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
@@ -166,7 +166,7 @@ export function AdminCustomers({ setActiveTab }: { setActiveTab?: (tab: string) 
                 <tr>
                   <th className="px-8 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px]">Identity</th>
                   <th className="px-8 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px]">Access Tier</th>
-                  <th className="px-8 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px]">Node Created</th>
+                  <th className="px-8 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px]">Joined</th>
                   <th className="px-8 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] text-right">Operations</th>
                 </tr>
               </thead>

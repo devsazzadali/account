@@ -152,11 +152,11 @@ export function UserDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FB] font-sans pb-20 md:pb-0">
+    <div className="min-h-screen bg-[#F8F9FB] font-sans">
       <div className="max-w-[1440px] mx-auto flex flex-col lg:flex-row min-h-screen">
 
         {/* ── Left Sidebar ── */}
-        <aside className="w-full lg:w-[300px] bg-white border-b lg:border-b-0 lg:border-r border-slate-200 p-6 lg:p-8 flex flex-col shrink-0">
+        <aside className="w-full lg:w-[300px] bg-white border-b lg:border-b-0 lg:border-r border-slate-200 p-4 sm:p-6 lg:p-8 flex flex-col shrink-0 max-lg:sticky max-lg:top-16 max-lg:z-30">
            {/* User Profile Card */}
            {loading ? (
               <div className="flex items-center gap-4 mb-8 p-4 bg-slate-50 rounded-3xl border border-slate-100 animate-pulse" aria-label="Loading profile">
@@ -167,7 +167,7 @@ export function UserDashboardPage() {
                  </div>
               </div>
            ) : (
-           <div className="flex items-center gap-4 mb-8 p-4 bg-slate-50 rounded-3xl border border-slate-100">
+           <div className="flex items-center gap-4 mb-4 lg:mb-8 p-4 bg-slate-50 rounded-3xl border border-slate-100">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-primary-500/20 shrink-0 overflow-hidden">
                  {profile?.avatar_url ? (
                     <img src={profile.avatar_url} className="w-full h-full object-cover rounded-2xl" alt="" />
@@ -186,7 +186,7 @@ export function UserDashboardPage() {
            )}
 
            {/* Navigation */}
-           <nav className="flex-1 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 -mx-1 px-1">
+           <nav className="flex-1 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 -mx-1 px-1 max-lg:[mask-image:linear-gradient(to_right,#000_90%,transparent_100%)]">
               {menuItems.map((item) => (
                 <button
                   key={item.id}
@@ -213,7 +213,7 @@ export function UserDashboardPage() {
         </aside>
 
         {/* ── Main Content Area ── */}
-        <main className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto lg:max-h-screen custom-scrollbar min-w-0">
+        <main className="flex-1 p-4 pb-24 md:p-8 lg:p-12 overflow-y-auto lg:max-h-screen custom-scrollbar min-w-0">
            {loading ? (
               <DashboardSkeleton />
            ) : (
@@ -279,7 +279,7 @@ function DashboardHome({ profile, user, orders, walletBalance, ticketState, setA
   return (
     <div className="space-y-8">
        <header>
-          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">{`Welcome back, ${displayName}`}</h1>
+          <h1 className="text-[1.65rem] leading-[1.15] md:text-4xl font-black text-slate-900 tracking-tight mb-2">{`Welcome back, ${displayName}`}</h1>
           <p className="text-slate-500 font-medium">Here&rsquo;s what&rsquo;s happening with your orders, wallet and messages.</p>
        </header>
 
@@ -328,7 +328,7 @@ function DashboardHome({ profile, user, orders, walletBalance, ticketState, setA
        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 md:p-8 shadow-sm">
           <div className="flex items-center justify-between mb-6">
              <h3 className="text-xl font-black text-slate-900">Recent Orders</h3>
-             <button onClick={() => setActiveTab('orders')} className="text-[12px] font-black text-primary-600 uppercase tracking-widest flex items-center gap-2 hover:underline">View All <ArrowRight size={14} /></button>
+             <button onClick={() => setActiveTab('orders')} className="text-[12px] font-black text-primary-600 uppercase tracking-widest flex items-center gap-2 hover:underline py-2.5 -my-1 px-1 -mx-1 min-h-[44px]">View All <ArrowRight size={14} /></button>
           </div>
           {orders.length === 0 ? (
              <div className="text-center py-6">
@@ -396,7 +396,7 @@ function SummaryCard({ icon, label, value, sub, actionLabel, actionIcon, onActio
        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</div>
        <div className={`${valueSmall ? "text-[22px]" : "text-3xl"} font-black text-slate-900 leading-tight`}>{value}</div>
        <div className="text-[12px] text-slate-400 font-medium mt-1 flex-1">{sub}</div>
-       <button onClick={onAction} className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-black text-primary-600 uppercase tracking-widest hover:underline self-start">
+       <button onClick={onAction} className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-black text-primary-600 uppercase tracking-widest hover:underline self-start min-h-[44px] py-2 px-1 -mx-1">
           {actionIcon}{actionLabel}<ArrowRight size={13} />
        </button>
     </div>
@@ -407,7 +407,7 @@ function OrderManifest({ orders }: any) {
   return (
     <div className="space-y-8">
        <header>
-          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">My Orders</h1>
+          <h1 className="text-[1.65rem] leading-[1.15] md:text-4xl font-black text-slate-900 tracking-tight mb-2">My Orders</h1>
           <p className="text-slate-500 font-medium">Every order you place appears here — open one for its delivery status, credential vault and dispute options.</p>
        </header>
 
@@ -450,7 +450,7 @@ function OrderManifest({ orders }: any) {
                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date(order.created_at).toLocaleDateString()}</div>
                          <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">{paymentLabel(order.payment_status)}</div>
                       </div>
-                      <Link href={`/order/${order.id}`} className="px-6 py-3 bg-primary-600 text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center gap-2">View Order <ArrowRight size={16} /></Link>
+                      <Link href={`/order/${order.id}`} className="px-6 py-3 min-h-[44px] bg-primary-600 text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center gap-2">View Order <ArrowRight size={16} /></Link>
                    </div>
                 </div>
              </div>

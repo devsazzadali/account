@@ -22,6 +22,7 @@ interface Settings {
   support_email: string;
   stripe_publishable_key: string;
   stripe_enabled: string; // "true" | "false"
+  service_fee_usd?: string;
   paypal_client_id: string;
   paypal_enabled: string; // "true" | "false"
   // Z2U alignment P0: storefront appearance + visibility controls.
@@ -225,6 +226,28 @@ export function AdminSettings() {
           </SectionCard>
         ) : activeTab === "Payments" ? (
           <>
+            <SectionCard title="Service Charge">
+              <Field label="Service fee per order (USD)" source={sources.service_fee_usd}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={settings.service_fee_usd ?? "0.50"}
+                  onChange={(e) => set("service_fee_usd", e.target.value)}
+                  placeholder="0.50"
+                  className={inputCls}
+                  autoComplete="off"
+                />
+              </Field>
+              <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
+                Added to every new order at checkout. Set <strong>0</strong> for no service charge — the
+                fee line then disappears from checkout and invoices entirely. Orders already placed keep
+                the fee they were charged; changing this only affects new orders.
+              </p>
+              <SaveBar saving={saving} saved={saved} onSave={handleSave} />
+            </SectionCard>
+
             <SectionCard title="Card Payments — Stripe">
               {integrations && (
                 <MethodStatus

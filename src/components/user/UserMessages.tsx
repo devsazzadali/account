@@ -469,7 +469,7 @@ export function UserMessages() {
             </div>
             <button
               onClick={() => setNewTicketOpen(true)}
-              className="mt-3 w-full py-2.5 bg-[#1dbf73] hover:bg-[#19a463] text-white rounded font-bold text-[13px] flex items-center justify-center gap-2 transition-all"
+              className="mt-3 w-full py-3 min-h-[44px] bg-[#1dbf73] hover:bg-[#19a463] text-white rounded font-bold text-[13px] flex items-center justify-center gap-2 transition-all"
             >
               <Plus size={15} /> New ticket
             </button>
@@ -515,14 +515,14 @@ export function UserMessages() {
             <button
               key={t.key}
               onClick={() => selectThread(t.key)}
-              className={`px-3 py-1.5 rounded-full text-[12px] font-bold whitespace-nowrap transition-all ${t.key === activeThread.key ? "bg-[#1dbf73] text-white" : "bg-[#f5f5f5] text-[#404145]"}`}
+              className={`px-3.5 py-2.5 min-h-[44px] rounded-full text-[12px] font-bold whitespace-nowrap transition-all ${t.key === activeThread.key ? "bg-[#1dbf73] text-white" : "bg-[#f5f5f5] text-[#404145]"}`}
             >
               {t.title}
             </button>
           ))}
           <button
             onClick={() => setNewTicketOpen(true)}
-            className="px-3 py-1.5 rounded-full text-[12px] font-bold whitespace-nowrap bg-white border border-[#1dbf73] text-[#1dbf73] flex items-center gap-1 shrink-0"
+            className="px-3.5 py-2.5 min-h-[44px] rounded-full text-[12px] font-bold whitespace-nowrap bg-white border border-[#1dbf73] text-[#1dbf73] flex items-center gap-1 shrink-0"
           >
             <Plus size={13} /> New ticket
           </button>
@@ -563,19 +563,19 @@ export function UserMessages() {
               <button
                 onClick={toggleFav}
                 title={fav ? "Remove from favourites" : "Mark as favourite"}
-                className={`p-2 transition-all ${fav ? "text-amber-500" : "text-[#74767e] hover:text-amber-500"}`}
+                className={`p-2 min-w-[44px] min-h-[44px] flex items-center justify-center transition-all ${fav ? "text-amber-500" : "text-[#74767e] hover:text-amber-500"}`}
               >
                 <Star size={18} fill={fav ? "currentColor" : "none"} />
               </button>
               <button
                 onClick={() => { setThreadSearchOpen((o) => !o); setThreadQuery(""); }}
                 title="Find in conversation"
-                className={`p-2 transition-all ${threadSearchOpen ? "text-[#1dbf73]" : "text-[#74767e] hover:text-[#1dbf73]"}`}
+                className={`p-2 min-w-[44px] min-h-[44px] flex items-center justify-center transition-all ${threadSearchOpen ? "text-[#1dbf73]" : "text-[#74767e] hover:text-[#1dbf73]"}`}
               >
                 <Search size={18} />
               </button>
               <div className="relative" ref={headerMenuRef}>
-                <button onClick={() => setHeaderMenuOpen((o) => !o)} title="Conversation options" className="text-[#74767e] hover:text-[#1dbf73] p-2 transition-all">
+                <button onClick={() => setHeaderMenuOpen((o) => !o)} title="Conversation options" className="text-[#74767e] hover:text-[#1dbf73] p-2 min-w-[44px] min-h-[44px] flex items-center justify-center transition-all">
                   <MoreVertical size={18} />
                 </button>
                 {headerMenuOpen && (
@@ -713,11 +713,11 @@ export function UserMessages() {
                       className="hidden"
                       onChange={handleFileChange}
                     />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="hover:text-[#1dbf73] transition-all disabled:opacity-50" title="Attach a file (image, PDF or text, max 5 MB)">
+                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="hover:text-[#1dbf73] transition-all disabled:opacity-50 min-w-[44px] min-h-[44px] -my-2 flex items-center justify-center" title="Attach a file (image, PDF or text, max 5 MB)">
                       {uploading ? <Loader2 size={18} className="animate-spin" /> : <Paperclip size={18} />}
                     </button>
                     <div className="relative" ref={emojiRef}>
-                      <button type="button" onClick={() => setEmojiOpen((o) => !o)} className={`hover:text-[#1dbf73] transition-all block ${emojiOpen ? "text-[#1dbf73]" : ""}`} title="Insert emoji">
+                      <button type="button" onClick={() => setEmojiOpen((o) => !o)} className={`hover:text-[#1dbf73] transition-all flex items-center justify-center min-w-[44px] min-h-[44px] -my-2 ${emojiOpen ? "text-[#1dbf73]" : ""}`} title="Insert emoji">
                         <Smile size={18} />
                       </button>
                       {emojiOpen && (
@@ -734,7 +734,7 @@ export function UserMessages() {
                       type="button"
                       onClick={referenceLastOrder}
                       disabled={!lastOrder}
-                      className="hover:text-[#1dbf73] transition-all disabled:opacity-30 disabled:hover:text-[#74767e]"
+                      className="hover:text-[#1dbf73] transition-all disabled:opacity-30 disabled:hover:text-[#74767e] min-w-[44px] min-h-[44px] -my-2 flex items-center justify-center"
                       title={lastOrder ? "Reference your latest order in this message" : "No recent order to reference"}
                     >
                       <Package size={18} />
@@ -742,7 +742,7 @@ export function UserMessages() {
                  </div>
                  <button
                   disabled={isSending || uploading || (!newMessage.trim() && !pendingAttachment)}
-                  className="px-6 py-2 bg-[#1dbf73] text-white rounded font-bold text-[14px] hover:bg-[#19a463] transition-all disabled:opacity-50"
+                  className="px-6 py-2 min-h-[44px] bg-[#1dbf73] text-white rounded font-bold text-[14px] hover:bg-[#19a463] transition-all disabled:opacity-50"
                  >
                     {isSending ? <Loader2 size={16} className="animate-spin" /> : "Send"}
                  </button>

@@ -295,7 +295,7 @@ export function UserSettings({ onNavigate }: { onNavigate?: (tab: string) => voi
                                             <button
                                               onClick={handleResendVerification}
                                               disabled={verifyState === "sending"}
-                                              className="px-4 py-2 bg-amber-50 border border-amber-200 rounded-full text-[10px] font-black text-amber-700 uppercase tracking-widest hover:bg-amber-100 transition-colors disabled:opacity-60 flex items-center gap-2"
+                                              className="px-4 py-2 min-h-[44px] bg-amber-50 border border-amber-200 rounded-full text-[10px] font-black text-amber-700 uppercase tracking-widest hover:bg-amber-100 transition-colors disabled:opacity-60 flex items-center gap-2"
                                             >
                                               {verifyState === "sending" ? <Loader2 size={12} className="animate-spin" /> : verifyState === "sent" ? <CheckCircle size={12} /> : <Mail size={12} />}
                                               {verifyState === "sending" ? "Sending…" : verifyState === "sent" ? "Email Sent" : "Resend Verification Email"}

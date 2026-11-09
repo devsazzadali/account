@@ -95,7 +95,9 @@ export function Header({
   }, [user?.id, isCustomer]);
 
   // Ctrl+K shortcut; Escape closes the search modal (its button is
-  // labelled ESC, so the key must actually do it too).
+  // labelled ESC, so the key must actually do it too). The mobile tab
+  // bar's Explore button dispatches "aso:open-search" to open the same
+  // modal (the tab bar lives outside this component's tree).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -104,8 +106,13 @@ export function Header({
       }
       if (e.key === "Escape") setSearchOpen(false);
     };
+    const openSearch = () => setSearchOpen(true);
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("aso:open-search", openSearch);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      window.removeEventListener("aso:open-search", openSearch);
+    };
   }, []);
 
   useEffect(() => {
@@ -200,10 +207,10 @@ export function Header({
       )}
     </AnimatePresence>
     <header className="glass border-b border-slate-200 sticky top-0 z-50 font-sans transition-all duration-300">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-7xl gap-4">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-7xl gap-2 sm:gap-4">
         {/* Logo */}
         <div className="flex items-center gap-2 shrink-0">
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href="/" className="flex items-center gap-2 group py-2 -my-2">
             {brand?.logoUrl ? (
               <img
                 src={brand.logoUrl}
@@ -236,7 +243,18 @@ export function Header({
         </button>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-4 shrink-0">
+          {/* Search entry point for touch layouts — the full search bar
+              above is desktop-only, so below lg this icon button opens
+              the same search modal (44px touch target). */}
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Search"
+            className="lg:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-slate-600 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+          >
+            <Search className="w-5 h-5" />
+          </button>
           {user && !isEmailConfirmed && (
             <button
               type="button"
@@ -376,10 +394,10 @@ export function Header({
             </>
           ) : !loading && (
             <div className="flex items-center gap-2">
-               <Link href="/login" className="hidden lg:block text-slate-600 hover:text-primary-600 font-bold text-sm px-4 py-2 transition-colors">
+               <Link href="/login" className="hidden lg:block text-slate-600 hover:text-primary-600 font-bold text-sm px-4 py-3 transition-colors">
                  Login
                </Link>
-               <Link href="/signup" className="bg-slate-900 hover:bg-slate-800 text-white px-4 sm:px-6 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-slate-900/20 active:scale-95">
+               <Link href="/signup" className="bg-slate-900 hover:bg-slate-800 text-white px-4 sm:px-6 py-3 min-h-[44px] rounded-xl text-[12px] font-black uppercase tracking-widest hidden min-[420px]:flex items-center gap-2 transition-all shadow-xl shadow-slate-900/20 active:scale-95">
                  <User className="w-4 h-4" />
                  <span className="hidden sm:inline">Initialize Account</span>
                  <span className="sm:hidden">Sign Up</span>
@@ -388,7 +406,7 @@ export function Header({
           )}
           
           <button
-            className="md:hidden text-slate-600 hover:text-slate-900 transition-colors"
+            className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="Toggle menu"
             aria-expanded={mobileOpen}
@@ -415,7 +433,7 @@ export function Header({
               key={l.href + l.label}
               href={l.href}
               onClick={() => setMobileOpen(false)}
-              className="py-2.5 text-sm font-semibold text-slate-700 hover:text-primary-600 border-b border-slate-50 last:border-0"
+              className="py-3.5 min-h-[44px] flex items-center text-sm font-semibold text-slate-700 hover:text-primary-600 border-b border-slate-50 last:border-0"
             >
               {l.label}
             </Link>
@@ -424,7 +442,7 @@ export function Header({
             <button
               type="button"
               onClick={() => { setMobileOpen(false); requestInstall(); }}
-              className="py-2.5 text-sm font-semibold text-primary-700 hover:text-primary-800 border-b border-slate-50 last:border-0 flex items-center gap-2 text-left"
+              className="py-3.5 min-h-[44px] text-sm font-semibold text-primary-700 hover:text-primary-800 border-b border-slate-50 last:border-0 flex items-center gap-2 text-left"
             >
               <Download size={16} />
               Install App

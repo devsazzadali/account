@@ -141,9 +141,9 @@ export function ProductDetailsPage({
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20">
       {/* Breadcrumbs */}
-      <div className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-30 shadow-sm">
+      <div className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-16 z-30 shadow-sm">
           <div className="container mx-auto px-4 py-4 flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              <Link href="/" className="hover:text-primary-600 transition-colors">Marketplace</Link>
+              <Link href="/" className="hover:text-primary-600 transition-colors py-1">Marketplace</Link>
               <ChevronRight size={12} />
               <span className="text-primary-600">{product.category || "Gaming Assets"}</span>
               <ChevronRight size={12} />
@@ -153,45 +153,52 @@ export function ProductDetailsPage({
 
       <StoreClosedBanner />
 
-      <div className="container mx-auto px-4 pt-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <div className="container mx-auto px-4 pt-6 lg:pt-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12">
           
           {/* Left Column: Visuals */}
-          <div className="lg:col-span-7 space-y-6">
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="relative rounded-[2.5rem] overflow-hidden border border-slate-200 bg-white aspect-video group shadow-xl"
-            >
-              <img src={product.image || "https://picsum.photos/seed/default/800/450"} alt={product.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/20 via-transparent to-transparent opacity-60"></div>
-              
-              <div className="absolute top-6 left-6">
-                <span className="bg-primary-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-primary-500/20">
-                    {product.badge || "Verified"}
-                </span>
-              </div>
+          <div className="contents lg:block lg:col-span-7 lg:space-y-6">
+            <div className="order-1 flex flex-col gap-3">
+              <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="relative rounded-[1.75rem] sm:rounded-[2.5rem] overflow-hidden border border-slate-200 bg-white aspect-video group shadow-xl"
+              >
+                <img src={product.image || "https://picsum.photos/seed/default/800/450"} alt={product.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/20 via-transparent to-transparent opacity-60"></div>
 
-              <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-auto flex flex-wrap items-center gap-2 sm:gap-3">
-                 <div className="bg-white/90 backdrop-blur-md border border-slate-200 rounded-2xl px-4 py-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-900 shadow-sm">
+                <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
+                  <span className="bg-primary-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-primary-500/20">
+                      {product.badge || "Verified"}
+                  </span>
+                </div>
+              </motion.div>
+
+              {/* Trust chips live BELOW the artwork now. As overlays they
+                  sat on top of the cover art's own lettering (the covers
+                  are branded graphics with centred text), so the pills
+                  read as clutter colliding with the picture. As a quiet
+                  chip row under the gallery they frame it instead. */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                 <div className="bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-700 shadow-sm">
                     {dInfo.type === "instant" ? <Zap size={14} className="text-primary-600 fill-current" /> : <Clock size={14} className="text-amber-600" />}
                     {dInfo.label}
                  </div>
-                 <div className="bg-white/90 backdrop-blur-md border border-slate-200 rounded-2xl px-4 py-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-900 shadow-sm">
+                 <div className="bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-700 shadow-sm">
                     <ShieldCheck size={14} className="text-blue-600" />
                     Escrow Protected
                  </div>
               </div>
-            </motion.div>
+            </div>
 
             {/* Tabs Section */}
-            <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 border border-slate-200 min-h-[300px] shadow-sm">
+            <div className="order-3 bg-white rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 border border-slate-200 min-h-[300px] shadow-sm">
                 <div className="flex gap-5 sm:gap-8 border-b border-slate-100 mb-8 overflow-x-auto">
                     {["description", "delivery", "warranty"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`pb-4 text-xs font-bold uppercase tracking-[0.2em] relative transition-colors whitespace-nowrap shrink-0 ${
+                            className={`pb-4 pt-3.5 text-xs font-bold uppercase tracking-[0.2em] relative transition-colors whitespace-nowrap shrink-0 ${
                                 activeTab === tab ? "text-primary-600" : "text-slate-400 hover:text-slate-900"
                             }`}
                         >
@@ -214,7 +221,7 @@ export function ProductDetailsPage({
                     >
                         {activeTab === "description" && (
                             <div className="space-y-6">
-                                <p className="text-slate-700 text-lg font-medium whitespace-pre-wrap">
+                                <p className="text-slate-700 text-base sm:text-lg font-medium whitespace-pre-wrap">
                                     {product.description ? product.description.split('--- Properties ---')[0].trim() : "Detailed digital asset specification is currently being synchronized."}
                                 </p>
                                 
@@ -268,7 +275,7 @@ export function ProductDetailsPage({
             </div>
 
             {/* Reviews */}
-            <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm">
+            <div className="order-4 bg-white rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 border border-slate-200 shadow-sm">
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Customer Reviews ({reviews.length})</h3>
                 {reviews.length === 0 ? (
                     <p className="text-sm text-slate-400 font-medium mb-6">No reviews yet — be the first to review this product after your purchase.</p>
@@ -301,7 +308,7 @@ export function ProductDetailsPage({
                     <p className="text-sm text-slate-500 font-medium leading-relaxed">
                         Reviews are tied to real purchases: once your order is completed, you can rate it — including delivery speed and service — right from the order page.
                     </p>
-                    <Link href="/dashboard?tab=orders" className="inline-block mt-3 px-6 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all">
+                    <Link href="/dashboard?tab=orders" className="inline-block mt-3 px-6 py-3.5 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all">
                         Go to My Orders
                     </Link>
                 </div>
@@ -309,15 +316,15 @@ export function ProductDetailsPage({
           </div>
 
           {/* Right Column: Order Panel */}
-          <div className="lg:col-span-5 space-y-6">
-            <div className="bg-white rounded-[2.5rem] p-10 border border-slate-200 relative overflow-hidden shadow-xl">
+          <div className="contents lg:block lg:col-span-5 lg:space-y-6">
+            <div className="order-2 bg-white rounded-[1.75rem] sm:rounded-[2.5rem] p-6 sm:p-8 xl:p-10 border border-slate-200 relative overflow-hidden shadow-xl">
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary-500/5 blur-[60px] rounded-full"></div>
               
               <div className="relative z-10">
-                <h1 className="text-3xl font-display font-bold text-slate-900 mb-4 leading-tight">{product.title}</h1>
+                <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 mb-4 leading-tight">{product.title}</h1>
                 
                 {(product.acquisitions ?? 0) > 0 && (
-                <div className="flex items-center gap-6 mb-10 pb-8 border-b border-slate-100">
+                <div className="flex items-center gap-6 mb-6 pb-6 border-b border-slate-100">
                     <div className="flex items-center gap-2">
                         <ShoppingCart size={14} className="text-primary-600" />
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{product.acquisitions}+ Acquisitions</span>
@@ -385,9 +392,9 @@ export function ProductDetailsPage({
                     <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-inner">
                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Quantity{minQty > 1 ? ` (min ${minQty})` : ""}</span>
                         <div className="flex items-center gap-4">
-                            <button onClick={() => setQuantity(Math.max(minQty, qty - 1))} className="p-2 text-slate-400 hover:text-primary-600 transition-colors"><Minus size={16} /></button>
+                            <button onClick={() => setQuantity(Math.max(minQty, qty - 1))} aria-label="Decrease quantity" className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-primary-600 transition-colors"><Minus size={16} /></button>
                             <span className="text-lg font-bold text-slate-900 w-6 text-center">{qty}</span>
-                            <button onClick={() => setQuantity(Math.min(stockCap || minQty, qty + 1))} className="p-2 text-slate-400 hover:text-primary-600 transition-colors"><Plus size={16} /></button>
+                            <button onClick={() => setQuantity(Math.min(stockCap || minQty, qty + 1))} aria-label="Increase quantity" className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-primary-600 transition-colors"><Plus size={16} /></button>
                         </div>
                     </div>
                 </div>
@@ -430,10 +437,10 @@ export function ProductDetailsPage({
             </div>
 
             {/* Delivery Timeline */}
-            <DeliveryTimeline fulfilmentType={fulfilment} />
+            <div className="order-5"><DeliveryTimeline fulfilmentType={fulfilment} /></div>
 
             {/* Seller Trust Card */}
-            <SellerTrustCard />
+            <div className="order-6"><SellerTrustCard /></div>
           </div>
         </div>
       </div>

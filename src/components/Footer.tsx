@@ -17,11 +17,11 @@ export function Footer({
   };
 
   return (
-    <footer className="bg-white text-slate-900 pt-20 pb-10 relative overflow-hidden border-t border-slate-200">
+    <footer className="bg-white text-slate-900 pt-12 md:pt-20 pb-10 relative overflow-hidden border-t border-slate-200">
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[300px] bg-primary-600/5 blur-[120px] rounded-full pointer-events-none"></div>
 
       <div className="container mx-auto px-4 max-w-7xl relative z-10">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 pb-12 border-b border-slate-100">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 md:mb-16 pb-10 md:pb-12 border-b border-slate-100">
           <div className="mb-8 md:mb-0">
             <div className="flex items-center gap-2 mb-4">
               {brand?.logoUrl ? (
@@ -55,17 +55,17 @@ export function Footer({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-20">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12 md:mb-20">
           <div>
             <h3 className="font-display font-bold mb-6 text-slate-900 text-sm uppercase tracking-widest flex items-center gap-2">
               <div className="w-1.5 h-1.5 bg-primary-600 rounded-full"></div>
               Store
             </h3>
             <ul className="space-y-4 text-slate-500 text-sm">
-              <li><Link href="/about" className="hover:text-primary-600 transition-colors">About Us</Link></li>
-              <li><Link href="/" className="hover:text-primary-600 transition-colors">Browse Products</Link></li>
-              <li><Link href="/signup" className="hover:text-primary-600 transition-colors">Create Account</Link></li>
-              <li><Link href="/dashboard" className="hover:text-primary-600 transition-colors">My Dashboard</Link></li>
+              <li><Link href="/about" className="inline-block py-2.5 hover:text-primary-600 transition-colors">About Us</Link></li>
+              <li><Link href="/" className="inline-block py-2.5 hover:text-primary-600 transition-colors">Browse Products</Link></li>
+              <li><Link href="/signup" className="inline-block py-2.5 hover:text-primary-600 transition-colors">Create Account</Link></li>
+              <li><Link href="/dashboard" className="inline-block py-2.5 hover:text-primary-600 transition-colors">My Dashboard</Link></li>
             </ul>
           </div>
           <div>
@@ -74,10 +74,10 @@ export function Footer({
               Support
             </h3>
             <ul className="space-y-4 text-slate-500 text-sm">
-              <li><Link href="/faq" className="hover:text-primary-600 transition-colors">FAQ</Link></li>
-              <li><Link href="/buyer-protection" className="hover:text-primary-600 transition-colors">Buyer Protection</Link></li>
-              <li><Link href="/forgot-password" className="hover:text-primary-600 transition-colors">Reset Password</Link></li>
-              <li><Link href="/login" className="hover:text-primary-600 transition-colors">Sign In</Link></li>
+              <li><Link href="/faq" className="inline-block py-2.5 hover:text-primary-600 transition-colors">FAQ</Link></li>
+              <li><Link href="/buyer-protection" className="inline-block py-2.5 hover:text-primary-600 transition-colors">Buyer Protection</Link></li>
+              <li><Link href="/forgot-password" className="inline-block py-2.5 hover:text-primary-600 transition-colors">Reset Password</Link></li>
+              <li><Link href="/login" className="inline-block py-2.5 hover:text-primary-600 transition-colors">Sign In</Link></li>
             </ul>
           </div>
           <div>
@@ -86,8 +86,8 @@ export function Footer({
               Legal
             </h3>
             <ul className="space-y-4 text-slate-500 text-sm">
-              <li><Link href="/terms" className="hover:text-primary-600 transition-colors">Terms of Service</Link></li>
-              <li><Link href="/privacy" className="hover:text-primary-600 transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="inline-block py-2.5 hover:text-primary-600 transition-colors">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="inline-block py-2.5 hover:text-primary-600 transition-colors">Privacy Policy</Link></li>
             </ul>
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-sm">
@@ -101,12 +101,12 @@ export function Footer({
 
         <div className="pt-10 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex gap-8 flex-wrap justify-center text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-            <Link href="/buyer-protection" className="hover:text-primary-600 transition-colors">Buyer Protection</Link>
+            <Link href="/buyer-protection" className="inline-block py-3 hover:text-primary-600 transition-colors">Buyer Protection</Link>
             {/* F-22: this link goes to the FAQ page — label it honestly
                 (no standalone How It Works page exists). */}
-            <Link href="/faq" className="hover:text-primary-600 transition-colors">FAQ</Link>
-            <Link href="/terms" className="hover:text-primary-600 transition-colors">Terms</Link>
-            <Link href="/privacy" className="hover:text-primary-600 transition-colors">Privacy</Link>
+            <Link href="/faq" className="inline-block py-3 hover:text-primary-600 transition-colors">FAQ</Link>
+            <Link href="/terms" className="inline-block py-3 hover:text-primary-600 transition-colors">Terms</Link>
+            <Link href="/privacy" className="inline-block py-3 hover:text-primary-600 transition-colors">Privacy</Link>
           </div>
           <div className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
             {`© 2026 ${brand?.name ?? DEFAULT_STORE_NAME}. All rights reserved.`}
@@ -116,7 +116,7 @@ export function Footer({
 
       <button
         onClick={scrollToTop}
-        className="fixed bottom-[10.5rem] right-4 sm:right-6 md:bottom-10 md:right-10 w-14 h-14 bg-primary-600 text-white rounded-2xl shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 z-50 flex items-center justify-center group"
+        className="fixed bottom-24 right-4 sm:right-6 md:bottom-10 md:right-10 w-11 h-11 sm:w-14 sm:h-14 bg-primary-600 text-white rounded-2xl shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 z-50 flex items-center justify-center group"
       >
         <ArrowUp className="w-6 h-6 group-hover:-translate-y-1 transition-transform" />
       </button>

@@ -52,8 +52,8 @@ export function Sidebar({
   if (!stats) {
     return (
       <div className="w-full md:w-[280px] shrink-0 space-y-6 animate-pulse">
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 h-[400px] shadow-sm"></div>
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 h-[100px] shadow-sm"></div>
+        <div className="bg-white rounded-[1.75rem] p-6 border border-slate-200 h-[400px] shadow-sm"></div>
+        <div className="bg-white rounded-[1.75rem] p-6 border border-slate-200 h-[100px] shadow-sm"></div>
       </div>
     );
   }
@@ -61,7 +61,7 @@ export function Sidebar({
   return (
     <div className="space-y-6 w-full md:w-[280px] shrink-0">
       {/* Store Profile Card */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 relative overflow-hidden group shadow-sm">
+      <div className="bg-white rounded-[1.75rem] p-6 border border-slate-200 relative overflow-hidden group shadow-sm">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-500 to-blue-500 opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
         <div className="flex flex-col items-center mb-6">
           <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-primary-100 mb-3 relative group-hover:border-primary-300 transition-colors duration-300 shadow-xl shadow-primary-500/10">
@@ -86,7 +86,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={handleContactStore}
-          className="w-full bg-primary-600 hover:bg-primary-500 text-white font-medium py-2.5 rounded-xl flex items-center justify-center gap-2 mb-6 transition-all duration-300 shadow-lg shadow-primary-500/20 hover:shadow-primary-500/40 transform hover:-translate-y-0.5"
+          className="w-full bg-primary-600 hover:bg-primary-500 text-white font-medium py-3 min-h-[44px] rounded-xl flex items-center justify-center gap-2 mb-6 transition-all duration-300 shadow-lg shadow-primary-500/20 hover:shadow-primary-500/40 transform hover:-translate-y-0.5"
         >
           <MessageCircle className="w-4 h-4" />
           Contact Store
@@ -95,34 +95,39 @@ export function Sidebar({
         <div className="space-y-4 text-sm">
           <div className="flex justify-between items-center">
             <span className="text-slate-500">Completed orders</span>
-            <span className="text-slate-900 font-medium">{stats.completed_orders}</span>
+            <span className="text-slate-900 font-semibold tabular-nums">{stats.completed_orders}</span>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-slate-500">Dispute rate</span>
-            <span className="text-slate-900 font-medium">
+          <div className="flex justify-between items-baseline">
+            {/* The "(last 90 days)" qualifier used to dangle on its own
+                line under this row, breaking the stat rhythm — it now
+                rides quietly under the label it belongs to. */}
+            <span className="text-slate-500">
+              Dispute rate
+              <span className="block text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">last 90 days</span>
+            </span>
+            <span className="text-slate-900 font-semibold tabular-nums">
               {stats.dispute_rate_90d === null ? "—" : `${stats.dispute_rate_90d}%`}
             </span>
           </div>
-          <div className="text-[10px] text-slate-400 uppercase tracking-wider -mt-2 mb-2">(last 90 days)</div>
 
           <div className="h-px bg-slate-100 my-3"></div>
 
           <div className="flex justify-between items-center gap-3">
             <span className="text-slate-500">Total reviews</span>
-            <span className="text-primary-600 font-medium bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100 whitespace-nowrap shrink-0">{stats.total_reviews}</span>
+            <span className="text-primary-600 font-semibold tabular-nums bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100 whitespace-nowrap shrink-0">{stats.total_reviews}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-slate-500">Average rating</span>
             <div className="flex items-center gap-1.5 text-slate-900">
               <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
-              <span className="font-medium">{stats.average_rating === null ? "—" : stats.average_rating.toFixed(1)}</span>
+              <span className="font-semibold tabular-nums">{stats.average_rating === null ? "—" : stats.average_rating.toFixed(1)}</span>
             </div>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-slate-500">Positive reviews</span>
             <div className="flex items-center gap-1.5 text-primary-600">
               <ThumbsUp className="w-3.5 h-3.5 fill-current" />
-              <span className="font-medium">{stats.positive_pct === null ? "—" : `${stats.positive_pct}%`}</span>
+              <span className="font-semibold tabular-nums">{stats.positive_pct === null ? "—" : `${stats.positive_pct}%`}</span>
             </div>
           </div>
         </div>
@@ -130,7 +135,7 @@ export function Sidebar({
 
       {/* Description Card — the "About the store" homepage block (CMS) */}
       {aboutEnabled && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+        <div className="bg-white rounded-[1.75rem] p-6 border border-slate-200 shadow-sm">
           <h3 className="font-display font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3 flex items-center gap-2">
             {aboutTitle}
           </h3>
@@ -141,7 +146,7 @@ export function Sidebar({
       )}
 
       {/* Buyer protection card */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+      <div className="bg-white rounded-[1.75rem] p-6 border border-slate-200 shadow-sm">
         <h3 className="font-display font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3 flex items-center gap-2">
           Buyer Protection
         </h3>

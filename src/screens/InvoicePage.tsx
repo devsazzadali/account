@@ -72,7 +72,9 @@ export function InvoicePage() {
 
   const total = Number(order.total_price) || 0;
   const discount = Number(order.discount_amount) || 0;
-  const fee = 0.5;
+  // The fee THIS order was charged (recorded at creation) — never the
+  // live admin setting, so historical invoices never change.
+  const fee = Number(order.service_fee ?? 0.5);
   const subtotal = total + discount - fee;
   const unit = order.quantity > 0 ? subtotal / order.quantity : subtotal;
   const storeName = store?.store_name || "Account Store One";
@@ -165,7 +167,9 @@ export function InvoicePage() {
               {discount > 0 && (
                 <div className="flex justify-between"><span className="text-emerald-600 font-bold">Coupon {order.coupon_code}</span><span className="font-bold text-emerald-600">-${discount.toFixed(2)}</span></div>
               )}
-              <div className="flex justify-between"><span className="text-slate-500 font-medium">Service fee</span><span className="font-bold text-slate-900">${fee.toFixed(2)}</span></div>
+              {fee > 0 && (
+                <div className="flex justify-between"><span className="text-slate-500 font-medium">Service fee</span><span className="font-bold text-slate-900">${fee.toFixed(2)}</span></div>
+              )}
               <div className="flex justify-between pt-3 border-t border-slate-100">
                 <span className="font-black text-slate-900 uppercase tracking-wide">Total</span>
                 <span className="text-xl font-black text-primary-700">${total.toFixed(2)} <span className="text-[10px] text-slate-400">USD</span></span>

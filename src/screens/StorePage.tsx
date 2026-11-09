@@ -21,8 +21,12 @@ export function StorePage({
 
   return (
     <div className="relative flex flex-col">
-      {/* Hero — admin-controlled (Storefront CMS); hidden when disabled */}
-      {cms.hero.enabled && <Banner hero={cms.hero} />}
+      {/* Hero — admin-controlled (Storefront CMS); hidden when disabled.
+          Full hero on the store home; a slim brand band while browsing
+          a category or search results, so offers lead on phones. */}
+      {cms.hero.enabled && (
+        <Banner hero={cms.hero} compact={selectedCategory !== "All" || !!searchQuery} />
+      )}
 
       {/* Shown only while the admin has the store hidden (Hide Shop) */}
       <StoreClosedBanner />

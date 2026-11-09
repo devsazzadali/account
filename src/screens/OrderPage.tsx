@@ -32,6 +32,7 @@ interface Order {
   escrow_hold_until: string | null;
   payment_method: string | null;
   total_price: number;
+  service_fee?: number | string;
   quantity: number;
   delivered_quantity?: number;
   intake_data?: Record<string, string> | null;
@@ -78,6 +79,7 @@ export function OrderPage() {
   const [payConfig, setPayConfig] = useState<any>(null);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [disputeReason, setDisputeReason] = useState("");
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [showDispute, setShowDispute] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   // Intake field labels for the service summary (from the category's
@@ -211,7 +213,7 @@ export function OrderPage() {
       <div className="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-30 shadow-sm">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+            <Link href="/dashboard" aria-label="Back to my orders" className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-slate-100 rounded-xl transition-colors">
               <ArrowLeft size={20} className="text-slate-600" />
             </Link>
             <div>
@@ -389,11 +391,13 @@ export function OrderPage() {
               {deliveredQty} of your {order.quantity} units have been delivered{order.credential_username ? " — they are in the vault below" : ""}.
               The store can still deliver the remaining {order.quantity - deliveredQty}. You can confirm the delivered part now,
               and if the rest can't be delivered you can cancel the remainder for a pro-rated refund to your wallet
-              (the $0.50 service fee is not refundable).
+              {Number(order.service_fee ?? 0.5) > 0
+                ? ` (the $${Number(order.service_fee ?? 0.5).toFixed(2)} service fee is not refundable).`
+                : "."}
             </p>
             <div className="flex flex-wrap gap-3">
               {!partialConfirmed && (
-                <button disabled={busy === "confirm_partial"} onClick={() => act("confirm_partial")} className="px-5 py-3 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 transition-all disabled:opacity-40 flex items-center gap-2">
+                <button disabled={busy === "confirm_partial"} onClick={() => act("confirm_partial")} className="px-5 py-3 min-h-[44px] bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 transition-all disabled:opacity-40 flex items-center gap-2">
                   <CheckCircle size={14} /> Confirm Delivered Part ({deliveredQty} of {order.quantity})
                 </button>
               )}
@@ -405,7 +409,7 @@ export function OrderPage() {
               <button
                 disabled={busy === "cancel_remainder"}
                 onClick={() => { if (confirm(`Cancel the remaining ${order.quantity - deliveredQty} unit(s)? Their value will be refunded to your wallet (pro-rated, minus the service fee). The delivered part stays yours.`)) act("cancel_remainder"); }}
-                className="px-5 py-3 bg-white border border-red-200 text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center gap-2 disabled:opacity-40"
+                className="px-5 py-3 min-h-[44px] bg-white border border-red-200 text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center gap-2 disabled:opacity-40"
               >
                 <XCircle size={14} /> Cancel Remainder &amp; Refund
               </button>
@@ -472,7 +476,7 @@ export function OrderPage() {
                         <code className="text-sm font-mono font-bold text-slate-900 break-all">{cred.value}</code>
                         <button
                           onClick={() => copyToClipboard(cred.value, cred.field)}
-                          className="shrink-0 p-2 hover:bg-white rounded-xl transition-all text-slate-400 hover:text-primary-600 border border-slate-200"
+                          className="shrink-0 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white rounded-xl transition-all text-slate-400 hover:text-primary-600 border border-slate-200"
                         >
                           {copiedField === cred.field ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
                         </button>
@@ -526,19 +530,34 @@ export function OrderPage() {
             <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Order Actions</h3>
             <div className="flex flex-wrap gap-3">
               {canConfirm && (
-                <button disabled={busy === "confirm_receipt"} onClick={() => act("confirm_receipt")} className="px-5 py-3 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 transition-all disabled:opacity-40 flex items-center gap-2">
+                <button disabled={busy === "confirm_receipt"} onClick={() => act("confirm_receipt")} className="px-5 py-3 min-h-[44px] bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 transition-all disabled:opacity-40 flex items-center gap-2">
                   <CheckCircle size={14} /> Confirm Receipt — Release Escrow
                 </button>
               )}
               {canDispute && (
-                <button onClick={() => setShowDispute(!showDispute)} className="px-5 py-3 bg-white border border-red-200 text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center gap-2">
+                <button onClick={() => setShowDispute(!showDispute)} className="px-5 py-3 min-h-[44px] bg-white border border-red-200 text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center gap-2">
                   <AlertTriangle size={14} /> Open a Dispute
                 </button>
               )}
-              {canCancel && (
-                <button disabled={busy === "cancel"} onClick={() => { if (confirm(isPaid ? "Cancel this order? The payment will be refunded to your store wallet." : "Cancel this order?")) act("cancel"); }} className="px-5 py-3 bg-white border border-slate-200 text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 disabled:opacity-40">
+              {canCancel && !confirmingCancel && (
+                <button disabled={busy === "cancel"} onClick={() => setConfirmingCancel(true)} className="px-5 py-3 min-h-[44px] bg-white border border-slate-200 text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 disabled:opacity-40">
                   <XCircle size={14} /> {isPaid ? "Cancel & Refund to Wallet" : "Cancel Order"}
                 </button>
+              )}
+              {canCancel && confirmingCancel && (
+                <div className="flex flex-wrap items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 w-full">
+                  <p className="text-[12px] font-bold text-red-700 flex-1 min-w-[200px]">
+                    {isPaid
+                      ? "Cancel this order? The payment will be refunded to your store wallet."
+                      : "Cancel this order?"}
+                  </p>
+                  <button disabled={busy === "cancel"} onClick={() => act("cancel")} className="px-5 py-3 min-h-[44px] bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all disabled:opacity-40">
+                    {busy === "cancel" ? "Cancelling…" : "Yes, Cancel Order"}
+                  </button>
+                  <button onClick={() => setConfirmingCancel(false)} className="px-5 py-3 min-h-[44px] bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
+                    Keep Order
+                  </button>
+                </div>
               )}
             </div>
             {showDispute && (
@@ -553,7 +572,7 @@ export function OrderPage() {
                 <button
                   disabled={busy === "dispute" || disputeReason.trim().length < 5}
                   onClick={() => act("dispute", { reason: disputeReason.trim() })}
-                  className="px-5 py-3 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all disabled:opacity-40"
+                  className="px-5 py-3 min-h-[44px] bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all disabled:opacity-40"
                 >
                   {busy === "dispute" ? "Opening…" : "Submit Dispute"}
                 </button>
@@ -568,7 +587,7 @@ export function OrderPage() {
           <div className="flex justify-end">
             <Link
               href={`/order/${order.id}/invoice`}
-              className="px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
+              className="px-5 py-3 min-h-[44px] bg-white border border-slate-200 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
             >
               View / Print Invoice
             </Link>
@@ -614,7 +633,7 @@ export function OrderPage() {
         </div>
 
         <div className="text-center">
-          <Link href="/dashboard" className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-colors">← Back to my orders</Link>
+          <Link href="/dashboard" className="inline-block py-3 -my-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-colors">← Back to my orders</Link>
         </div>
       </div>
     </div>

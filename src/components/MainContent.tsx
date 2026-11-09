@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award, Plus, Minus, AlertCircle, ShieldCheck, Check, Briefcase } from "lucide-react";
+import { Search, ThumbsUp, MinusCircle, Zap, Crown, Clock, Star, TrendingUp, Award, Plus, Minus, AlertCircle, ShieldCheck, Check, Briefcase, SlidersHorizontal } from "lucide-react";
 import { deliveryInfo } from "../lib/fulfilment";
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import Link from "next/link";
@@ -41,121 +41,136 @@ const ProductCard: React.FC<{ item: FeaturedItem }> = ({ item }) => {
     };
 
     return (
-    <div 
+    <div
       onClick={handleCardClick}
-      className="group ios-card p-4 hover:border-[#1dbf73]/50 transition-all duration-500 hover:shadow-xl hover:-translate-y-1 block h-full relative overflow-hidden flex flex-col cursor-pointer"
+      className="group relative flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-slate-200/90 bg-white shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)] transition-all duration-500 hover:-translate-y-1 hover:border-primary-500/40 hover:shadow-[0_24px_44px_-16px_rgba(15,23,42,0.20)] cursor-pointer"
     >
-      <div className="flex gap-4 flex-1">
-        {/* Left Side: Content */}
-        <div className="flex-1 flex flex-col justify-between min-w-0">
-          <div>
-            {item.category && (
-                <div className="text-[10px] text-primary-600 font-medium uppercase tracking-wider mb-1.5 truncate">{item.category}</div>
-            )}
-            <h3 className="text-sm font-display font-semibold text-slate-900 line-clamp-2 mb-3 group-hover:text-primary-600 transition-colors leading-relaxed" title={item.title}>
-              {item.title}
-            </h3>
-            {/* F-27: delivery badges derive from the product's REAL
-                fulfilmentType — a manual/service product is never
-                labelled "Instant"/"Auto" (and vice versa). */}
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              {(() => {
-                const d = deliveryInfo(item.fulfilmentType);
-                if (d.type === "instant") {
-                  return (
-                    <>
-                      <span className="flex items-center gap-1 text-[10px] text-primary-700 bg-primary-50 px-2 py-0.5 rounded-md border border-primary-100">
-                        <Zap className="w-3 h-3 text-primary-500 fill-current" /> Instant
-                      </span>
-                      <span className="flex items-center gap-1 text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                        <Clock className="w-3 h-3 text-blue-500" /> Auto
-                      </span>
-                    </>
-                  );
-                }
-                if (d.type === "service") {
-                  return (
-                    <span className="flex items-center gap-1 text-[10px] text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-100">
-                      <Briefcase className="w-3 h-3 text-violet-500" /> Service
-                    </span>
-                  );
-                }
-                return (
-                  <span className="flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
-                    <Clock className="w-3 h-3 text-amber-500" /> Manual
-                  </span>
-                );
-              })()}
+      {/* Cover — full-width 16/10 so the card composes at any column
+          width (the old fixed 90px side thumb collapsed the text
+          column in narrow grids, e.g. tablet with the sidebar). */}
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100 shrink-0">
+         <img
+            src={item.image || "https://picsum.photos/seed/default/400/225"}
+            alt={item.title}
+            loading="lazy"
+            className="h-full w-full object-cover transform transition-transform duration-700 group-hover:scale-[1.06]"
+         />
+         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 via-transparent to-transparent pointer-events-none"></div>
+         {item.badge && (
+            <div className="absolute top-3 right-3 bg-primary-600 text-white text-[9px] px-2.5 py-1 font-bold shadow-lg z-10 rounded-full uppercase tracking-wider">
+                {item.badge}
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2.5 mt-2 bg-slate-50 rounded-xl p-2 border border-slate-100">
+         )}
+      </div>
+
+      {/* Content */}
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
+        {item.category && (
+            <div className="text-[10px] text-primary-600 font-bold uppercase tracking-[0.14em] mb-1.5 truncate">{item.category}</div>
+        )}
+        <h3 className="text-[15px] font-display font-semibold text-slate-900 line-clamp-2 group-hover:text-primary-700 transition-colors leading-snug" title={item.title}>
+          {item.title}
+        </h3>
+        {/* F-27: delivery badges derive from the product's REAL
+            fulfilmentType — a manual/service product is never
+            labelled "Instant"/"Auto" (and vice versa). */}
+        <div className="flex flex-wrap items-center gap-1.5 mt-3">
+          {(() => {
+            const d = deliveryInfo(item.fulfilmentType);
+            if (d.type === "instant") {
+              return (
+                <>
+                  <span className="flex items-center gap-1 text-[10px] font-semibold text-primary-700 bg-primary-50 px-2 py-1 rounded-md border border-primary-100">
+                    <Zap className="w-3 h-3 text-primary-500 fill-current" /> Instant
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded-md border border-blue-100">
+                    <Clock className="w-3 h-3 text-blue-500" /> Auto
+                  </span>
+                </>
+              );
+            }
+            if (d.type === "service") {
+              return (
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-violet-700 bg-violet-50 px-2 py-1 rounded-md border border-violet-100">
+                  <Briefcase className="w-3 h-3 text-violet-500" /> Service
+                </span>
+              );
+            }
+            return (
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">
+                <Clock className="w-3 h-3 text-amber-500" /> Manual
+              </span>
+            );
+          })()}
+        </div>
+
+        <div className="mt-3.5 flex items-center gap-2.5 bg-slate-50 rounded-xl px-2.5 py-2 border border-slate-100">
             <div className="shrink-0">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-600 to-blue-600 flex items-center justify-center">
-                    <Crown className="w-4 h-4 text-white" />
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-600 to-blue-600 flex items-center justify-center">
+                    <Crown className="w-3.5 h-3.5 text-white" />
                 </div>
             </div>
             <div className="flex flex-col min-w-0">
-                <span className="text-[10px] text-slate-500 truncate leading-tight mb-0.5">Sold by</span>
-                <span className="text-xs text-slate-900 font-medium truncate">Account Store One</span>
+                <span className="text-[9px] text-slate-400 uppercase tracking-wider leading-tight">Sold by</span>
+                <span className="text-xs text-slate-900 font-semibold truncate leading-tight">Account Store One</span>
             </div>
-          </div>
+            <ShieldCheck className="w-4 h-4 text-primary-500 shrink-0 ml-auto" />
         </div>
 
-        {/* Right Side: Image & Price */}
-        <div className="flex flex-col items-end justify-between shrink-0 w-[90px]">
-          <div className="w-[90px] h-[90px] rounded-xl overflow-hidden relative border border-slate-200 bg-slate-100 group-hover:border-primary-500/30 transition-colors">
-             <img 
-                src={item.image || "https://picsum.photos/seed/default/400/225"} 
-                alt={item.title}
-                className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110" 
-             />
-             {item.badge && (
-                <div className="absolute top-0 right-0 bg-primary-600 text-white text-[9px] px-2 py-0.5 font-bold shadow-lg z-10 rounded-bl-lg uppercase">
-                    {item.badge}
+        {/* Price leads the row now (label stacked over the figure, the
+            way a price should read at a glance); the right side carries
+            the offer's real sold count as quiet social proof instead of
+            leaving the row half empty. */}
+        <div className="mt-4 flex items-end justify-between gap-3">
+            <div>
+                <div className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.18em] leading-none mb-1.5">Price</div>
+                <div className="font-display font-bold text-slate-900 text-2xl leading-none flex items-baseline gap-0.5">
+                    <span className="text-primary-600 text-sm">$</span>
+                    {item.price.toFixed(2)}
                 </div>
-             )}
-          </div>
-          <div className="mt-auto text-right w-full pt-4">
-            <div className="text-[10px] text-slate-400 uppercase tracking-widest leading-none mb-1">Price</div>
-            <div className="font-display font-bold text-slate-900 text-xl leading-none flex items-center justify-end gap-1">
-                <span className="text-primary-600 text-sm">$</span>
-                {item.price.toFixed(2)}
             </div>
-          </div>
+            {item.sold > 0 && (
+                <div className="flex items-center gap-1.5 text-slate-400 pb-0.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-primary-500" />
+                    <span className="text-[11px] font-semibold whitespace-nowrap">{item.sold} sold</span>
+                </div>
+            )}
         </div>
-      </div>
 
-      {/* Quantity and Buy Button */}
-      <div className="mt-5 flex items-center gap-2 relative z-20">
-          <div className="flex items-center bg-slate-100 border border-slate-200 rounded-xl p-1 shrink-0">
-              <button 
-                  onClick={(e) => handleQuantityChange(e, -1)}
-                  className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-lg transition-colors text-slate-400 hover:text-slate-900 shadow-sm"
+        {/* Quantity and Buy Button — 44px-tall controls; the row wraps
+            on narrow cards so nothing ever squeezes. */}
+        <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2 relative z-20">
+            <div className="flex items-center bg-slate-100 border border-slate-200 rounded-xl p-1 shrink-0">
+                <button
+                    onClick={(e) => handleQuantityChange(e, -1)}
+                    aria-label="Decrease quantity"
+                    className="w-11 h-11 flex items-center justify-center hover:bg-white rounded-lg transition-colors text-slate-400 hover:text-slate-900 shadow-sm"
+                >
+                    <Minus size={15} />
+                </button>
+                <span className="w-7 text-center text-[13px] font-bold text-slate-900">{quantity}</span>
+                <button
+                    onClick={(e) => handleQuantityChange(e, 1)}
+                    aria-label="Increase quantity"
+                    className="w-11 h-11 flex items-center justify-center hover:bg-white rounded-lg transition-colors text-slate-400 hover:text-slate-900 shadow-sm"
+                >
+                    <Plus size={15} />
+                </button>
+            </div>
+            {item.stock !== undefined && item.stock <= 0 ? (
+              <span className="flex-1 min-w-[128px] h-11 bg-slate-100 text-slate-400 text-[11px] font-bold uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 cursor-not-allowed">
+                Out of Stock
+              </span>
+            ) : (
+              <Link
+                href={`/checkout/${item.id}?quantity=${quantity}`}
+                className="flex-1 min-w-[128px] h-11 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white text-[11px] font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-primary-500/20 transition-all flex items-center justify-center gap-2 group/btn"
               >
-                  <Minus size={14} />
-              </button>
-              <span className="w-8 text-center text-xs font-bold text-slate-900">{quantity}</span>
-              <button 
-                  onClick={(e) => handleQuantityChange(e, 1)}
-                  className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-lg transition-colors text-slate-400 hover:text-slate-900 shadow-sm"
-              >
-                  <Plus size={14} />
-              </button>
-          </div>
-          {item.stock !== undefined && item.stock <= 0 ? (
-            <span className="flex-1 bg-slate-100 text-slate-400 text-[11px] font-bold uppercase tracking-widest py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed">
-              Out of Stock
-            </span>
-          ) : (
-            <Link
-              href={`/checkout/${item.id}?quantity=${quantity}`}
-              className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white text-[11px] font-bold uppercase tracking-widest py-3 rounded-xl shadow-lg shadow-primary-500/20 transition-all flex items-center justify-center gap-2 group/btn"
-            >
-              Buy Now
-              <Zap className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform fill-current" />
-            </Link>
-          )}
+                Buy Now
+                <Zap className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform fill-current" />
+              </Link>
+            )}
+        </div>
       </div>
     </div>
   );
@@ -275,6 +290,10 @@ export function MainContent({
   const [priceMax, setPriceMax] = useState("");
   const [deliverySel, setDeliverySel] = useState<string[]>([]);
   const [kindTab, setKindTab] = useState<"accounts" | "subscriptions">("accounts");
+  // Mobile category view: the filter column stays collapsed behind the
+  // Filters button below md (always visible on md+, where the class
+  // swap below is overridden by md:block).
+  const [filtersOpen, setFiltersOpen] = useState(false);
   // Reviews paging (F-23): reveal loaded reviews in steps; the button
   // disappears once everything loaded is on screen.
   const [reviewsShown, setReviewsShown] = useState(4);
@@ -506,7 +525,7 @@ export function MainContent({
                     <p className="text-slate-500 text-sm max-w-xs mx-auto">Try checking your spelling or using more general keywords to find what you're looking for.</p>
                 </div>
              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
                     {products.map((item) => (
                         <ProductCard key={item.id} item={item} />
                     ))}
@@ -531,7 +550,7 @@ export function MainContent({
                     </div>
                     <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight"><SplitTitle title={sections.featured.title} accentClassName="text-primary-600" /></h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
                 {featuredItems.map((item) => (
                     <ProductCard key={item.id} item={item} />
                 ))}
@@ -555,7 +574,7 @@ export function MainContent({
                     </div>
                     <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight"><SplitTitle title={sections.trending.title} accentClassName="text-blue-600" /></h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
                 {trendingItems.map((item) => (
                     <ProductCard key={item.id} item={item} />
                 ))}
@@ -569,7 +588,7 @@ export function MainContent({
           (toggleable + orderable); in a category view it is the product
           listing itself and always renders. */}
       {!searchQuery && (selectedCategory !== 'All' || sections.categories.enabled) && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 mb-12 relative overflow-hidden shadow-sm" style={{ order: orderOf("categories") }}>
+        <div className="bg-white rounded-[1.75rem] border border-slate-200 p-4 sm:p-6 lg:p-8 mb-12 relative overflow-hidden shadow-sm" style={{ order: orderOf("categories") }}>
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/5 blur-[100px] rounded-full pointer-events-none"></div>
           
           {selectedCategory === 'All' ? (
@@ -586,7 +605,7 @@ export function MainContent({
                         <button
                             key={tab}
                             onClick={() => handleCategoryClick(tab === 'Accounts' ? 'All' : tab === 'Top Up' ? 'Game Top Up' : tab)}
-                            className={`${tab === 'Accounts' ? 'text-primary-600 border-b-2 border-primary-600' : 'text-slate-400 hover:text-slate-900'} pb-3 px-2 text-sm font-semibold whitespace-nowrap transition-all duration-300`}
+                            className={`${tab === 'Accounts' ? 'text-primary-600 border-b-2 border-primary-600' : 'text-slate-400 hover:text-slate-900'} py-3 px-2 min-h-[44px] text-sm font-semibold whitespace-nowrap transition-all duration-300`}
                         >
                             {tab} {tab === 'Accounts' && <span className="ml-1 opacity-50">({allProducts.length})</span>}
                         </button>
@@ -637,13 +656,13 @@ export function MainContent({
                                 </div>
                                 <button 
                                     onClick={() => handleCategoryClick(cat.name)} 
-                                    className="text-xs font-bold text-primary-600 hover:text-primary-500 uppercase tracking-widest flex items-center gap-2 group"
+                                    className="text-xs font-bold text-primary-600 hover:text-primary-500 uppercase tracking-widest flex items-center gap-2 group py-2.5 px-1 -mr-1 min-h-[44px]"
                                 >
                                     Explore All
                                     <TrendingUp className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                                 </button>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
                                 {catProducts.slice(0, 3).map((item) => (
                                     <ProductCard key={item.id} item={item} />
                                 ))}
@@ -653,9 +672,39 @@ export function MainContent({
                 })}
             </>
         ) : (
-            <div className="flex flex-col md:flex-row gap-8">
+            <div className="flex flex-col gap-6">
+                {/* Results header — full width, so on mobile the products
+                    lead and the filters collapse behind the Filters
+                    button instead of filling the first screen. */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-5 border-b border-slate-100">
+                    <button
+                        onClick={() => handleCategoryClick('All')}
+                        className="min-h-[44px] text-xs font-bold text-slate-400 hover:text-primary-600 flex items-center gap-2 uppercase tracking-widest transition-colors group"
+                    >
+                        <div className="p-1.5 bg-slate-100 rounded-lg group-hover:bg-primary-50 transition-colors">
+                            <TrendingUp className="w-3.5 h-3.5 rotate-[-90deg]" />
+                        </div>
+                        Back to Store
+                    </button>
+                    <div className="flex items-center gap-3">
+                        <div className="text-xs font-bold text-slate-300 uppercase tracking-widest">
+                            Showing{" "}<span className="text-slate-900">{visibleProducts.length}</span>{" "}Results
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setFiltersOpen((v) => !v)}
+                            aria-expanded={filtersOpen}
+                            className="md:hidden min-h-[44px] px-4 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white text-xs font-bold uppercase tracking-widest text-slate-600 shadow-sm"
+                        >
+                            <SlidersHorizontal className="w-4 h-4 text-primary-600" />
+                            Filters{filtersActive ? ` (${(nameFilter.trim() ? 1 : 0) + (priceMin || priceMax ? 1 : 0) + deliverySel.length})` : ""}
+                        </button>
+                    </div>
+                </div>
+                <div className="flex flex-col md:flex-row gap-8">
                 {/* Left Sidebar Filters — every control is live (F-05) */}
-                <div className="w-full md:w-72 shrink-0 space-y-8">
+                <div className={`${filtersOpen ? "block" : "hidden"} md:block w-full md:w-72 shrink-0`}>
+                  <div className="space-y-8">
                     <div>
                         <h3 className="text-sm font-bold text-slate-900 mb-4 uppercase tracking-widest text-primary-600">Search Offers</h3>
                         <div className="relative">
@@ -703,7 +752,7 @@ export function MainContent({
                                 {DELIVERY_TYPES.map((t) => {
                                     const checked = deliverySel.includes(t.id);
                                     return (
-                                        <label key={t.id} className="flex items-center justify-between group cursor-pointer">
+                                        <label key={t.id} className="flex items-center justify-between group cursor-pointer py-2">
                                             <div className="flex items-center gap-3">
                                                 <input
                                                     type="checkbox"
@@ -726,41 +775,38 @@ export function MainContent({
                             </p>
                         </div>
                     </div>
+                  </div>
                 </div>
 
                 {/* Right Product Grid */}
                 <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-100">
-                        <button
-                            onClick={() => handleCategoryClick('All')}
-                            className="text-xs font-bold text-slate-400 hover:text-primary-600 flex items-center gap-2 uppercase tracking-widest transition-colors group"
-                        >
-                            <div className="p-1.5 bg-slate-100 rounded-lg group-hover:bg-primary-50 transition-colors">
-                                <TrendingUp className="w-3.5 h-3.5 rotate-[-90deg]" />
-                            </div>
-                            Back to Store
-                        </button>
-                        <div className="text-xs font-bold text-slate-300 uppercase tracking-widest">
-                            Showing{" "}<span className="text-slate-900">{visibleProducts.length}</span>{" "}Results
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-6 mb-8 overflow-x-auto scrollbar-hide border-b border-slate-100">
+                    {/* Segmented pill control (was an underline tab row
+                        whose second tab clipped off the phone screen —
+                        "SUBS…" — and read as broken). Both options now
+                        fit side by side at 360px; the active pill is a
+                        raised white thumb on a slate track. */}
+                    <div className="flex p-1 gap-1 mb-8 bg-slate-100 rounded-2xl overflow-x-auto scrollbar-hide">
                          <button
                             type="button"
                             onClick={() => setKindTab("accounts")}
-                            className={kindTab === "accounts"
-                                ? "border-b-2 border-primary-600 px-6 py-3 text-sm font-bold text-primary-600 uppercase tracking-widest whitespace-nowrap"
-                                : "border-b-2 border-transparent px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest cursor-pointer transition-colors whitespace-nowrap"}
+                            aria-pressed={kindTab === "accounts"}
+                            className={`flex-1 min-h-[44px] px-3 sm:px-6 rounded-xl text-[11px] sm:text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${
+                                kindTab === "accounts"
+                                    ? "bg-white text-primary-700 shadow-sm"
+                                    : "text-slate-500 hover:text-slate-900"
+                            }`}
                          >
                             Available Accounts
                          </button>
                          <button
                             type="button"
                             onClick={() => setKindTab("subscriptions")}
-                            className={kindTab === "subscriptions"
-                                ? "border-b-2 border-primary-600 px-6 py-3 text-sm font-bold text-primary-600 uppercase tracking-widest whitespace-nowrap"
-                                : "border-b-2 border-transparent px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest cursor-pointer transition-colors whitespace-nowrap"}
+                            aria-pressed={kindTab === "subscriptions"}
+                            className={`flex-1 min-h-[44px] px-3 sm:px-6 rounded-xl text-[11px] sm:text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${
+                                kindTab === "subscriptions"
+                                    ? "bg-white text-primary-700 shadow-sm"
+                                    : "text-slate-500 hover:text-slate-900"
+                            }`}
                          >
                             Subscriptions
                          </button>
@@ -784,12 +830,13 @@ export function MainContent({
                             )}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
                             {visibleProducts.map((item) => (
                                 <ProductCard key={item.id} item={item} />
                             ))}
                         </div>
                     )}
+                </div>
                 </div>
             </div>
         )}
@@ -798,7 +845,7 @@ export function MainContent({
 
       {/* Customer Reviews — homepage section (CMS: visibility, title, order) */}
       {sections.reviews.enabled && (
-      <div className="bg-white rounded-2xl border border-slate-200 p-8 mb-12 shadow-sm" style={{ order: orderOf("reviews") }}>
+      <div className="bg-white rounded-[1.75rem] border border-slate-200 p-4 sm:p-6 lg:p-8 mb-12 shadow-sm" style={{ order: orderOf("reviews") }}>
         <div className="flex justify-between items-center mb-10">
             <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20">

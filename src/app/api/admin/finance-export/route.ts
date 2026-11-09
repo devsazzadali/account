@@ -30,7 +30,8 @@ export async function GET(req: Request) {
   for (const o of orders) {
     const total = Number(o.totalPrice);
     const discount = Number(o.discountAmount || 0);
-    const subtotal = total + discount - SERVICE_FEE;
+    const fee = Number(o.serviceFee ?? SERVICE_FEE);
+    const subtotal = total + discount - fee;
     lines.push([
       o.id,
       o.createdAt.toISOString(),
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
       subtotal.toFixed(2),
       discount.toFixed(2),
       o.couponCode || "",
-      SERVICE_FEE.toFixed(2),
+      fee.toFixed(2),
       total.toFixed(2),
       o.paymentStatus,
       o.paymentMethod || "",

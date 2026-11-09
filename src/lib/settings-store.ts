@@ -32,6 +32,10 @@ export const SETTING_KEYS = {
   stripeSecretKey: "stripe_secret_key",
   stripeWebhookSecret: "stripe_webhook_secret",
   stripeEnabled: "stripe_enabled",
+  // Per-order service charge (USD), admin-configurable from Settings →
+  // Payments. Copied onto each order at creation (orders.service_fee);
+  // 0 = no service charge. Default/fallback 0.50 = the historical fee.
+  serviceFeeUsd: "service_fee_usd",
   paypalClientId: "paypal_client_id",
   paypalClientSecret: "paypal_client_secret",
   paypalEnabled: "paypal_enabled",
@@ -98,6 +102,7 @@ const DEFAULTS: Record<string, string> = {
   notify_new_order: "true",
   // No imported review history by default — stats fall back to local
   // reviews only until a baseline is recorded in settings.
+  service_fee_usd: "0.50",
   review_baseline_count: "0",
   review_baseline_avg: "",
   review_baseline_positive_pct: "",
@@ -235,7 +240,26 @@ export async function getPaymentConfig() {
       configured: paypal.configured,
     },
     wallet: { enabled: true },
+    // Current per-order service charge so the checkout UI totals match
+    // the server's order math exactly (server stays the money truth).
+    service_fee: (() => {
+      const raw = Number(s[SETTING_KEYS.serviceFeeUsd]);
+      return Number.isFinite(raw) && raw >= 0 ? Math.round(raw * 100) / 100 : DEFAULT_SERVICE_FEE_USD;
+    })(),
   };
+}
+
+/** The current per-order service charge (USD). Reads the admin setting
+ *  `service_fee_usd`; any invalid/negative value falls back to the
+ *  historical default of 0.50, and 0 is a valid value (no charge).
+ *  NOTE: this is the LIVE setting for new orders + checkout display —
+ *  existing orders always render their stored orders.service_fee. */
+export const DEFAULT_SERVICE_FEE_USD = 0.5;
+export async function getServiceFeeUsd(): Promise<number> {
+  const s = await getAllSettings();
+  const raw = Number(s[SETTING_KEYS.serviceFeeUsd]);
+  if (!Number.isFinite(raw) || raw < 0) return DEFAULT_SERVICE_FEE_USD;
+  return Math.round(raw * 100) / 100;
 }
 
 /** ── Storefront CMS resolver ─────────────────────────────────────────────

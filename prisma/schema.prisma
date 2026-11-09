@@ -141,6 +141,12 @@ model Order {
   customerEmail      String?     @map("customer_email")
   quantity           Int         @default(1)
   totalPrice         Decimal     @map("total_price") @db.Decimal(10, 2)
+  // Service fee charged on THIS order, copied from the admin-configurable
+  // `service_fee_usd` setting at creation time. Historical orders keep
+  // their recorded fee when the setting changes; every display/report
+  // reads this column, never the live setting. Default 0.50 = the fee
+  // that was in force for every order placed before the column existed.
+  serviceFee         Decimal     @default(0.5) @map("service_fee") @db.Decimal(10, 2)
   status             String      @default("New Order") // UI state machine (code truth)
   paymentStatus      String      @default("pending") @map("payment_status")
   paymentMethod      String?     @map("payment_method")

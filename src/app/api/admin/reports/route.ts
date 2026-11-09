@@ -80,7 +80,7 @@ export async function GET(req: Request) {
           ["Orders paid in period", String(f.grossPaidCount), "including orders refunded since"],
           ["Fully refunded since", String(f.refundedSinceCount), "fee returned inside each full refund"],
           ["Refunds paid out", `$${money(f.refundsTotal)}`, `${f.refundsCount} wallet refund transactions in period`],
-          ["Service fees retained", `$${money(f.feesRetained)}`, "$0.50 per period-paid order not fully refunded"],
+          ["Service fees retained", `$${money(f.feesRetained)}`, "recorded fee of each period-paid order not fully refunded"],
           ["Orders created in period", String(f.ordersCreated), "all payment states"],
         ],
       },
@@ -148,7 +148,7 @@ export async function GET(req: Request) {
         totalsRow: ["TOTAL", "", "", `${rows.length} orders`, String(tq), "", `$${money(td)}`, `$${money(tf)}`, `$${money(tt)}`, "", ""],
       },
     ];
-    footnote = "Totals cover every order created in the period, paid and unpaid. Unit price = (total + discount - $0.50 fee) / qty, the canonical split.";
+    footnote = "Totals cover every order created in the period, paid and unpaid. Unit price = (total + discount - the order's recorded service fee) / qty, the canonical split.";
   }
 
   if (kind === "inventory") {

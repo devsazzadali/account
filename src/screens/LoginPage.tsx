@@ -171,7 +171,7 @@ export function LoginPage() {
       <div className="flex-1 flex flex-col justify-center items-center px-6 pb-6 pt-24 md:p-16 bg-white relative">
         {/* Mobile Header */}
         <div className="md:hidden absolute top-8 left-8">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2 py-2 -my-2">
                 {brand.logoUrl ? (
                     <img src={brand.logoUrl} alt={brand.name} className="w-8 h-8 rounded-lg object-cover" />
                 ) : (
@@ -203,6 +203,8 @@ export function LoginPage() {
                             <input
                                 type="text"
                                 required
+                                autoComplete="username"
+                                inputMode="email"
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-[#1dbf73] focus:ring-4 focus:ring-[#1dbf73]/10 transition-all shadow-sm"
                                 placeholder="name@domain.com"
                                 value={email}
@@ -214,7 +216,7 @@ export function LoginPage() {
                     <div>
                         <div className="flex justify-between items-center mb-2 ml-1">
                             <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Password</label>
-                            <a href="/forgot-password" className="text-[10px] font-bold text-[#1dbf73] hover:text-[#19a463] transition-colors uppercase tracking-widest">Forgot?</a>
+                            <a href="/forgot-password" className="inline-block px-1 py-2 -my-1 text-[10px] font-bold text-[#1dbf73] hover:text-[#19a463] transition-colors uppercase tracking-widest">Forgot?</a>
                         </div>
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -223,6 +225,7 @@ export function LoginPage() {
                             <input
                                 type="password"
                                 required
+                                autoComplete="current-password"
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-[#1dbf73] focus:ring-4 focus:ring-[#1dbf73]/10 transition-all shadow-sm"
                                 placeholder="••••••••"
                                 value={password}
@@ -232,8 +235,8 @@ export function LoginPage() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 ml-1">
-                    <input type="checkbox" id="remember" className="w-4 h-4 rounded border-slate-200 bg-slate-50 text-[#1dbf73] focus:ring-[#1dbf73]/20" />
+                <div className="flex items-center gap-3 ml-1 py-1">
+                    <input type="checkbox" id="remember" className="w-5 h-5 rounded border-slate-200 bg-slate-50 text-[#1dbf73] focus:ring-[#1dbf73]/20" />
                     <label htmlFor="remember" className="text-xs text-slate-500 cursor-pointer select-none">Remember me for 30 days</label>
                 </div>
 
@@ -265,7 +268,7 @@ export function LoginPage() {
                     <button
                         type="button"
                         onClick={() => handleSocialLogin('google')}
-                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-red-50 hover:text-red-600"
+                        className="w-full flex items-center justify-center gap-2 py-3.5 min-h-[44px] rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:bg-red-50 hover:text-red-600"
                     >
                         <Globe className="w-5 h-5" />
                         <span className="text-[10px] font-bold uppercase tracking-widest">Continue with Google</span>
@@ -275,7 +278,7 @@ export function LoginPage() {
 
             <div className="mt-12 text-center text-sm">
                 <span className="text-slate-500">Don't have an account? </span>
-                <Link href="/signup" className="text-[#1dbf73] font-bold hover:text-[#19a463] transition-colors underline underline-offset-4">Join now</Link>
+                <Link href="/signup" className="inline-block py-2 text-[#1dbf73] font-bold hover:text-[#19a463] transition-colors underline underline-offset-4">Join now</Link>
             </div>
         </motion.div>
         

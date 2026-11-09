@@ -81,11 +81,11 @@ export function AdminOrders({ setActiveTab }: { setActiveTab?: (tab: string) => 
         product_title: o.products?.title || "Product",
         product_image: o.products?.image || null,
         // Unit price paid (QA3 D1): derived exactly from the order's own
-        // numbers — subtotal = total + discount − service fee ($0.50) —
-        // divided by quantity. Falls back to the product's current list
-        // price only if the order math is unavailable.
+        // numbers — subtotal = total + discount − the order's recorded
+        // service fee — divided by quantity. Falls back to the product's
+        // current list price only if the order math is unavailable.
         unit_price: o.quantity
-          ? (Number(o.total_price || 0) + Number(o.discount_amount || 0) - 0.5) / Number(o.quantity)
+          ? (Number(o.total_price || 0) + Number(o.discount_amount || 0) - Number(o.service_fee ?? 0.5)) / Number(o.quantity)
           : (o.products?.price ?? null),
         product_eta_hours: o.products?.delivery_eta_hours ?? null,
         // Game & Category filters (video-gap #2): orders carry neither
